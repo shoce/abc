@@ -1,0 +1,79 @@
+# https://docs.github.com/en/actions/learn-github-actions/contexts
+name: release
+permissions:
+  contents: write
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  build-push-ubuntu-24-04:
+    runs-on: ubuntu-24.04
+    steps:
+
+      - name: version
+        run: |
+          BUILD_OS=ubuntu-24.04
+          VERSION=$( date '+%y.%m%d.%H%M' | sed 's/\.0*/./g' )-$BUILD_OS
+          echo "BUILD_OS=$BUILD_OS" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      # https://github.com/actions/checkout/
+      - uses: actions/checkout@v4
+
+      # https://github.com/actions/setup-go/
+      - uses: actions/setup-go@v5
+        with:
+          # https://go.dev/dl/
+          go-version: "1.24.1"
+
+      - name: go build
+        run: |
+          mkdir -p /tmp/${{ github.event.repository.name }}/
+          for cmd in * ; do
+            echo
+            echo $cmd ___
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o /tmp/${{ github.event.repository.name }}/$cmd -trimpath -ldflags ' -X main.VERSION=${{ env.VERSION }}'
+          done
+          echo
+          cd /tmp/${{ github.event.repository.name }}/
+          for sl in ls lsr lt ll lr ; do ln -s -f l $sl ; done
+          for sl in append ; do ln -s -f put $sl ; done
+          tar -c --numeric-owner --group=:0 --owner=:0 -z -f ${{ github.event.repository.name }}.tar.gz *
+          echo '/tmp/${{ github.event.repository.name }}/:'
+          ls -l -a
+
+      - name: release notes
+        run: |
+          {
+          echo 'install:'
+          echo '```'
+          echo 'curl -s -S -L https://github.com/shoce/${{ github.event.repository.name }}/releases/download/${{ env.VERSION }}/${{ github.event.repository.name }}.tar.gz | tar -v -t -z '
+          echo '```'
+          echo
+          echo '/etc/os-release:'
+          echo '```'
+          cat /etc/os-release
+          echo '```'
+          echo
+          echo 'go version:'
+          echo '```'
+          go version
+          echo '```'
+          } >/tmp/${{ github.event.repository.name }}/release.notes..text
+
+      - name: gh release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create ${{ env.VERSION }} /tmp/${{ github.event.repository.name }}/${{ github.event.repository.name }}.tar.gz --notes-file /tmp/${{ github.event.repository.name }}/release.notes..text
+
+      - name: gh release clean
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: for tag in $( gh release list --order asc --limit 100 --json tagName --jq '.[] | select(.tagName | test("-")) | .tagName' | head -n -3 ) ; do gh release delete "$tag" -y ; done
+
+

@@ -1,0 +1,1 @@
+Given with path, reads file contents and writes to stdout, does not fail if the path does not exist or the path is a dir.

@@ -1,0 +1,1 @@
+Select word by position number from stdin. `wo 2` filters the second word from every line, `wo -1` filters the first word from the end of the line.
