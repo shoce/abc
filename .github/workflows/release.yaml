@@ -33,8 +33,8 @@ jobs:
         run: |
           for cmd in * ; do
             echo
-            echo $cmd
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o $cmd.linux.amd64 -trimpath -ldflags ' -X main.VERSION='$VERSION
+            echo $cmd ___
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o ../$cmd.linux.amd64 -trimpath -ldflags ' -X main.VERSION='$VERSION
           done
           ls -l -a
           tar -c -z -f ${{ github.event.repository.name }}.tar.gz *.linux.amd64
