@@ -1,10 +1,38 @@
 package main
-import ("crypto/sha256"; "io"; "fmt"; "os"; "encoding/hex")
+
+import (
+	"crypto/sha256"
+	"fmt"
+	"io"
+	"os"
+
+	"encoding/hex"
+
+	"github.com/btcsuite/btcutil/base58"
+)
+
 func main() {
-	h:= sha256.New()
+	WIF := false
+	if len(os.Args) > 1 && os.Args[1] == "-wif" {
+		WIF = true
+	}
+
+	h := sha256.New()
+	if WIF {
+		h.Write([]byte{0x80})
+	}
 	n, err := io.Copy(h, os.Stdin)
-	if err != nil { fmt.Fprintln(os.Stderr, err); os.Exit(1) }
-	fmt.Fprintln(os.Stderr, n, "bytes long data hashed")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	fmt.Fprintln(os.Stderr, n, "bytes hashed")
 	hs := h.Sum(nil)
-	fmt.Println(hex.EncodeToString(hs))
+
+	if WIF {
+		fmt.Println(base58.Encode(hs))
+	} else {
+		fmt.Println(hex.EncodeToString(hs))
+	}
 }
