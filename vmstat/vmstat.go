@@ -21,6 +21,8 @@ import (
 	psproc "github.com/shirou/gopsutil/process"
 )
 
+const NL = "\n"
+
 func fmtdur(d time.Duration) string {
 	days := d / (time.Minute * 1440)
 	mins := d % (time.Minute * 1440) / time.Minute
@@ -158,55 +160,57 @@ func main() {
 	*/
 
 	if loadavg.Load1*100 > 100 {
-		fmt.Printf("cpu1m=%.0f%% ", loadavg.Load1*100)
+		fmt.Printf("cpu1m:%.0f%% ", loadavg.Load1*100)
 	}
 	if loadavg.Load15*100 > 80 {
-		fmt.Printf("cpu15m=%.0f%% ", loadavg.Load15*100)
+		fmt.Printf("cpu15m:%.0f%% ", loadavg.Load15*100)
 	}
 	if vmem.UsedPercent > 60 {
-		fmt.Printf("mem=%.0f%% ", vmem.UsedPercent)
+		fmt.Printf("mem:%.0f%% ", vmem.UsedPercent)
 	}
 	if swapmem.UsedPercent > 60 {
-		fmt.Printf("swap=%.0f%% ", swapmem.UsedPercent)
+		fmt.Printf("swap:%.0f%% ", swapmem.UsedPercent)
 	}
 
 	if diskstat.UsedPercent > 60 {
-		fmt.Printf("disk=%.0f%% ", diskstat.UsedPercent)
+		fmt.Printf("disk:%.0f%% ", diskstat.UsedPercent)
 	}
 	if diskread>>10 > 1000 {
-		fmt.Printf("diskread=%dkbps ", diskread>>10)
+		fmt.Printf("diskread:%dkbps ", diskread>>10)
 	}
 	if diskwrite>>10 > 1000 {
-		fmt.Printf("diskwrite=%dkbps ", diskwrite>>10)
+		fmt.Printf("diskwrite:%dkbps ", diskwrite>>10)
 	}
 
 	if len(ip4conns) > 20 {
-		fmt.Printf("ip4conns=%d ", len(ip4conns))
+		fmt.Printf("ip4conns:%d ", len(ip4conns))
 	}
 	if len(ip6conns) > 20 {
-		fmt.Printf("ip6conns=%d ", len(ip6conns))
+		fmt.Printf("ip6conns:%d ", len(ip6conns))
 	}
 	if netrecv>>10 > 1000 {
-		fmt.Printf("netrecv=%dkbps ", netrecv>>10)
+		fmt.Printf("netrecv:%dkbps ", netrecv>>10)
 	}
 	if netsent>>10 > 1000 {
-		fmt.Printf("netsent=%dkbps ", netsent>>10)
+		fmt.Printf("netsent:%dkbps ", netsent>>10)
 	}
 
 	if len(procs) > 150 {
-		fmt.Printf("procs=%d ", len(procs))
+		fmt.Printf("procs:%d ", len(procs))
 	}
 
 	uptime := time.Since(boottime).Truncate(time.Minute)
 	if uptime < 100*time.Minute {
-		fmt.Printf("uptime=%s ", fmtdur(uptime))
+		fmt.Printf("uptime:%s ", fmtdur(uptime))
 	}
 
 	fmt.Printf("\n")
 
 	for _, u := range users {
 		ustarted := time.Unix(int64(u.Started), 0)
-		fmt.Printf("- /user/%s: %s %s ago\n", u.User, u.Host, fmtdur(time.Since(ustarted)))
+		fmt.Printf("- user:%s host:%s duration:%s"+NL, u.User, u.Host,
+			fmtdur(time.Since(ustarted)),
+		)
 	}
 
 	for _, p := range procs {
@@ -272,8 +276,9 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("- /proc/%s: uptime=%s cpu=%.0f%% mem=%.0f%% files=%d conns=%d listens=%v\n",
-			pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), plistens)
+		fmt.Printf("- proc:%s uptime:%s cpu:%.0f%% mem:%.0f%% files:%d conns:%d listens:%v"+NL,
+			pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), plistens,
+		)
 	}
 
 }

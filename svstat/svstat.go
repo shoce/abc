@@ -22,20 +22,20 @@ const (
 	WANT_DOWN     = "want down"
 	GOT_TERM      = "got term"
 
-	START = "u"
-	PAUSE = "p"
-	ALARM = "a"
+	START     = "u"
+	PAUSE     = "p"
+	ALARM     = "a"
 	TERMINATE = "t"
-	EXIT = "x"
-	KILL = "k"
-	USER1 = "1"
-	USER2 = "2"
-	QUIT = "q"
+	EXIT      = "x"
+	KILL      = "k"
+	USER1     = "1"
+	USER2     = "2"
+	QUIT      = "q"
 	INTERRUPT = "i"
-	HANGUP = "h"
-	CONT = "c"
-	ONCE = "o"
-	STOP = "d"
+	HANGUP    = "h"
+	CONT      = "c"
+	ONCE      = "o"
+	STOP      = "d"
 
 	EPOCH = 4611686018427387914
 )
@@ -177,5 +177,5 @@ func main() {
 	}
 	//fmt.Fprintf(os.Stderr, "%+v\n", s)
 	//fmt.Printf("%s: %s (pid %d) %d seconds, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
-	fmt.Printf("Path=%s Status=%s PID=%d Seconds=%d Action=%s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
+	fmt.Printf("path:%s status:%s pid:%d seconds:%d action:%s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
 }
