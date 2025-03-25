@@ -31,12 +31,14 @@ jobs:
 
       - name: go build
         run: |
+          mkdir -p /tmp/${{ github.event.repository.name }}/
           for cmd in * ; do
             echo
             echo $cmd ___
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o ../$cmd.linux.amd64 -trimpath -ldflags ' -X main.VERSION='$VERSION
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o /tmp/${{ github.event.repository.name }}/$cmd -trimpath -ldflags ' -X main.VERSION='$VERSION
           done
-          tar -c -z -f ${{ github.event.repository.name }}.tar.gz *.linux.amd64
+          cd /tmp/${{ github.event.repository.name }}/
+          tar -c -z -f ${{ github.event.repository.name }}.tar.gz *
           ls -l -a
 
       - name: release notes
@@ -56,13 +58,13 @@ jobs:
           echo '```'
           go version
           echo '```'
-          } >release.notes..text
+          } >/tmp/${{ github.event.repository.name }}/release.notes..text
 
       - name: gh release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create $VERSION ${{ github.event.repository.name }}.tar.gz --notes-file release.notes..text
+        run: gh release create $VERSION /tmp/${{ github.event.repository.name }}/${{ github.event.repository.name }}.tar.gz --notes-file /tmp/${{ github.event.repository.name }}/release.notes..text
 
       - name: gh release clean
         shell: bash
