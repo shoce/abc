@@ -18,6 +18,45 @@ import (
 
 const listenAddr = "0:5873"
 const timeFmt = "Mon 01/02 15:04"
+const templateHtml = `
+<html>
+<head>
+<style>
+body {
+	font-family: "Input Mono", sans-serif;
+}
+table {
+	text-align: left;
+	border-collapse: collapse;
+}
+table, th, td {
+	border-left: 1px solid black;
+	padding-left: 6px;
+	padding-right: 12px;
+}
+tr:first-child {
+	font-weight: bold;
+	border-bottom: 1px solid black;
+}
+td:first-child {
+	font-weight: bold;
+	font-style: italic;
+}
+</style>
+</head>
+<body>
+	<table>
+		{{ range $i, $r := . }}
+		<tr>
+			{{ range $j, $c := $r }}
+				<td> {{ . }} </td>
+			{{ end }}
+		</tr>
+		{{ end }}
+	</table>
+</body>
+</html>
+`
 
 var locationsNames = []string{
 	"America/Los_Angeles",
@@ -44,11 +83,10 @@ func httpTimezones(w http.ResponseWriter, req *http.Request) {
 			t1.In(l).Format(timeFmt),
 			t2.In(l).Format(timeFmt),
 			now.In(l).Format(timeFmt),
-			})
+		})
 	}
 
-
-	timezonesTmpl, err := template.ParseFiles("timezones.html")
+	timezonesTmpl, err := template.New("template.html").Parse(templateHtml)
 	if err != nil {
 		log.Print("template.html: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
