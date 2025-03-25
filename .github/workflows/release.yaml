@@ -41,7 +41,7 @@ jobs:
           cd /tmp/${{ github.event.repository.name }}/
           for sl in ls lsr lt ll lr ; do ln -s -f l $sl ; done
           for sl in append ; do ln -s -f put $sl ; done
-          tar -c --group=:0 --owner=:0 -z -f ${{ github.event.repository.name }}.tar.gz *
+          tar -c --numeric-owner --group=:0 --owner=:0 -z -f ${{ github.event.repository.name }}.tar.gz *
           echo '/tmp/${{ github.event.repository.name }}/:'
           ls -l -a
 
@@ -50,7 +50,7 @@ jobs:
           {
           echo 'install:'
           echo '```'
-          echo 'curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/${{ env.VERSION }}/${{ github.event.repository.name }}.tar.gz | tar -v -t -z'
+          echo 'curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/${{ env.VERSION }}/${{ github.event.repository.name }}.tar.gz | tar -v -t -z '
           echo '```'
           echo
           echo '/etc/os-release:'
