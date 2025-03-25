@@ -1,0 +1,1 @@
+Golang templates in cli. Template on stdin, output on stdout; or template file path as the first arg, output path as the second arg. FuncMap: Files; Dirs; FilesDirs; DirsFiles; DirName; ReadFile; UserHomeDir; HasPrefix; HasSuffix; TrimPrefix; TrimSuffix; TrimSpace, Contains, Join, Split, Index, Append, MapNew, MapAppend.

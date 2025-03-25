@@ -1,0 +1,1 @@
+Substitue a string with another string in files recursively: `subst s1 s2 path...`

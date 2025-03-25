@@ -1,0 +1,65 @@
+# https://docs.github.com/en/actions/learn-github-actions/contexts
+name: release
+permissions:
+  contents: write
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  build-push-ubuntu-24-04:
+    runs-on: ubuntu-24.04
+    steps:
+
+      - name: version
+        run: |
+          BUILD_OS=ubuntu-24.04
+          VERSION=$( date '+%y.%m%d.%H%M' | sed 's/\.0*/./g' )-$BUILD_OS
+          echo "BUILD_OS=$BUILD_OS" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      # https://github.com/actions/checkout/
+      - uses: actions/checkout@v4
+
+      # https://github.com/actions/setup-go/
+      - uses: actions/setup-go@v5
+        with:
+          # https://go.dev/dl/
+          go-version: "1.24.1"
+
+      - name: go build
+        run: |
+          for cmd in * ; do
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $cmd.linux.amd64 -C $cmd -trimpath -ldflags ' -X main.VERSION='$VERSION
+          done
+          ls -l -a
+          tar -c -z -f ${{ github.event.repository.name }}.tar.gz *.linux.amd64
+          ls -l -a
+
+      - name: release notes
+        run: |
+          {
+          echo "curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/$VERSION/${{ github.event.repository.name }}.tar.gz | tar -t -z"
+          echo
+          echo /etc/os-release:
+          cat /etc/os-release
+          echo
+          echo go version:
+          go version
+          } >release.notes..text
+
+      - name: gh release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $VERSION ${{ github.event.repository.name }}.tar.gz --notes-file release.notes..text
+
+      - name: gh release clean
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: for tag in $( gh release list --order asc --limit 100 --json tagName --jq '.[] | select(.tagName | test("-")) | .tagName' | head -n -3 ) ; do gh release delete "$tag" -y ; done
+
+
