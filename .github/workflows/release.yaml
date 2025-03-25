@@ -33,6 +33,7 @@ jobs:
         run: |
           mkdir -p /tmp/${{ github.event.repository.name }}/
           for cmd in * ; do
+            test -d $cmd || continue
             echo
             echo $cmd ___
             CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o /tmp/${{ github.event.repository.name }}/$cmd -trimpath -ldflags ' -X main.VERSION=${{ env.VERSION }}'
