@@ -51,7 +51,12 @@ jobs:
           {
           echo 'install:'
           echo '```'
-          echo 'curl -s -S -L https://github.com/shoce/${{ github.event.repository.name }}/releases/download/${{ env.VERSION }}/${{ github.event.repository.name }}.tar.gz | tar -v -t -z '
+          echo 'curl -s -S -L https://github.com/shoce/${{ github.event.repository.name }}/releases/download/${{ env.VERSION }}/${{ github.event.repository.name }}.tar.gz | tar -v -z -C /bin/ -t '
+          echo '```'
+          echo
+          echo 'install latest:'
+          echo '```'
+          echo 'curl -s -S -L https://github.com/shoce/${{ github.event.repository.name }}/releases/latest/download/${{ github.event.repository.name }}.tar.gz | tar -v -z -C /bin/ -t '
           echo '```'
           echo
           echo '/etc/os-release:'
