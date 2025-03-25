@@ -50,7 +50,7 @@ jobs:
           {
           echo 'install:'
           echo '```'
-          echo 'curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/${{ env.VERSION }}/${{ github.event.repository.name }}.tar.gz | tar -t -z'
+          echo 'curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/${{ env.VERSION }}/${{ github.event.repository.name }}.tar.gz | tar -v -t -z'
           echo '```'
           echo
           echo '/etc/os-release:'
