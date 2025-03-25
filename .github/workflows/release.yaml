@@ -42,7 +42,7 @@ jobs:
       - name: release notes
         run: |
           {
-          `echo "curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/$VERSION/${{ github.event.repository.name }}.tar.gz | tar -t -z"`
+          echo "`curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/$VERSION/${{ github.event.repository.name }}.tar.gz | tar -t -z`"
           echo
           echo /etc/os-release:
           echo '```'
