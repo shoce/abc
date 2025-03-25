@@ -32,6 +32,8 @@ jobs:
       - name: go build
         run: |
           for cmd in * ; do
+            echo
+            echo $cmd
             CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o $cmd.linux.amd64 -trimpath -ldflags ' -X main.VERSION='$VERSION
           done
           ls -l -a

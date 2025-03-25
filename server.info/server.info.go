@@ -41,12 +41,12 @@ type Disk struct {
 
 func main() {
 	var serverInfo ServerInfo
-	dpp, err := disk.DiskPartitions(false)
+	dpp, err := disk.Partitions(false)
 	if err != nil {
 		log.Fatal("disk.DiskPartitions: ", err)
 	}
 	for _, dp := range dpp {
-		dps, err := disk.DiskUsage(dp.Device)
+		dps, err := disk.Usage(dp.Device)
 		if err != nil {
 			//log.Printf("disk.DiskUsage `%s`: %s", dp.Device, err)
 			continue
@@ -63,18 +63,18 @@ func main() {
 		serverInfo.Disks = append(serverInfo.Disks, p)
 	}
 
-	cpuCount, err := cpu.CPUCounts(true)
+	cpuCount, err := cpu.Counts(true)
 	if err != nil {
 		log.Fatal("cpu.CPUCounts true: ", err)
 	}
 	serverInfo.CPUCount = uint64(cpuCount)
-	hwCpuCount, err := cpu.CPUCounts(false)
+	hwCpuCount, err := cpu.Counts(false)
 	if err != nil {
 		log.Fatal("cpu.CPUCounts false: ", err)
 	}
 	serverInfo.HWCPUCount = uint64(hwCpuCount)
 
-	cpuInfo, err := cpu.CPUInfo()
+	cpuInfo, err := cpu.Info()
 	if err != nil {
 		log.Fatal("cpu.CPUInfo: ", err)
 	}
