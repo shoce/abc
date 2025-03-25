@@ -77,7 +77,7 @@ const (
 )
 
 var (
-	Version string
+	VERSION string
 
 	LogBeatTime bool
 	LogUTCTime  bool
@@ -116,7 +116,7 @@ var (
 
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Printf("%s\n", Version)
+		fmt.Println(VERSION)
 		os.Exit(0)
 	}
 

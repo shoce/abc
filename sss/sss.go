@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	Version string
+	VERSION string
 )
 
 func fmtdur(d time.Duration) string {
@@ -39,7 +39,7 @@ func fmtdur(d time.Duration) string {
 
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Println(Version)
+		fmt.Println(VERSION)
 		os.Exit(0)
 	}
 }

@@ -35,7 +35,7 @@ const (
 )
 
 var (
-	Version string
+	VERSION string
 
 	Hostname     string
 	PollInterval time.Duration
@@ -148,7 +148,7 @@ func print() {
 
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Println(Version)
+		fmt.Println(VERSION)
 		os.Exit(0)
 	}
 }

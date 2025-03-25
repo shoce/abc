@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	Version string
+	VERSION string
 
 	Recursive   bool
 	ShowSymlink bool
@@ -203,7 +203,7 @@ func ls(path string) error {
 
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Println(Version)
+		fmt.Println(VERSION)
 		os.Exit(0)
 	}
 }

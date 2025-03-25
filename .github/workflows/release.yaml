@@ -35,10 +35,12 @@ jobs:
           for cmd in * ; do
             echo
             echo $cmd ___
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o /tmp/${{ github.event.repository.name }}/$cmd -trimpath -ldflags ' -X main.VERSION='$VERSION
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -C $cmd -o /tmp/${{ github.event.repository.name }}/$cmd -trimpath -ldflags ' -X main.VERSION=${{ env.VERSION }}'
           done
+          echo
           cd /tmp/${{ github.event.repository.name }}/
           tar -c -z -f ${{ github.event.repository.name }}.tar.gz *
+          echo '/tmp/${{ github.event.repository.name }}/:'
           ls -l -a
 
       - name: release notes
@@ -46,7 +48,7 @@ jobs:
           {
           echo 'install:'
           echo '```'
-          echo 'curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/$VERSION/${{ github.event.repository.name }}.tar.gz | tar -t -z'
+          echo 'curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/download/${{ env.VERSION }}/${{ github.event.repository.name }}.tar.gz | tar -t -z'
           echo '```'
           echo
           echo '/etc/os-release:'
@@ -64,7 +66,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create $VERSION /tmp/${{ github.event.repository.name }}/${{ github.event.repository.name }}.tar.gz --notes-file /tmp/${{ github.event.repository.name }}/release.notes..text
+        run: gh release create ${{ env.VERSION }} /tmp/${{ github.event.repository.name }}/${{ github.event.repository.name }}.tar.gz --notes-file /tmp/${{ github.event.repository.name }}/release.notes..text
 
       - name: gh release clean
         shell: bash
