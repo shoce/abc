@@ -3,12 +3,11 @@ history:
 2020/1227 v1
 
 GoFmt GoBuild
-cp $HOME/bin/out $HOME/bin/err
 
 out ha ha
 out 'he he'
 err haa >/dev/null
- */
+*/
 
 package main
 

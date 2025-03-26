@@ -23,18 +23,12 @@ import (
 
 const NL = "\n"
 
-func fmtdur(d time.Duration) string {
+func fmtdur(d time.Duration) (s string) {
 	days := d / (time.Minute * 1440)
 	mins := d % (time.Minute * 1440) / time.Minute
-	s := ""
-	if mins > 0 {
-		s = fmt.Sprintf("%dm%s", mins, s)
-	}
+	s = fmt.Sprintf("%dm", mins)
 	if days > 0 {
-		s = fmt.Sprintf("%dd%s", days, s)
-	}
-	if s == "" {
-		s = "0m"
+		s = fmt.Sprintf("%dd", days) + s
 	}
 	return s
 }

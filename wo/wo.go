@@ -2,9 +2,6 @@
 history:
 2020/04/20 v1
 
-go get -a -u -v
-go mod tidy
-
 GoFmt GoBuildNull GoBuild GoRun
 */
 

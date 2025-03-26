@@ -3,7 +3,7 @@ history:
 2015-04-19 v1
 2020-0127 ignore SIGURG
 
-GoFmt GoBuild GoRelease
+GoFmt GoBuild
 
 pipemon </dev/random >/dev/null
 pipemon </etc/passwd >/dev/null

@@ -2,7 +2,10 @@
 history:
 2016-0203 v1
 
-GoFmt GoBuildNull GoBuild GoRelease
+GoFmt
+GoBuildNull
+GoBuild
+GoRelease
 */
 
 package main

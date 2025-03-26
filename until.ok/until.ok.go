@@ -1,9 +1,5 @@
 /*
 
-go mod init github.com/shoce/until.ok
-go get -a -u -v
-go mod tidy
-
 GoFmt
 GoBuildNull
 GoBuild

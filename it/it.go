@@ -6,6 +6,7 @@ options:
 	y = print year since last millenium
 	d = print date or day number since last january first
 	s = print seconds or subbeats (there are one hundred subbeats in one beat)
+	m = print military time, with date in month and day format, if printing date
 	n = not to print time
 	f = yd = print year, date and time
 	ff = yds = print year, date, time and seconds/subbeats
@@ -18,10 +19,6 @@ history:
 20/289 (2020/10/15) add options for version printing and not printing beats but date only
 20/209 add options f and ff
 21/1215 -m option to show date with months and time in military 24 hour
-
-go mod init github.com/shoce/it
-go get -a -u -v
-go mod tidy
 
 GoFmt
 GoBuildNull
