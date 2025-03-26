@@ -2,7 +2,10 @@
 history:
 2019/11/1 v2
 
-GoFmt GoBuildNull GoBuild GoRun
+GoFmt
+GoBuildNull
+GoBuild
+GoRun
 */
 
 package main

@@ -1,5 +1,10 @@
-// history: 2015-1210 v1
-// go run svstat.go
+/*
+history: 2015-1210 v1
+
+GoFmt
+GoBuild
+GoRun /etc/service/*
+*/
 
 package main
 
@@ -11,6 +16,8 @@ import (
 )
 
 const (
+	NL = "\n"
+
 	DOWN   = "down"
 	UP     = "up"
 	FINISH = "finish"
@@ -163,19 +170,22 @@ func (s *Service) ReadStatus() error {
 }
 
 func main() {
-	var sp string
+	var spp []string
 	if len(os.Args) > 1 {
-		sp = os.Args[1]
+		spp = os.Args[1:]
 	} else {
-		sp = "."
+		spp = []string{"."}
 	}
-	s := Service{Path: sp}
-	err := s.ReadStatus()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Service.ReadStatus: %s\n", err)
-		os.Exit(1)
+
+	for _, sp := range spp {
+		s := Service{Path: sp}
+		err := s.ReadStatus()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Service.ReadStatus: %s\n", err)
+			os.Exit(1)
+		}
+		//fmt.Fprintf(os.Stderr, "%+v\n", s)
+		//fmt.Printf("%s: %s (pid %d) %d seconds, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
+		fmt.Printf("path=%s status=%s pid=%d seconds=%d action=%s"+NL, s.Path, s.Status, s.PID, s.Seconds, s.Action)
 	}
-	//fmt.Fprintf(os.Stderr, "%+v\n", s)
-	//fmt.Printf("%s: %s (pid %d) %d seconds, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
-	fmt.Printf("path:%s status:%s pid:%d seconds:%d action:%s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
 }
