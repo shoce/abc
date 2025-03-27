@@ -51,6 +51,7 @@ func init() {
 		"Append":      Append,
 		"MapNew":      MapNew,
 		"MapAppend":   MapAppend,
+		"MapGet":      MapGet,
 	}
 
 	te = template.New("te")
@@ -258,4 +259,11 @@ func MapAppend(m map[string][]string, a, b string) (map[string][]string, error) 
 	}
 	m[a] = append(m[a], b)
 	return m, nil
+}
+
+func MapGet(m map[string][]string, a string) ([]string, error) {
+	if _, ok := m[a]; !ok {
+		return nil, fmt.Errorf("key `%s` not exist", a)
+	}
+	return m[a], nil
 }
