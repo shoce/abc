@@ -263,7 +263,7 @@ func MapAppend(m map[string][]string, a, b string) (map[string][]string, error) 
 
 func MapGet(m map[string][]string, a string) ([]string, error) {
 	if _, ok := m[a]; !ok {
-		return nil, fmt.Errorf("key `%s` not exist", a)
+		return []string{}, nil
 	}
 	return m[a], nil
 }
