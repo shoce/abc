@@ -80,7 +80,6 @@ var (
 	VERSION string
 
 	LogBeatTime bool
-	LogUTCTime  bool
 
 	VERBOSE bool
 	SILENT  bool
@@ -230,7 +229,7 @@ func main() {
 			s := <-sigintchan
 			switch s {
 			case syscall.SIGINT:
-				lognl()
+				log(NL)
 				log("interrupt signal")
 				if InterruptChan != nil {
 					InterruptChan <- true
@@ -246,7 +245,7 @@ func main() {
 			s := <-sighupchan
 			switch s {
 			case syscall.SIGHUP:
-				lognl()
+				log(NL)
 				log("hangup signal")
 				os.Exit(2)
 			}
@@ -374,10 +373,6 @@ func main() {
 	}
 }
 
-func lognl() {
-	fmt.Fprintf(os.Stderr, "\n")
-}
-
 func underline(s string) string {
 	if os.Getenv("TERM") != "" {
 		return "\033[4m" + s + "\033[0m"
@@ -386,8 +381,7 @@ func underline(s string) string {
 }
 
 func log(msg string, args ...interface{}) {
-	var t time.Time = time.Now()
-	var tsuffix string
+	var t time.Time = time.Now().Local()
 	var ts string
 	if LogBeatTime {
 		const BEAT = time.Duration(24) * time.Hour / 1000
@@ -395,35 +389,23 @@ func log(msg string, args ...interface{}) {
 		ty := t.Sub(time.Date(t.Year(), 1, 1, 0, 0, 0, 0, TzBiel))
 		td := t.Sub(time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, TzBiel))
 		ts = fmt.Sprintf(
-			"%d:"+"%d:"+"%d",
+			"%d:%d:%d",
 			t.Year()%1000,
 			int(ty/(time.Duration(24)*time.Hour))+1,
 			int(td/BEAT),
 		)
 	} else {
-		if LogUTCTime {
-			t = t.UTC()
-			tsuffix = "z"
-		} else {
-			t = t.Local()
-		}
 		ts = fmt.Sprintf(
-			"%03d:"+"%02d%02d:"+"%02d%02d"+"%s",
-			t.Year()%1000,
-			t.Month(), t.Day(),
+			"%d%02d%02d:%02d%02d+",
+			t.Year()%1000, t.Month(), t.Day(),
 			t.Hour(), t.Minute(),
-			tsuffix,
 		)
 	}
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
-	}
+	fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
 }
 
 func logstatus() {
-	lognl()
+	log(NL)
 	log(underline("Status=%s Hostname=%s Host=%s User=%s hs ; "), Status, Hostname, Host, User)
 }
 
