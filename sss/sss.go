@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -132,6 +133,8 @@ func main() {
 				continue
 			}
 		}
+
+		sort.Strings(plistens)
 
 		fmt.Printf(
 			"/proc/%d %s uptime=%s listens=%v"+NL,
