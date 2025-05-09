@@ -130,7 +130,7 @@ func main() {
 					print = true
 				}
 				for _, l := range plistens {
-					if l == ":"+a {
+					if strings.HasSuffix(l, ":"+a) {
 						print = true
 					}
 				}
