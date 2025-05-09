@@ -119,7 +119,7 @@ func main() {
 		if len(os.Args) > 1 {
 			print := false
 			for _, a := range os.Args[1:] {
-				if a == pname {
+				if strings.Contains(pname, a) {
 					print = true
 				}
 				for _, l := range plistens {
