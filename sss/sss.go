@@ -17,6 +17,10 @@ import (
 	psproc "github.com/shirou/gopsutil/process"
 )
 
+const (
+	NL = "\n"
+)
+
 var (
 	VERSION string
 )
@@ -93,15 +97,45 @@ func main() {
 			if c.Raddr.Port != 0 {
 				craddr = fmt.Sprintf("%s:%d", craddr, c.Raddr.Port)
 			}
-			plistens = append(plistens, fmt.Sprintf("%s/%s", claddr, craddr))
+			l := claddr
+			if craddr != "" {
+				l += "/" + craddr
+			}
+			add := true
+			for _, p := range plistens {
+				if l == p {
+					add = false
+				}
+			}
+			if add {
+				plistens = append(plistens, l)
+			}
 		}
 
 		if len(plistens) == 0 {
 			continue
 		}
 
+		if len(os.Args) > 1 {
+			print := false
+			for _, a := range os.Args[1:] {
+				if a == pname {
+					print = true
+				}
+				for _, l := range plistens {
+					if l == ":"+a {
+						print = true
+					}
+				}
+			}
+			if !print {
+				continue
+			}
+		}
+
 		fmt.Printf(
-			"/proc/%d %s uptime=%s listens=%v\n",
-			p.Pid, pname, fmtdur(puptime), plistens)
+			"/proc/%d %s uptime=%s listens=%v"+NL,
+			p.Pid, pname, fmtdur(puptime), plistens,
+		)
 	}
 }
