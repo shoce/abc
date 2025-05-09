@@ -73,6 +73,10 @@ func main() {
 			log.Fatalf("p.Connections: %s", err)
 		}
 
+		sort.Slice(pconns, func(i, j int) bool {
+			return pconns[i].Laddr.Port < pconns[j].Laddr.Port
+		})
+
 		var plistens []string
 		for _, c := range pconns {
 			if pname == "docker-proxy" {
@@ -133,8 +137,6 @@ func main() {
 				continue
 			}
 		}
-
-		sort.Strings(plistens)
 
 		fmt.Printf(
 			"/proc/%d %s uptime=%s listens=%v"+NL,
