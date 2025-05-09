@@ -86,9 +86,11 @@ func main() {
 				continue
 			}
 			claddr := c.Laddr.IP
-			if strings.HasPrefix(claddr, "127.0.0.") || claddr == "::1" {
-				continue
-			}
+			/*
+				if strings.HasPrefix(claddr, "127.0.0.") || claddr == "::1" {
+					continue
+				}
+			*/
 			if claddr == "0.0.0.0" || claddr == "::" || claddr == "*" {
 				claddr = ""
 			}
