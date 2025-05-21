@@ -8,14 +8,14 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 )
 
 const (
-	Cycle = 28
-	SEP = " ; "
-	DATESEP = "/"
+	Cycle       = 28
+	SEP         = " ; "
+	DATESEP     = "/"
 	TodayPrefix = "* "
 	TodaySuffix = " *"
 )
@@ -32,7 +32,7 @@ func main() {
 	ty1 := time.Date(tnow.Year()+1, 1, 1, 0, 0, 0, 0, time.Local)
 
 	for t := ty0; t.Before(ty1); t = t.Add(time.Duration(24) * time.Hour) {
-		if t.Sub(ty0) % (Cycle * time.Duration(24) * time.Hour) == 0 {
+		if t.Sub(ty0)%(Cycle*time.Duration(24)*time.Hour) == 0 {
 			fmt.Println()
 		}
 		today := false
@@ -40,12 +40,12 @@ func main() {
 			today = true
 		}
 		days := dayfmt(t.Sub(ty0))
-		canondate := strings.ToLower(t.Format("Jan"+DATESEP+"2"))
+		canondate := strings.ToLower(t.Format("Jan" + DATESEP + "2"))
 		date := days + " " + canondate
 		if today {
-			date = TodayPrefix+date+TodaySuffix
+			date = TodayPrefix + date + TodaySuffix
 		}
-		fmt.Print(date+SEP)
+		fmt.Print(date + SEP)
 	}
 	fmt.Println()
 }

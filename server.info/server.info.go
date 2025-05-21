@@ -18,24 +18,24 @@ const TAB = "	"
 
 type ServerInfo struct {
 	CPUInfo        string `json:"cpu_info"`
-	CPUCount       uint64      `json:"cpu_count"`
-	HWCPUCount     uint64      `json:"hw_cpu_count"`
-	MemTotalBytes  uint64      `json:"mem_total_bytes"`
-	MemFreeBytes   uint64      `json:"mem_free_bytes"`
-	SwapTotalBytes uint64      `json:"swap_total_bytes"`
-	SwapFreeBytes  uint64      `json:"swap_free_bytes"`
+	CPUCount       uint64 `json:"cpu_count"`
+	HWCPUCount     uint64 `json:"hw_cpu_count"`
+	MemTotalBytes  uint64 `json:"mem_total_bytes"`
+	MemFreeBytes   uint64 `json:"mem_free_bytes"`
+	SwapTotalBytes uint64 `json:"swap_total_bytes"`
+	SwapFreeBytes  uint64 `json:"swap_free_bytes"`
 	Disks          []Disk `json:"disks"`
-	PrivateIP       string `json:"private_ip"`
+	PrivateIP      string `json:"private_ip"`
 }
 type Disk struct {
-	Device string `json:"device"`
-	FSType string `json:"fstype"`
+	Device     string `json:"device"`
+	FSType     string `json:"fstype"`
 	MountPoint string `json:"mountpoint"`
-	Opts string `json:"opts"`
+	Opts       string `json:"opts"`
 
-	Total uint64 `json:"total"`
-	Free uint64 `json:"free"`
-	Used uint64 `json:"used"`
+	Total   uint64  `json:"total"`
+	Free    uint64  `json:"free"`
+	Used    uint64  `json:"used"`
 	Percent float64 `json:"percent"`
 }
 

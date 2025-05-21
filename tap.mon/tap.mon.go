@@ -10,7 +10,7 @@ import (
 const BUFFERSIZE = 1522
 
 func main() {
-	ifce, err := water.NewTAP("")
+	ifce, err := water.New(water.Config{DeviceType: water.TAP})
 	fmt.Printf("%v, %v\n\n", err, ifce)
 	buffer := make([]byte, BUFFERSIZE)
 	for {

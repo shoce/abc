@@ -59,13 +59,10 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
-	cid "github.com/ipfs/go-cid"
-	mh "github.com/multiformats/go-multihash"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/proxy"
 )
@@ -405,7 +402,7 @@ func log(msg string, args ...interface{}) {
 }
 
 func logstatus() {
-	log(NL)
+	fmt.Fprintf(os.Stderr, NL)
 	log(underline("Status=%s Hostname=%s Host=%s User=%s hs ; "), Status, Hostname, Host, User)
 }
 
@@ -716,58 +713,4 @@ func run(cmds string, cmd []string, stdin io.Reader) (status string, err error) 
 	} else {
 		return runssh(cmds, cmd, stdin)
 	}
-}
-
-func printpathinfo(fpath string, finfo os.FileInfo, err error) error {
-	if err != nil {
-		return err
-	}
-
-	s := fmt.Sprintf("%s", strings.ReplaceAll(fpath, "\t", "\\\t"))
-	if (finfo.Mode() & os.ModeSymlink) != 0 {
-		if linkpath, err := os.Readlink(fpath); err != nil {
-			return err
-		} else {
-			s += "@" + linkpath + "@"
-		}
-	}
-	if finfo.IsDir() {
-		s += string(os.PathSeparator)
-	}
-
-	s += fmt.Sprintf("\tmode:%04o", finfo.Mode()&os.ModePerm)
-
-	if !finfo.IsDir() && (finfo.Mode()&os.ModeSymlink == 0) {
-		s += fmt.Sprintf("\tsize:%s", seps(int(finfo.Size()), 3))
-	}
-
-	if !finfo.IsDir() && (finfo.Mode()&os.ModeSymlink == 0) {
-		f, err := os.Open(fpath)
-		if err != nil {
-			log("%v", err)
-			return err
-		}
-		defer f.Close()
-		fmh, err := mh.SumStream(f, mh.SHA2_256, -1)
-		if err != nil {
-			log("%v", err)
-			return err
-		}
-		c := cid.NewCidV1(cid.Raw, fmh)
-		s += fmt.Sprintf("\tcid:%s", c)
-	}
-	fmt.Println(s)
-	return nil
-}
-
-func listpath(fpath string) error {
-	if fpath, err := filepath.Abs(fpath); err != nil {
-		return err
-	} else {
-		fpath = filepath.Clean(fpath)
-		if err := filepath.Walk(fpath, printpathinfo); err != nil {
-			return err
-		}
-	}
-	return nil
 }

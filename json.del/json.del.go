@@ -49,7 +49,7 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		
+
 	}
 	fmt.Printf("%v\n", o)
 }

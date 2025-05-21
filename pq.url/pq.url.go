@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/lib/pq"
 	"os"
+
+	"github.com/lib/pq"
 )
 
 func main() {
