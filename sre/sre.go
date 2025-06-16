@@ -1,12 +1,6 @@
 /*
-usage: sre S1 [S2]
-S1 can be a regex, if begins with `~`
-replace all occurences of S1 with S2 in stdin and print to stdout
-if S2 is not provided or empty, all occurences of S1 are removed
 
-GoFmt
-GoBuildNull
-GoBuild
+GoGet GoFmt GoBuildNull GoBuild
 */
 
 package main

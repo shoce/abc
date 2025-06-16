@@ -2,7 +2,7 @@
 history:
 2020/1227 v1
 
-GoFmt GoBuild
+GoGet GoFmt GoBuild
 
 out ha ha
 out 'he he'
