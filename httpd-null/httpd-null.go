@@ -1,10 +1,8 @@
 /*
-
 GoGet GoFmt GoBuildNull GoBuild
 GoRun
 ListenAddr=:8080 GoRun
 IfFileExists=$home/test ListenAddr=:8080 GoRun
-
 */
 
 package main
