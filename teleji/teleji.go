@@ -38,7 +38,7 @@ import (
 )
 
 var (
-	Version string
+	VERSION string
 	Verbose bool
 
 	TgToken                 string
@@ -62,7 +62,7 @@ const (
 func init() {
 
 	if len(os.Args) == 2 && (os.Args[1] == "version" || os.Args[1] == "--version") {
-		fmt.Println(Version)
+		fmt.Println(VERSION)
 		os.Exit(0)
 	}
 
