@@ -1,0 +1,1 @@
+filter stdin on occurences of S. g for literal string. gr for regexp.
