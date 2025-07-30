@@ -27,8 +27,8 @@ func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr,
 			"usage: g S"+NL+
-				SPAC+"S is a literal string"+NL,
-			"usage: gr R"+NL+
+				SPAC+"S is a literal string"+NL+
+				"usage: gr R"+NL+
 				SPAC+"R is a regexp"+NL,
 		)
 		os.Exit(1)
