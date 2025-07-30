@@ -45,6 +45,7 @@ jobs:
           for sl in ll ls lt lr llr lsr ; do ln -s -f l $sl ; done
           for sl in append ; do ln -s -f put $sl ; done
           for sl in err ; do ln -s -f out $sl ; done
+          for sl in srer ; do ln -s -f sre $sl ; done
           for sl in gr ; do ln -s -f g $sl ; done
           for sl in Aa ; do ln -s -f aA $sl ; done
           tar -c --numeric-owner --group=:0 --owner=:0 -z -f ${{ github.event.repository.name }}.tar.gz *
