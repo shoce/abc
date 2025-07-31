@@ -20,7 +20,7 @@ const (
 
 var (
 	S1, S2 string
-	R1, R2 *regexp.Regexp
+	R1     *regexp.Regexp
 )
 
 func main() {
@@ -28,8 +28,8 @@ func main() {
 		fmt.Fprintf(os.Stderr,
 			"usage: sre S1 [S2]"+NL+
 				SPAC+"S1 and S2 are literal strings"+NL+
-				"usage: srer R1 [R2]"+NL+
-				SPAC+"R1 and R2 are regexps"+NL,
+				"usage: srer R1 [S2]"+NL+
+				SPAC+"R1 is a regexp, S2 is a string with $n for submatches"+NL,
 		)
 		os.Exit(1)
 	}
@@ -40,8 +40,7 @@ func main() {
 
 	if path.Base(os.Args[0]) == "srer" {
 		var err error
-		R1, err = regexp.Compile(S1)
-		if err != nil {
+		if R1, err = regexp.Compile(S1); err != nil {
 			fmt.Fprintf(os.Stderr, "provided regular expression compile error:"+NL+"%v"+NL, err)
 			os.Exit(1)
 		}
@@ -59,9 +58,8 @@ func main() {
 	} else {
 		for scanner.Scan() {
 			line1 = scanner.Text()
-			// https://pkg.go.dev/regexp#Regexp.ReplaceAllLiteralString
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllString
-			line2 = R1.ReplaceAllLiteralString(line1, S2)
+			line2 = R1.ReplaceAllString(line1, S2)
 			fmt.Println(line2)
 		}
 	}
