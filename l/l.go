@@ -5,9 +5,7 @@ history:
 021/0329 add cid printing
 021/1026 add -1 option
 
-GoGet
-GoFmt
-GoBuildNull
+GoGet GoFmt GoBuildNull
 GoBuild
 GoRun
 
@@ -62,7 +60,7 @@ func seps(i int, e int) string {
 func ts() string {
 	t := time.Now().UTC()
 	return fmt.Sprintf(
-		"%03d:%02d%02d:%02d%02d",
+		"%03d:%02d%02d:%02d%02dZ",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
 }
@@ -87,7 +85,7 @@ func printinfo(path string, info os.FileInfo) error {
 		if err != nil {
 			return err
 		}
-		s += TAB + fmt.Sprintf("symlink:%s", linkpath)
+		s += TAB + fmt.Sprintf("symlink[%s]", linkpath)
 	}
 
 	if finfo.Mode().IsDir() {
@@ -103,7 +101,7 @@ func printinfo(path string, info os.FileInfo) error {
 		if fstat, ok := finfo.Sys().(*syscall.Stat_t); ok {
 			fstatuid, fstatgid = int64(fstat.Uid), int64(fstat.Gid)
 		}
-		s += TAB + fmt.Sprintf("owner:%d/%d", fstatuid, fstatgid)
+		s += TAB + fmt.Sprintf("uid:%d gid:%d", fstatuid, fstatgid)
 	}
 
 	if ShowSize && !finfo.Mode().IsDir() && (info.Mode()&os.ModeSymlink == 0) {
@@ -202,7 +200,7 @@ func ls(path string) error {
 }
 
 func init() {
-	if len(os.Args) == 2 && os.Args[1] == "version" {
+	if len(os.Args) == 2 && os.Args[1] == "-version" {
 		fmt.Println(VERSION)
 		os.Exit(0)
 	}
@@ -248,31 +246,39 @@ func main() {
 		}
 		switch p {
 		case "-r":
+		case "-recursive":
 			Recursive = true
 		case "-m":
+		case "-mode":
 			ShowMode = true
 		case "-o":
+		case "-owner":
 			ShowOwner = true
 		case "-s":
+		case "-size":
 			ShowSize = true
 		case "-t":
+		case "-time":
 			ShowTime = true
 		case "-c":
+		case "-cid":
 			ShowCid = true
 		case "-l":
+		case "-link":
 			ShowSymlink = true
 			ShowMode = true
 			//ShowTime = true
 			ShowSize = true
 			//ShowCid = true
 		case "-1":
+		case "-pathonly":
 			ShowMode = false
 			ShowTime = false
 			ShowSize = false
 			ShowCid = false
 			ShowOwner = false
 		default:
-			log("invalid option `%s`", p)
+			log("invalid option [%s]", p)
 			os.Exit(1)
 		}
 		paths = paths[1:]

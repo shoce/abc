@@ -4,9 +4,7 @@ history:
 20/1106 suffix every line with shortened hostname
 23/0827 github.com/shirou/gopsutil/v3
 
-GoGet
-GoFmt
-GoBuildNull
+GoGet GoFmt GoBuildNull
 GoBuild
 GoRun
 */
