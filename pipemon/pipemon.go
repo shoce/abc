@@ -3,7 +3,7 @@ history:
 2015-04-19 v1
 2020-0127 ignore SIGURG
 
-GoFmt GoBuild
+GoGet GoFmt GoBuild
 
 pipemon </dev/random >/dev/null
 pipemon </etc/passwd >/dev/null
@@ -21,31 +21,36 @@ import (
 	"time"
 )
 
-const N = 64 * 1024
+const (
+	NL = "\n"
+
+	N = 64 << 10
+)
 
 var (
 	err     error
 	t0      time.Time
-	written int64
+	written uint64
 )
 
-func errprintf(format string, a ...interface{}) (n int, err error) {
-	return fmt.Fprintf(os.Stderr, "pipemon: "+format, a...)
+func log(format string, a ...interface{}) (n int, err error) {
+	return fmt.Fprintf(os.Stderr, "pipemon: "+format+NL, a...)
 }
 
 func report() {
-	var dt float64
-	dt = time.Since(t0).Seconds()
-	var kbps int64
-	kbps = int64(float64(written/1024) / dt)
-	errprintf("time=%ds written=%dkb rate=%dkbps\r\n", int64(dt), written/1024, kbps)
+	dt := time.Since(t0).Seconds()
+	log("time <%ds> written <%dkb> rate <%dkbps>",
+		uint64(dt),
+		written>>10,
+		uint64(float64(written>>10)/dt),
+	)
 }
 
 func copy(ch chan error) {
 	var w int64
 	for err == nil {
 		w, err = io.CopyN(os.Stdout, os.Stdin, N)
-		written = written + w
+		written = written + uint64(w)
 	}
 	ch <- err
 }
@@ -72,7 +77,7 @@ func main() {
 			if s == syscall.SIGURG {
 				continue
 			}
-			errprintf("signal: %v\n", s)
+			log("signal: %v", s)
 			report()
 			os.Exit(1)
 		case e := <-copychan:
@@ -80,7 +85,7 @@ func main() {
 				report()
 				os.Exit(0)
 			} else {
-				errprintf("copy: %v\n", e)
+				log("copy: %v", e)
 				report()
 				os.Exit(1)
 			}
