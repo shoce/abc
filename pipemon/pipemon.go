@@ -2,6 +2,7 @@
 history:
 2015-04-19 v1
 2020-0127 ignore SIGURG
+2025-0807 seps + end of stdin
 
 GoGet GoFmt GoBuild
 
@@ -15,6 +16,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,7 +26,7 @@ import (
 const (
 	NL = "\n"
 
-	N = 64 << 10
+	CopyNBytes = 64 << 10
 )
 
 var (
@@ -33,23 +35,11 @@ var (
 	written uint64
 )
 
-func log(format string, a ...interface{}) (n int, err error) {
-	return fmt.Fprintf(os.Stderr, "pipemon: "+format+NL, a...)
-}
-
-func report() {
-	dt := time.Since(t0).Seconds()
-	log("time <%ds> written <%dkb> rate <%dkbps>",
-		uint64(dt),
-		written>>10,
-		uint64(float64(written>>10)/dt),
-	)
-}
-
 func copy(ch chan error) {
 	var w int64
 	for err == nil {
-		w, err = io.CopyN(os.Stdout, os.Stdin, N)
+		// https://pkg.go.dev/io#CopyN
+		w, err = io.CopyN(os.Stdout, os.Stdin, CopyNBytes)
 		written = written + uint64(w)
 	}
 	ch <- err
@@ -83,12 +73,36 @@ func main() {
 		case e := <-copychan:
 			if e == io.EOF {
 				report()
+				log("end of stdin")
 				os.Exit(0)
 			} else {
-				log("copy: %v", e)
+				log("error copy: %v", e)
 				report()
 				os.Exit(1)
 			}
 		}
 	}
+}
+
+func seps(i uint64, e int) string {
+	ee := uint64(math.Pow(10, float64(e)))
+	if i < ee {
+		return fmt.Sprintf("%d", i%ee)
+	} else {
+		f := fmt.Sprintf("0%dd", e)
+		return fmt.Sprintf("%s·%"+f, seps(i/ee, e), i%ee)
+	}
+}
+
+func log(format string, args ...interface{}) (n int, err error) {
+	return fmt.Fprintf(os.Stderr, "pipemon: "+format+NL, args...)
+}
+
+func report() {
+	dt := time.Since(t0).Seconds()
+	log("time <%ss> written <%skb> rate <%skbps>",
+		seps(uint64(dt), 2),
+		seps(written>>10, 3),
+		seps(uint64(float64(written>>10)/dt), 3),
+	)
 }
