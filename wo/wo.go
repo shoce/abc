@@ -18,6 +18,12 @@ import (
 
 const (
 	NL = "\n"
+
+	ScannerBufferSize = 200 << 10
+)
+
+var (
+	ScannerBuffer []byte
 )
 
 func main() {
@@ -45,10 +51,13 @@ func main() {
 	}
 
 	sp := regexp.MustCompile(`[^ \t]+([ \t]+|$)`)
-	sc := bufio.NewScanner(os.Stdin)
 
-	for sc.Scan() {
-		l = sc.Text()
+	scanner := bufio.NewScanner(os.Stdin)
+	ScannerBuffer = make([]byte, ScannerBufferSize)
+	scanner.Buffer(ScannerBuffer, ScannerBufferSize)
+
+	for scanner.Scan() {
+		l = scanner.Text()
 		l = strings.TrimSpace(l)
 
 		ww = sp.FindAllString(l, -1)
@@ -69,7 +78,7 @@ func main() {
 		}
 		fmt.Println()
 	}
-	if err = sc.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		fmt.Fprintf(os.Stderr, "read stdin: %v", err)
 	}
 }

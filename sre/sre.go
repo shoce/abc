@@ -16,11 +16,15 @@ import (
 const (
 	NL   = "\n"
 	SPAC = "    "
+
+	ScannerBufferSize = 200 << 10
 )
 
 var (
 	S1, S2 string
 	R1     *regexp.Regexp
+
+	ScannerBuffer []byte
 )
 
 func main() {
@@ -47,7 +51,11 @@ func main() {
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
+	ScannerBuffer = make([]byte, ScannerBufferSize)
+	scanner.Buffer(ScannerBuffer, ScannerBufferSize)
+
 	var line1, line2 string
+
 	if R1 == nil {
 		for scanner.Scan() {
 			line1 = scanner.Text()
