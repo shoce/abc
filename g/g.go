@@ -21,9 +21,11 @@ const (
 )
 
 var (
-	S string
-	R *regexp.Regexp
+	PNAME string
+	S     string
+	R     *regexp.Regexp
 
+	InvertMatch   bool
 	ScannerBuffer []byte
 )
 
@@ -34,12 +36,21 @@ func main() {
 				SPAC+"S is a literal string"+NL+
 				"usage: gr R"+NL+
 				SPAC+"R is a regexp"+NL,
+			"usage: gv S"+NL+
+				SPAC+"S is a literal string"+NL,
+			"usage: gvr R"+NL+
+				SPAC+"R is a regexp"+NL,
 		)
 		os.Exit(1)
 	}
+	PNAME = path.Base(os.Args[0])
 	S = os.Args[1]
 
-	if path.Base(os.Args[0]) == "gr" {
+	if PNAME == "gv" || PNAME == "gvr" {
+		InvertMatch = true
+	}
+
+	if PNAME == "gr" || PNAME == "gvr" {
 		var err error
 		R, err = regexp.Compile(S)
 		if err != nil {
@@ -58,7 +69,7 @@ func main() {
 		for scanner.Scan() {
 			line = scanner.Text()
 			// https://pkg.go.dev/strings#Contains
-			if strings.Contains(line, S) {
+			if strings.Contains(line, S) != InvertMatch {
 				fmt.Println(line)
 			}
 		}
@@ -66,7 +77,7 @@ func main() {
 		for scanner.Scan() {
 			line = scanner.Text()
 			// https://pkg.go.dev/regexp#Regexp.MatchString
-			if R.MatchString(line) {
+			if R.MatchString(line) != InvertMatch {
 				fmt.Println(line)
 			}
 		}
