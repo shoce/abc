@@ -14,6 +14,7 @@ Oct 28 21:37:28 ci sshd[3685911]: error: session_signal_req: session signalling 
 023/0827 VERBOSE
 023/0827 keepalive
 025/0108 sighup
+025/0823 Status TermInverse
 
 GoGet
 GoFmt
@@ -370,9 +371,23 @@ func main() {
 	}
 }
 
-func underline(s string) string {
+func TermUnderline(s string) string {
 	if os.Getenv("TERM") != "" {
 		return "\033[4m" + s + "\033[0m"
+	}
+	return s
+}
+
+func TermInverse(s string) string {
+	if os.Getenv("TERM") != "" {
+		return "\033[7m" + s + "\033[0m"
+	}
+	return s
+}
+
+func TermUnderlineInverse(s string) string {
+	if os.Getenv("TERM") != "" {
+		return "\033[4;7m" + s + "\033[0m"
 	}
 	return s
 }
@@ -403,7 +418,13 @@ func log(msg string, args ...interface{}) {
 
 func logstatus() {
 	fmt.Fprintf(os.Stderr, NL)
-	log(underline("Status=%s Hostname=%s Host=%s User=%s hs ; "), Status, Hostname, Host, User)
+	s := fmt.Sprintf("Status=%s", Status)
+	if Status != "" {
+		s = TermInverse(s)
+	}
+	s += fmt.Sprintf(" Hostname=%s Host=%s User=%s hs ; ", Hostname, Host, User)
+	s = TermUnderline(s)
+	log(s)
 }
 
 func seps(i int, e int) string {
