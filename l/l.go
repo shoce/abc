@@ -150,10 +150,16 @@ func fls(path string, info os.FileInfo, err error) error {
 	return nil
 }
 
-func ls(path string) error {
-	var err error
-
+func list(path string) error {
 	var listcontents bool
+	if strings.HasSuffix(path, "/") {
+		listcontents = true
+	}
+
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
 
 	pathstat, err := os.Lstat(path)
 	if err != nil {
@@ -172,14 +178,19 @@ func ls(path string) error {
 		if err != nil {
 			return err
 		}
-		if linktargetstat.Mode().IsDir() {
-			listcontents = true
+		if !linktargetstat.Mode().IsDir() && listcontents {
+			return fmt.Errorf("%s symblink[%s] is not a dir", path, linktargetpath)
 		}
-	} else if pathstat.Mode().IsDir() {
-		listcontents = true
+	} else if !pathstat.Mode().IsDir() && listcontents {
+		return fmt.Errorf("%s is not a dir", path)
 	}
 
-	if listcontents {
+	if Recursive {
+		err = filepath.Walk(path, fls)
+		if err != nil {
+			return err
+		}
+	} else if listcontents {
 		ff, err := ioutil.ReadDir(path)
 		if err != nil {
 			return err
@@ -190,15 +201,14 @@ func ls(path string) error {
 			printinfo(fpath, fstat)
 		}
 	} else {
-		if err2 := printinfo(path, pathstat); err2 != nil {
-			log("%v", err2)
-			return err2
+		if err := printinfo(path, pathstat); err != nil {
+			log("%v", err)
+			return err
 		}
 	}
 
 	return nil
 }
-
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "-version" {
 		fmt.Println(VERSION)
@@ -285,7 +295,7 @@ func main() {
 	}
 
 	if len(paths) == 0 {
-		paths = append(paths, ".")
+		paths = append(paths, "./")
 	}
 
 	for _, p := range paths {
@@ -295,28 +305,4 @@ func main() {
 			os.Exit(1)
 		}
 	}
-}
-
-func list(path string) error {
-	path, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-
-	// `ls /symlink/to/dir/` shows dir contents but `ls -r /symlink/to/dir/` does not
-	// should not be changed as a symlink to a parent dir will create infinite recursion
-
-	if Recursive {
-		err = filepath.Walk(path, fls)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = ls(path)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
