@@ -15,15 +15,14 @@ jobs:
 
       - uses: shoce/action-version@v1
 
-      - name: version
+      - name: buildos
         run: |
           BUILD_OS=ubuntu-24.04
           VERSION=$VERSION-$BUILD_OS
           echo "BUILD_OS=$BUILD_OS" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      # https://github.com/actions/checkout/
-      - uses: actions/checkout@v5
+      - uses: shoce/action-checkout@v1
 
       # https://github.com/actions/setup-go/
       - uses: actions/setup-go@v5
