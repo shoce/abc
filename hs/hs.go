@@ -324,7 +324,7 @@ func main() {
 			os.Exit(1)
 		}
 		if Status != "" {
-			log("%s status: %s", cmds, Status)
+			log("%s: %s", cmds, TermInverse(fmt.Sprintf("status %s", Status)))
 		}
 		os.Exit(0)
 	}
