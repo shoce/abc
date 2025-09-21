@@ -11,6 +11,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -26,6 +27,10 @@ const (
 	NL = "\n"
 )
 
+var (
+	PRINTALL bool
+)
+
 func fmtdur(d time.Duration) (s string) {
 	days := d / (time.Minute * 1440)
 	mins := d % (time.Minute * 1440) / time.Minute
@@ -37,6 +42,13 @@ func fmtdur(d time.Duration) (s string) {
 }
 
 func main() {
+	if len(os.Args) > 1 {
+		if os.Args[1] == "-a" || os.Args[1] == "-all" {
+			PRINTALL = true
+		}
+
+	}
+
 	loadavg, err := psload.Avg()
 	if err != nil {
 		log.Fatalf("psload.Avg: %s", err)
@@ -156,48 +168,48 @@ func main() {
 
 	*/
 
-	if loadavg.Load1*100 > 100 {
+	if PRINTALL || loadavg.Load1*100 > 100 {
 		fmt.Printf("cpu1m <%.0f%%> ", loadavg.Load1*100)
 	}
-	if loadavg.Load15*100 > 80 {
+	if PRINTALL || loadavg.Load15*100 > 80 {
 		fmt.Printf("cpu15m <%.0f%%> ", loadavg.Load15*100)
 	}
-	if vmem.UsedPercent > 60 {
+	if PRINTALL || vmem.UsedPercent > 60 {
 		fmt.Printf("mem <%.0f%%> ", vmem.UsedPercent)
 	}
-	if swapmem.UsedPercent > 60 {
+	if PRINTALL || swapmem.UsedPercent > 60 {
 		fmt.Printf("swap <%.0f%%> ", swapmem.UsedPercent)
 	}
 
-	if diskstat.UsedPercent > 60 {
+	if PRINTALL || diskstat.UsedPercent > 60 {
 		fmt.Printf("disk <%.0f%%> ", diskstat.UsedPercent)
 	}
-	if diskread>>10 > 1000 {
+	if PRINTALL || diskread>>10 > 1000 {
 		fmt.Printf("diskread <%dkbps> ", diskread>>10)
 	}
-	if diskwrite>>10 > 1000 {
+	if PRINTALL || diskwrite>>10 > 1000 {
 		fmt.Printf("diskwrite <%dkbps> ", diskwrite>>10)
 	}
 
-	if len(ip4conns) > 20 {
+	if PRINTALL || len(ip4conns) > 20 {
 		fmt.Printf("ip4conns <%d> ", len(ip4conns))
 	}
-	if len(ip6conns) > 20 {
+	if PRINTALL || len(ip6conns) > 20 {
 		fmt.Printf("ip6conns <%d> ", len(ip6conns))
 	}
-	if netrecv>>10 > 1000 {
+	if PRINTALL || netrecv>>10 > 1000 {
 		fmt.Printf("netrecv <%dkbps> ", netrecv>>10)
 	}
-	if netsent>>10 > 1000 {
+	if PRINTALL || netsent>>10 > 1000 {
 		fmt.Printf("netsent <%dkbps> ", netsent>>10)
 	}
 
-	if len(procs) > 150 {
+	if PRINTALL || len(procs) > 150 {
 		fmt.Printf("procs <%d> ", len(procs))
 	}
 
 	uptime := time.Since(boottime).Truncate(time.Minute)
-	if uptime < 100*time.Minute {
+	if PRINTALL || uptime < 100*time.Minute {
 		fmt.Printf("uptime <%s> ", fmtdur(uptime))
 	}
 
