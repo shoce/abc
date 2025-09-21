@@ -2,9 +2,7 @@
 history:
 2019/11/1 v2
 
-GoFmt
-GoBuildNull
-GoBuild
+GoFmt GoBuildNull GoBuild
 GoRun
 */
 
@@ -24,7 +22,9 @@ import (
 	psproc "github.com/shirou/gopsutil/process"
 )
 
-const NL = "\n"
+const (
+	NL = "\n"
+)
 
 func fmtdur(d time.Duration) (s string) {
 	days := d / (time.Minute * 1440)
@@ -70,7 +70,7 @@ func main() {
 	if rootpart == "" {
 		log.Fatal("Could not find root partition device name")
 	}
-	//fmt.Printf("rootpart=%v\n", rootpart)
+	//fmt.Printf("rootpart %s"+NL, rootpart)
 
 	diskcounts1map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
@@ -101,7 +101,7 @@ func main() {
 		diskcounts2 = c
 		break
 	}
-	//fmt.Printf("diskcounts1map=%+v diskcounts1=%+v diskcounts2map=%+v diskcounts2=%+v\n",
+	//fmt.Printf("diskcounts1map %+v diskcounts1 %+v diskcounts2map %+v diskcounts2 %+v"+NL,
 	//	diskcounts1map, diskcounts1, diskcounts2map, diskcounts2)
 	diskread := diskcounts2.ReadBytes - diskcounts1.ReadBytes
 	diskwrite := diskcounts2.WriteBytes - diskcounts1.WriteBytes
@@ -145,67 +145,67 @@ func main() {
 
 	/*
 
-		fmt.Printf("cpu1m=%.0f%% cpu15m=%.0f%% mem=%.0f%% swap=%.0f%%\n",
+		fmt.Printf("cpu1m <%.0f%%> cpu15m <%.0f%%> mem <%.0f%%> swap <%.0f%%>"+NL,
 			loadavg.Load1*100, loadavg.Load15*100, vmem.UsedPercent, swapmem.UsedPercent)
-		fmt.Printf("disk=%.0f%% diskread=%dkbps diskwrite=%dkbps\n",
+		fmt.Printf("disk <%.0f%%> diskread <%dkbps> diskwrite <%dkbps>"+NL,
 			diskstat.UsedPercent, diskread>>10, diskwrite>>10)
-		fmt.Printf("ip4conns=%d ip6conns=%d netrecv=%dkbps netsent=%dkbps\n",
+		fmt.Printf("ip4conns <%d> ip6conns <%d> netrecv <%dkbps> netsent <%dkbps>"+NL,
 			len(ip4conns), len(ip6conns), netrecv>>10, netsent>>10)
-		fmt.Printf("users=%d procs=%d boot=%s\n",
+		fmt.Printf("users <%d> procs <%d> boot <%s>"+NL,
 			len(users), len(procs), boottime.Format("Jan/2"))
 
 	*/
 
 	if loadavg.Load1*100 > 100 {
-		fmt.Printf("cpu1m:%.0f%% ", loadavg.Load1*100)
+		fmt.Printf("cpu1m <%.0f%%> ", loadavg.Load1*100)
 	}
 	if loadavg.Load15*100 > 80 {
-		fmt.Printf("cpu15m:%.0f%% ", loadavg.Load15*100)
+		fmt.Printf("cpu15m <%.0f%%> ", loadavg.Load15*100)
 	}
 	if vmem.UsedPercent > 60 {
-		fmt.Printf("mem:%.0f%% ", vmem.UsedPercent)
+		fmt.Printf("mem <%.0f%%> ", vmem.UsedPercent)
 	}
 	if swapmem.UsedPercent > 60 {
-		fmt.Printf("swap:%.0f%% ", swapmem.UsedPercent)
+		fmt.Printf("swap <%.0f%%> ", swapmem.UsedPercent)
 	}
 
 	if diskstat.UsedPercent > 60 {
-		fmt.Printf("disk:%.0f%% ", diskstat.UsedPercent)
+		fmt.Printf("disk <%.0f%%> ", diskstat.UsedPercent)
 	}
 	if diskread>>10 > 1000 {
-		fmt.Printf("diskread:%dkbps ", diskread>>10)
+		fmt.Printf("diskread <%dkbps> ", diskread>>10)
 	}
 	if diskwrite>>10 > 1000 {
-		fmt.Printf("diskwrite:%dkbps ", diskwrite>>10)
+		fmt.Printf("diskwrite <%dkbps> ", diskwrite>>10)
 	}
 
 	if len(ip4conns) > 20 {
-		fmt.Printf("ip4conns:%d ", len(ip4conns))
+		fmt.Printf("ip4conns <%d> ", len(ip4conns))
 	}
 	if len(ip6conns) > 20 {
-		fmt.Printf("ip6conns:%d ", len(ip6conns))
+		fmt.Printf("ip6conns <%d> ", len(ip6conns))
 	}
 	if netrecv>>10 > 1000 {
-		fmt.Printf("netrecv:%dkbps ", netrecv>>10)
+		fmt.Printf("netrecv <%dkbps> ", netrecv>>10)
 	}
 	if netsent>>10 > 1000 {
-		fmt.Printf("netsent:%dkbps ", netsent>>10)
+		fmt.Printf("netsent <%dkbps> ", netsent>>10)
 	}
 
 	if len(procs) > 150 {
-		fmt.Printf("procs:%d ", len(procs))
+		fmt.Printf("procs <%d> ", len(procs))
 	}
 
 	uptime := time.Since(boottime).Truncate(time.Minute)
 	if uptime < 100*time.Minute {
-		fmt.Printf("uptime:%s ", fmtdur(uptime))
+		fmt.Printf("uptime <%s> ", fmtdur(uptime))
 	}
 
-	fmt.Printf("\n")
+	fmt.Printf(NL)
 
 	for _, u := range users {
 		ustarted := time.Unix(int64(u.Started), 0)
-		fmt.Printf("- user:%s host:%s duration:%s"+NL, u.User, u.Host,
+		fmt.Printf("- user %s host %s duration <%s>"+NL, u.User, u.Host,
 			fmtdur(time.Since(ustarted)),
 		)
 	}
@@ -273,8 +273,8 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("- proc:%s uptime:%s cpu:%.0f%% mem:%.0f%% files:%d conns:%d listens:%v"+NL,
-			pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), plistens,
+		fmt.Printf("- proc %s uptime <%s> cpu <%.0f%%> mem <%.0f%%> files <%d> conns <%d> listens (%s)"+NL,
+			pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), strings.Join(plistens, " "),
 		)
 	}
 
