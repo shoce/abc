@@ -82,6 +82,8 @@ var (
 	VERBOSE bool
 	SILENT  bool
 
+	TERM string
+
 	Proxy       string // proxy chain separated by semicolons
 	ProxyChain  = []string{}
 	ProxyDialer proxy.Dialer
@@ -123,6 +125,10 @@ func init() {
 
 	if os.Getenv("SILENT") != "" {
 		SILENT = true
+	}
+
+	if v := os.Getenv("TERM"); v != "" {
+		TERM = v
 	}
 
 	var err error
@@ -371,23 +377,30 @@ func main() {
 	}
 }
 
+func TermItalic(s string) string {
+	if TERM != "" {
+		return "\033[3m" + s + "\033[23m"
+	}
+	return s
+}
+
 func TermUnderline(s string) string {
-	if os.Getenv("TERM") != "" {
-		return "\033[4m" + s + "\033[0m"
+	if TERM != "" {
+		return "\033[4m" + s + "\033[24m"
 	}
 	return s
 }
 
 func TermInverse(s string) string {
-	if os.Getenv("TERM") != "" {
-		return "\033[7m" + s + "\033[0m"
+	if TERM != "" {
+		return "\033[7m" + s + "\033[27m"
 	}
 	return s
 }
 
 func TermUnderlineInverse(s string) string {
-	if os.Getenv("TERM") != "" {
-		return "\033[4;7m" + s + "\033[0m"
+	if TERM != "" {
+		return "\033[4;7m" + s + "\033[24;27m"
 	}
 	return s
 }

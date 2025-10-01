@@ -38,43 +38,36 @@ const (
 var (
 	VERSION string
 
+	TERM string
+
 	Recursive   bool
 	ShowSymlink bool
 	ShowTime    bool
 	ShowSize    bool
-	ShowMode    bool
+	ShowPerm    bool
 	ShowOwner   bool
 	ShowCid     bool
 )
 
-func seps(i int, e int) string {
-	ee := int(math.Pow(10, float64(e)))
-	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
-	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s.%"+f, seps(i/ee, e), i%ee)
-	}
-}
-
-func ts() string {
-	t := time.Now().UTC()
-	return fmt.Sprintf(
-		"%03d:%02d%02d:%02d%02dZ",
-		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
-	)
-}
-
-func log(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, ts()+" "+msg+NL, args...)
-}
-
 func printinfo(path string, info os.FileInfo) error {
 	var err error
 
-	s := fmt.Sprintf("%s", strings.ReplaceAll(path, TAB, "\\\t"))
+	s := path
+
+	s = strings.ReplaceAll(s, TAB, "\\\t")
 
 	var finfo os.FileInfo = info
+
+	if finfo.Mode().IsDir() {
+		s += string(os.PathSeparator)
+	}
+
+	if fperm := finfo.Mode().Perm(); fperm&0111 != 0 {
+		//s = TermBold(s)
+		s = TermItalic(s)
+		//s = TermUnderline(s)
+	}
+
 	if ShowSymlink && (finfo.Mode()&os.ModeSymlink) != 0 {
 		finfo, err = os.Lstat(path)
 		if err != nil {
@@ -88,12 +81,8 @@ func printinfo(path string, info os.FileInfo) error {
 		s += TAB + fmt.Sprintf("symlink[%s]", linkpath)
 	}
 
-	if finfo.Mode().IsDir() {
-		s += string(os.PathSeparator)
-	}
-
-	if ShowMode {
-		s += TAB + fmt.Sprintf("mode:%04o", finfo.Mode()&os.ModePerm)
+	if ShowPerm {
+		s += TAB + fmt.Sprintf("perm:%04o", finfo.Mode().Perm())
 	}
 
 	if ShowOwner {
@@ -214,6 +203,10 @@ func init() {
 		fmt.Println(VERSION)
 		os.Exit(0)
 	}
+
+	if v := os.Getenv("TERM"); v != "" {
+		TERM = v
+	}
 }
 
 func main() {
@@ -234,7 +227,7 @@ func main() {
 		Recursive = true
 	case "ll":
 		ShowSymlink = true
-		ShowMode = true
+		ShowPerm = true
 		ShowOwner = true
 		//ShowTime = true
 		ShowSize = true
@@ -242,7 +235,7 @@ func main() {
 	case "llr":
 		Recursive = true
 		ShowSymlink = true
-		ShowMode = true
+		ShowPerm = true
 		ShowOwner = true
 		//ShowTime = true
 		ShowSize = true
@@ -258,9 +251,9 @@ func main() {
 		case "-r":
 		case "-recursive":
 			Recursive = true
-		case "-m":
-		case "-mode":
-			ShowMode = true
+		case "-p":
+		case "-perm":
+			ShowPerm = true
 		case "-o":
 		case "-owner":
 			ShowOwner = true
@@ -276,13 +269,13 @@ func main() {
 		case "-l":
 		case "-link":
 			ShowSymlink = true
-			ShowMode = true
+			ShowPerm = true
 			//ShowTime = true
 			ShowSize = true
 			//ShowCid = true
 		case "-1":
 		case "-pathonly":
-			ShowMode = false
+			ShowPerm = false
 			ShowTime = false
 			ShowSize = false
 			ShowCid = false
@@ -305,4 +298,47 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func TermBold(s string) string {
+	if TERM != "" {
+		return "\033[1m" + s + "\033[21m"
+	}
+	return s
+}
+
+func TermItalic(s string) string {
+	if TERM != "" {
+		return "\033[3m" + s + "\033[23m"
+	}
+	return s
+}
+
+func TermUnderline(s string) string {
+	if TERM != "" {
+		return "\033[4m" + s + "\033[24m"
+	}
+	return s
+}
+
+func seps(i, e int) string {
+	ee := int(math.Pow(10, float64(e)))
+	if i < ee {
+		return fmt.Sprintf("%d", i%ee)
+	} else {
+		f := fmt.Sprintf("0%dd", e)
+		return fmt.Sprintf("%s.%"+f, seps(i/ee, e), i%ee)
+	}
+}
+
+func ts() string {
+	t := time.Now().UTC()
+	return fmt.Sprintf(
+		"%03d:%02d%02d:%02d%02d+",
+		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
+	)
+}
+
+func log(msg string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, ts()+" "+msg+NL, args...)
 }
