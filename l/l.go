@@ -248,34 +248,23 @@ func main() {
 			break
 		}
 		switch p {
-		case "-r":
-		case "-recursive":
+		case "-r", "-recursive":
 			Recursive = true
-		case "-p":
-		case "-perm":
+		case "-p", "-perm":
 			ShowPerm = true
-		case "-o":
-		case "-owner":
+		case "-o", "-owner":
 			ShowOwner = true
-		case "-s":
-		case "-size":
+		case "-s", "-size":
 			ShowSize = true
-		case "-t":
-		case "-time":
+		case "-t", "-time":
 			ShowTime = true
-		case "-c":
-		case "-cid":
+		case "-c", "-cid":
 			ShowCid = true
-		case "-l":
-		case "-link":
+		case "-l", "-link":
 			ShowSymlink = true
-			ShowPerm = true
-			//ShowTime = true
-			ShowSize = true
-			//ShowCid = true
-		case "-1":
-		case "-pathonly":
+		case "-1", "-pathonly":
 			ShowPerm = false
+			ShowSymlink = false
 			ShowTime = false
 			ShowSize = false
 			ShowCid = false
