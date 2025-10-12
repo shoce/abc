@@ -1,12 +1,7 @@
 /*
 
-go get -u -v
-go mod tidy
-
-GoFmt
-GoBuildNull
-GoBuild
-GoRun
+GoGet GoFmt GoBuildNull
+GoBuild GoRun
 
 */
 
@@ -17,15 +12,19 @@ import (
 	"net"
 	"os"
 	"strings"
-
-	yaml "gopkg.in/yaml.v3"
 )
 
 const (
-	NL = "\n"
+	SP  = " "
+	TAB = "\t"
+	NL  = "\n"
 
 	ShowLoopback = false
 	ShowDown     = false
+)
+
+var (
+	NETINTERFACES map[string]NetInterface
 )
 
 func main() {
@@ -40,7 +39,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "net.Interfaces(): %v"+NL, err)
 	}
 
-	netinterfaces := make(map[string]NetInterface)
+	NETINTERFACES = make(map[string]NetInterface)
 
 	for _, i = range ii {
 		if len(os.Args) > 1 {
@@ -81,26 +80,33 @@ func main() {
 		}
 
 		for _, a = range aa {
-			ni.Addr = append(ni.Addr, a.String())
+			ni.Addr = append(ni.Addr, fmt.Sprintf("<%s>", a))
 		}
 
-		netinterfaces[ni.Name] = ni
+		NETINTERFACES[ni.Name] = ni
 	}
 
-	ye := yaml.NewEncoder(os.Stdout)
-	defer ye.Close()
-	err = ye.Encode(netinterfaces)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "yaml.Encoder.Encode: %v"+NL, err)
+	for _, ni := range NETINTERFACES {
+		fmt.Printf(
+			"@%s {"+NL+
+				TAB+"@addr ( %s )"+NL+
+				TAB+"@hwaddr <%s>"+NL+
+				TAB+"@up <%t>"+NL+
+				TAB+"@loopback <%t>"+NL+
+				TAB+"@ptp <%t>"+NL+
+				TAB+"@err %v"+NL+
+				"}"+NL,
+			ni.Name, strings.Join(ni.Addr, SP), ni.HwAddr, ni.Up, ni.Loopback, ni.PointToPoint, ni.Error,
+		)
 	}
 }
 
 type NetInterface struct {
-	Name         string   `yaml:"name"`
-	Loopback     bool     `yaml:"loopback"`
-	PointToPoint bool     `yaml:"ptp"`
-	Up           bool     `yaml:"up"`
-	HwAddr       string   `yaml:"hwaddr"`
-	Addr         []string `yaml:"addr"`
-	Error        error    `yaml:"error,omitempty"`
+	Name         string
+	Addr         []string
+	HwAddr       string
+	Up           bool
+	Loopback     bool
+	PointToPoint bool
+	Error        error
 }
