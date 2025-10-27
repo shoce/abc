@@ -178,7 +178,7 @@ func main() {
 			diskstat.UsedPercent, diskread>>10, diskwrite>>10)
 		pout("@ip4conns <%d> @ip6conns <%d> @netrecv <%dkbps> @netsent <%dkbps>"+NL,
 			len(ip4conns), len(ip6conns), netrecv>>10, netsent>>10)
-		pout("@usersn <%d> @procsn <%d> @boot <%s>"+NL,
+		pout("@nusers <%d> @nprocs <%d> @boot <%s>"+NL,
 			len(users), len(procs), boottime.Format("Jan/2"))
 
 	*/
@@ -220,7 +220,7 @@ func main() {
 	}
 
 	if PRINTALL || len(procs) > 150 {
-		pout("@procsn <%d> ", len(procs))
+		pout("@nprocs <%d> ", len(procs))
 	}
 
 	uptime := time.Since(boottime).Truncate(time.Minute)
