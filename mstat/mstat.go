@@ -230,7 +230,10 @@ func main() {
 
 	pout(NL)
 
-	pout("@users (" + NL)
+	pout("@users (")
+	if len(users) > 0 {
+		pout(NL)
+	}
 	for _, u := range users {
 		ustarted := time.Unix(int64(u.Started), 0)
 		pout(TAB+"{ @user %s @host %s @duration <%s> }"+NL, u.User, u.Host,
@@ -239,7 +242,10 @@ func main() {
 	}
 	pout(")" + NL)
 
-	pout("@procs (" + NL)
+	pout("@procs (")
+	if len(procs) > 0 {
+		pout(NL)
+	}
 	for _, p := range procs {
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
