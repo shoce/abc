@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	NL = "\n"
+	TAB = "\t"
+	NL  = "\n"
 )
 
 var (
@@ -177,7 +178,7 @@ func main() {
 			diskstat.UsedPercent, diskread>>10, diskwrite>>10)
 		pout("@ip4conns <%d> @ip6conns <%d> @netrecv <%dkbps> @netsent <%dkbps>"+NL,
 			len(ip4conns), len(ip6conns), netrecv>>10, netsent>>10)
-		pout("@users <%d> @procs <%d> @boot <%s>"+NL,
+		pout("@usersn <%d> @procsn <%d> @boot <%s>"+NL,
 			len(users), len(procs), boottime.Format("Jan/2"))
 
 	*/
@@ -219,7 +220,7 @@ func main() {
 	}
 
 	if PRINTALL || len(procs) > 150 {
-		pout("@procs <%d> ", len(procs))
+		pout("@procsn <%d> ", len(procs))
 	}
 
 	uptime := time.Since(boottime).Truncate(time.Minute)
@@ -229,13 +230,16 @@ func main() {
 
 	pout(NL)
 
+	pout("@users (" + NL)
 	for _, u := range users {
 		ustarted := time.Unix(int64(u.Started), 0)
-		pout("- @user %s @host %s @duration <%s>"+NL, u.User, u.Host,
+		pout(TAB+"{ @user %s @host %s @duration <%s> }"+NL, u.User, u.Host,
 			fmtdur(time.Since(ustarted)),
 		)
 	}
+	pout(")" + NL)
 
+	pout("@procs (" + NL)
 	for _, p := range procs {
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
@@ -305,10 +309,11 @@ func main() {
 			continue
 		}
 
-		pout("- @proc %s @uptime <%s> @cpu <%.0f%%> @mem <%.0f%%> @files <%d> @conns <%d> @listens (%s)"+NL,
+		pout(TAB+"{ @proc %s @uptime <%s> @cpu <%.0f%%> @mem <%.0f%%> @files <%d> @conns <%d> @listens (%s) }"+NL,
 			pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), strings.Join(plistens, " "),
 		)
 	}
+	pout(")" + NL)
 
 }
 
