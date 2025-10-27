@@ -2,7 +2,7 @@
 history:
 2019/11/1 v2
 
-GoFmt GoBuildNull GoBuild
+GoGet GoFmt GoBuildNull GoBuild
 GoRun
 */
 
@@ -10,7 +10,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -51,26 +50,31 @@ func main() {
 
 	loadavg, err := psload.Avg()
 	if err != nil {
-		log.Fatalf("psload.Avg: %s", err)
+		plog("psload.Avg %s", err)
+		os.Exit(1)
 	}
 
 	vmem, err := psmem.VirtualMemory()
 	if err != nil {
-		log.Fatalf("psmem.VirtualMemory: %s", err)
+		plog("psmem.VirtualMemory %s", err)
+		os.Exit(1)
 	}
 	swapmem, err := psmem.SwapMemory()
 	if err != nil {
-		log.Fatalf("psmem.SwapMemory: %s", err)
+		plog("psmem.SwapMemory %s", err)
+		os.Exit(1)
 	}
 
 	diskstat, err := psdisk.Usage("/")
 	if err != nil {
-		log.Fatalf("psdisk.Usage: %s", err)
+		plog("psdisk.Usage %s", err)
+		os.Exit(1)
 	}
 
 	parts, err := psdisk.Partitions(true)
 	if err != nil {
-		log.Fatalf("psdisk.Partitions: %s", err)
+		plog("psdisk.Partitions %s", err)
+		os.Exit(1)
 	}
 	rootpart := ""
 	for _, p := range parts {
@@ -80,28 +84,33 @@ func main() {
 		}
 	}
 	if rootpart == "" {
-		log.Fatal("Could not find root partition device name")
+		plog("Could not find root partition device name")
+		os.Exit(1)
 	}
-	//fmt.Printf("rootpart %s"+NL, rootpart)
+	//pout("@rootpart %s"+NL, rootpart)
 
 	diskcounts1map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
-		log.Fatalf("psdisk.IOCounters: %s", err)
+		plog("psdisk.IOCounters %s", err)
+		os.Exit(1)
 	}
 	netcounts1map, err := psnet.IOCounters(false)
 	if err != nil {
-		log.Fatalf("psnet.IOCounters: %s", err)
+		plog("psnet.IOCounters %s", err)
+		os.Exit(1)
 	}
 
 	time.Sleep(time.Second)
 
 	diskcounts2map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
-		log.Fatalf("psdisk.IOCounters: %s", err)
+		plog("psdisk.IOCounters %s", err)
+		os.Exit(1)
 	}
 	netcounts2map, err := psnet.IOCounters(false)
 	if err != nil {
-		log.Fatalf("psnet.IOCounters: %s", err)
+		plog("psnet.IOCounters %s", err)
+		os.Exit(1)
 	}
 
 	var diskcounts1, diskcounts2 psdisk.IOCountersStat
@@ -113,18 +122,20 @@ func main() {
 		diskcounts2 = c
 		break
 	}
-	//fmt.Printf("diskcounts1map %+v diskcounts1 %+v diskcounts2map %+v diskcounts2 %+v"+NL,
+	//pout("@diskcounts1map %+v @diskcounts1 %+v @diskcounts2map %+v @diskcounts2 %+v"+NL,
 	//	diskcounts1map, diskcounts1, diskcounts2map, diskcounts2)
 	diskread := diskcounts2.ReadBytes - diskcounts1.ReadBytes
 	diskwrite := diskcounts2.WriteBytes - diskcounts1.WriteBytes
 
 	ip4conns, err := psnet.Connections("inet4")
 	if err != nil {
-		log.Fatalf("psnet.Connections: %s", err)
+		plog("psnet.Connections %s", err)
+		os.Exit(1)
 	}
 	ip6conns, err := psnet.Connections("inet6")
 	if err != nil {
-		log.Fatalf("psnet.Connections: %s", err)
+		plog("psnet.Connections %s", err)
+		os.Exit(1)
 	}
 
 	var netcounts1, netcounts2 psnet.IOCountersStat
@@ -141,83 +152,86 @@ func main() {
 
 	users, err := pshost.Users()
 	if err != nil {
-		log.Fatalf("pshost.Users: %s", err)
+		plog("pshost.Users %s", err)
+		os.Exit(1)
 	}
 
 	procs, err := psproc.Processes()
 	if err != nil {
-		log.Fatalf("psproc.Processes: %s", err)
+		plog("psproc.Processes %s", err)
+		os.Exit(1)
 	}
 
 	boottimeunix, err := pshost.BootTime()
 	if err != nil {
-		log.Fatalf("pshost.BootTime: %s", err)
+		plog("pshost.BootTime %s", err)
+		os.Exit(1)
 	}
 	boottime := time.Unix(int64(boottimeunix), 0)
 
 	/*
 
-		fmt.Printf("cpu1m <%.0f%%> cpu15m <%.0f%%> mem <%.0f%%> swap <%.0f%%>"+NL,
+		pout("@cpu1m <%.0f%%> @cpu15m <%.0f%%> @mem <%.0f%%> @swap <%.0f%%>"+NL,
 			loadavg.Load1*100, loadavg.Load15*100, vmem.UsedPercent, swapmem.UsedPercent)
-		fmt.Printf("disk <%.0f%%> diskread <%dkbps> diskwrite <%dkbps>"+NL,
+		pout("@disk <%.0f%%> @diskread <%dkbps> @diskwrite <%dkbps>"+NL,
 			diskstat.UsedPercent, diskread>>10, diskwrite>>10)
-		fmt.Printf("ip4conns <%d> ip6conns <%d> netrecv <%dkbps> netsent <%dkbps>"+NL,
+		pout("@ip4conns <%d> @ip6conns <%d> @netrecv <%dkbps> @netsent <%dkbps>"+NL,
 			len(ip4conns), len(ip6conns), netrecv>>10, netsent>>10)
-		fmt.Printf("users <%d> procs <%d> boot <%s>"+NL,
+		pout("@users <%d> @procs <%d> @boot <%s>"+NL,
 			len(users), len(procs), boottime.Format("Jan/2"))
 
 	*/
 
 	if PRINTALL || loadavg.Load1*100 > 100 {
-		fmt.Printf("cpu1m <%.0f%%> ", loadavg.Load1*100)
+		pout("@cpu1m <%.0f%%> ", loadavg.Load1*100)
 	}
 	if PRINTALL || loadavg.Load15*100 > 80 {
-		fmt.Printf("cpu15m <%.0f%%> ", loadavg.Load15*100)
+		pout("@cpu15m <%.0f%%> ", loadavg.Load15*100)
 	}
 	if PRINTALL || vmem.UsedPercent > 60 {
-		fmt.Printf("mem <%.0f%%> ", vmem.UsedPercent)
+		pout("@mem <%.0f%%> ", vmem.UsedPercent)
 	}
 	if PRINTALL || swapmem.UsedPercent > 60 {
-		fmt.Printf("swap <%.0f%%> ", swapmem.UsedPercent)
+		pout("@swap <%.0f%%> ", swapmem.UsedPercent)
 	}
 
 	if PRINTALL || diskstat.UsedPercent > 60 {
-		fmt.Printf("disk <%.0f%%> ", diskstat.UsedPercent)
+		pout("@disk <%.0f%%> ", diskstat.UsedPercent)
 	}
 	if PRINTALL || diskread>>10 > 1000 {
-		fmt.Printf("diskread <%dkbps> ", diskread>>10)
+		pout("@diskread <%dkbps> ", diskread>>10)
 	}
 	if PRINTALL || diskwrite>>10 > 1000 {
-		fmt.Printf("diskwrite <%dkbps> ", diskwrite>>10)
+		pout("@diskwrite <%dkbps> ", diskwrite>>10)
 	}
 
 	if PRINTALL || len(ip4conns) > 20 {
-		fmt.Printf("ip4conns <%d> ", len(ip4conns))
+		pout("@ip4conns <%d> ", len(ip4conns))
 	}
 	if PRINTALL || len(ip6conns) > 20 {
-		fmt.Printf("ip6conns <%d> ", len(ip6conns))
+		pout("@ip6conns <%d> ", len(ip6conns))
 	}
 	if PRINTALL || netrecv>>10 > 1000 {
-		fmt.Printf("netrecv <%dkbps> ", netrecv>>10)
+		pout("@netrecv <%dkbps> ", netrecv>>10)
 	}
 	if PRINTALL || netsent>>10 > 1000 {
-		fmt.Printf("netsent <%dkbps> ", netsent>>10)
+		pout("@netsent <%dkbps> ", netsent>>10)
 	}
 
 	if PRINTALL || len(procs) > 150 {
-		fmt.Printf("procs <%d> ", len(procs))
+		pout("@procs <%d> ", len(procs))
 	}
 
 	uptime := time.Since(boottime).Truncate(time.Minute)
 	if PRINTALL || uptime < 100*time.Minute {
-		fmt.Printf("uptime <%s> ", fmtdur(uptime))
+		pout("@uptime <%s> ", fmtdur(uptime))
 	}
 
-	fmt.Printf(NL)
+	pout(NL)
 
 	for _, u := range users {
 		ustarted := time.Unix(int64(u.Started), 0)
-		fmt.Printf("- user %s host %s duration <%s>"+NL, u.User, u.Host,
+		pout("- @user %s @host %s @duration <%s>"+NL, u.User, u.Host,
 			fmtdur(time.Since(ustarted)),
 		)
 	}
@@ -225,29 +239,35 @@ func main() {
 	for _, p := range procs {
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
-			log.Fatalf("p.CreateTime: %s", err)
+			plog("p.CreateTime %s", err)
+			os.Exit(1)
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 		pcpu, err := p.CPUPercent()
 		if err != nil {
-			log.Fatalf("p.CPUPercent: %s", err)
+			plog("p.CPUPercent %s", err)
+			os.Exit(1)
 		}
 		pmem, err := p.MemoryPercent()
 		if err != nil {
-			log.Fatalf("p.MemoryPercent: %s", err)
+			plog("p.MemoryPercent %s", err)
+			os.Exit(1)
 		}
 		pname, err := p.Name()
 		if err != nil {
-			log.Fatalf("p.Name: %s", err)
+			plog("p.Name %s", err)
+			os.Exit(1)
 		}
 		pfiles, err := p.OpenFiles()
 		if err != nil {
-			log.Fatalf("p.OpenFiles: %s", err)
+			plog("p.OpenFiles %s", err)
+			os.Exit(1)
 		}
 
 		pconns, err := p.Connections()
 		if err != nil {
-			log.Fatalf("p.Connections: %s", err)
+			plog("p.Connections %s", err)
+			os.Exit(1)
 		}
 
 		var plistens []string
@@ -285,9 +305,17 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("- proc %s uptime <%s> cpu <%.0f%%> mem <%.0f%%> files <%d> conns <%d> listens (%s)"+NL,
+		pout("- @proc %s @uptime <%s> @cpu <%.0f%%> @mem <%.0f%%> @files <%d> @conns <%d> @listens (%s)"+NL,
 			pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), strings.Join(plistens, " "),
 		)
 	}
 
+}
+
+func pout(text string, args ...interface{}) (int, error) {
+	return fmt.Printf(text, args...)
+}
+
+func plog(text string, args ...interface{}) (int, error) {
+	return fmt.Fprintf(os.Stderr, text, args...)
 }
