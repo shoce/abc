@@ -51,30 +51,30 @@ func main() {
 
 	loadavg, err := psload.Avg()
 	if err != nil {
-		plog("psload.Avg %s", err)
+		perr("psload.Avg %s", err)
 		os.Exit(1)
 	}
 
 	vmem, err := psmem.VirtualMemory()
 	if err != nil {
-		plog("psmem.VirtualMemory %s", err)
+		perr("psmem.VirtualMemory %s", err)
 		os.Exit(1)
 	}
 	swapmem, err := psmem.SwapMemory()
 	if err != nil {
-		plog("psmem.SwapMemory %s", err)
+		perr("psmem.SwapMemory %s", err)
 		os.Exit(1)
 	}
 
 	diskstat, err := psdisk.Usage("/")
 	if err != nil {
-		plog("psdisk.Usage %s", err)
+		perr("psdisk.Usage %s", err)
 		os.Exit(1)
 	}
 
 	parts, err := psdisk.Partitions(true)
 	if err != nil {
-		plog("psdisk.Partitions %s", err)
+		perr("psdisk.Partitions %s", err)
 		os.Exit(1)
 	}
 	rootpart := ""
@@ -85,19 +85,19 @@ func main() {
 		}
 	}
 	if rootpart == "" {
-		plog("Could not find root partition device name")
+		perr("Could not find root partition device name")
 		os.Exit(1)
 	}
 	//pout("@rootpart %s"+NL, rootpart)
 
 	diskcounts1map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
-		plog("psdisk.IOCounters %s", err)
+		perr("psdisk.IOCounters %s", err)
 		os.Exit(1)
 	}
 	netcounts1map, err := psnet.IOCounters(false)
 	if err != nil {
-		plog("psnet.IOCounters %s", err)
+		perr("psnet.IOCounters %s", err)
 		os.Exit(1)
 	}
 
@@ -105,12 +105,12 @@ func main() {
 
 	diskcounts2map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
-		plog("psdisk.IOCounters %s", err)
+		perr("psdisk.IOCounters %s", err)
 		os.Exit(1)
 	}
 	netcounts2map, err := psnet.IOCounters(false)
 	if err != nil {
-		plog("psnet.IOCounters %s", err)
+		perr("psnet.IOCounters %s", err)
 		os.Exit(1)
 	}
 
@@ -130,12 +130,12 @@ func main() {
 
 	ip4conns, err := psnet.Connections("inet4")
 	if err != nil {
-		plog("psnet.Connections %s", err)
+		perr("psnet.Connections %s", err)
 		os.Exit(1)
 	}
 	ip6conns, err := psnet.Connections("inet6")
 	if err != nil {
-		plog("psnet.Connections %s", err)
+		perr("psnet.Connections %s", err)
 		os.Exit(1)
 	}
 
@@ -153,19 +153,19 @@ func main() {
 
 	users, err := pshost.Users()
 	if err != nil {
-		plog("pshost.Users %s", err)
+		perr("pshost.Users %s", err)
 		os.Exit(1)
 	}
 
 	procs, err := psproc.Processes()
 	if err != nil {
-		plog("psproc.Processes %s", err)
+		perr("psproc.Processes %s", err)
 		os.Exit(1)
 	}
 
 	boottimeunix, err := pshost.BootTime()
 	if err != nil {
-		plog("pshost.BootTime %s", err)
+		perr("pshost.BootTime %s", err)
 		os.Exit(1)
 	}
 	boottime := time.Unix(int64(boottimeunix), 0)
@@ -249,34 +249,34 @@ func main() {
 	for _, p := range procs {
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
-			plog("p.CreateTime %s", err)
+			perr("p.CreateTime %s", err)
 			os.Exit(1)
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 		pcpu, err := p.CPUPercent()
 		if err != nil {
-			plog("p.CPUPercent %s", err)
+			perr("p.CPUPercent %s", err)
 			os.Exit(1)
 		}
 		pmem, err := p.MemoryPercent()
 		if err != nil {
-			plog("p.MemoryPercent %s", err)
+			perr("p.MemoryPercent %s", err)
 			os.Exit(1)
 		}
 		pname, err := p.Name()
 		if err != nil {
-			plog("p.Name %s", err)
+			perr("p.Name %s", err)
 			os.Exit(1)
 		}
 		pfiles, err := p.OpenFiles()
 		if err != nil {
-			plog("p.OpenFiles %s", err)
+			perr("p.OpenFiles %s", err)
 			os.Exit(1)
 		}
 
 		pconns, err := p.Connections()
 		if err != nil {
-			plog("p.Connections %s", err)
+			perr("p.Connections %s", err)
 			os.Exit(1)
 		}
 
@@ -308,10 +308,10 @@ func main() {
 			plistens = append(plistens, fmt.Sprintf("%s/%s", claddr, craddr))
 		}
 
-		if puptime > 10*time.Minute {
+		if !PRINTALL && puptime > 10*time.Minute {
 			continue
 		}
-		if pcpu < 20 && pmem < 20 && len(pfiles) < 100 && len(pconns) < 100 && len(plistens) == 0 {
+		if !PRINTALL && pcpu < 20 && pmem < 20 && len(pfiles) < 100 && len(pconns) < 100 && len(plistens) == 0 {
 			continue
 		}
 
@@ -327,6 +327,6 @@ func pout(text string, args ...interface{}) (int, error) {
 	return fmt.Printf(text, args...)
 }
 
-func plog(text string, args ...interface{}) (int, error) {
+func perr(text string, args ...interface{}) (int, error) {
 	return fmt.Fprintf(os.Stderr, text, args...)
 }
