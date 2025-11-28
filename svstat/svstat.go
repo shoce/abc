@@ -1,7 +1,7 @@
 /*
 history: 2015-1210 v1
 
-GoFmt
+GoFmt GoBuildNull
 GoBuild
 GoRun /etc/service/*
 */
@@ -22,12 +22,12 @@ const (
 	UP     = "up"
 	FINISH = "finish"
 
-	NORMALLY_DOWN = "normally down"
-	NORMALLY_UP   = "normally up"
+	NORMALLY_DOWN = "normally-down"
+	NORMALLY_UP   = "normally-up"
 	PAUSED        = "paused"
-	WANT_UP       = "want up"
-	WANT_DOWN     = "want down"
-	GOT_TERM      = "got term"
+	WANT_UP       = "want-up"
+	WANT_DOWN     = "want-down"
+	GOT_TERM      = "got-term"
 
 	START     = "u"
 	PAUSE     = "p"
@@ -78,13 +78,13 @@ func (s Service) DownPath() string {
 func (s Service) WriteControl(c string) error {
 	f, err := os.OpenFile(s.ControlPath(), os.O_WRONLY, os.ModeNamedPipe)
 	if err != nil {
-		return fmt.Errorf("os.OpenFile `%s`: %s", s.ControlPath(), err)
+		return fmt.Errorf("os.OpenFile %s %s", s.ControlPath(), err)
 	}
 	b := []byte(c)
 	n, err := f.Write(b)
 	if err != nil {
 		f.Close()
-		return fmt.Errorf("File.Write: %s", err)
+		return fmt.Errorf("File.Write %s", err)
 	}
 	if n != len(b) {
 		f.Close()
@@ -92,7 +92,7 @@ func (s Service) WriteControl(c string) error {
 	}
 	err = f.Close()
 	if err != nil {
-		return fmt.Errorf("File.Close: %s", err)
+		return fmt.Errorf("File.Close %s", err)
 	}
 	return nil
 }
@@ -105,21 +105,21 @@ func (s *Service) ReadStatus() error {
 	b := make([]byte, 20)
 	f, err := os.Open(s.StatusPath())
 	if err != nil {
-		return fmt.Errorf("os.Open `%s`: %s", s.StatusPath(), err)
+		return fmt.Errorf("os.Open %s %s", s.StatusPath(), err)
 	}
 	n, err := f.Read(b)
 	if err != nil {
 		f.Close()
-		return fmt.Errorf("File.Read: %s", err)
+		return fmt.Errorf("File.Read %s", err)
 	}
 	err = f.Close()
 	if err != nil {
-		return fmt.Errorf("File.Close: %s", err)
+		return fmt.Errorf("File.Close %s", err)
 	}
 
 	//fmt.Fprintf(os.Stderr, "% x\n", b)
 	if n < 18 {
-		return fmt.Errorf("Service.Read returned %d bytes: %s", n, err)
+		return fmt.Errorf("Service.Read returned %d bytes %s", n, err)
 	}
 	s.Seconds = int64(binary.BigEndian.Uint64(b[0:8]))
 	now := time.Now().UTC().Unix() + EPOCH
@@ -181,11 +181,10 @@ func main() {
 		s := Service{Path: sp}
 		err := s.ReadStatus()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Service.ReadStatus: %s\n", err)
+			fmt.Fprintf(os.Stderr, "ERROR Service.ReadStatus %s\n", err)
 			os.Exit(1)
 		}
-		//fmt.Fprintf(os.Stderr, "%+v\n", s)
-		//fmt.Printf("%s: %s (pid %d) %d seconds, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
-		fmt.Printf("path=%s status=%s pid=%d seconds=%d action=%s"+NL, s.Path, s.Status, s.PID, s.Seconds, s.Action)
+		//fmt.Printf("%s %s pid<%d> <%ds>, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
+		fmt.Printf("path %s status %s pid <%d> seconds <%ds> action %s"+NL, s.Path, s.Status, s.PID, s.Seconds, s.Action)
 	}
 }
