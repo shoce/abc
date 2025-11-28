@@ -184,7 +184,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "ERROR Service.ReadStatus %s\n", err)
 			os.Exit(1)
 		}
-		//fmt.Printf("%s %s pid<%d> <%ds>, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
-		fmt.Printf("path %s status %s pid <%d> seconds <%ds> action %s"+NL, s.Path, s.Status, s.PID, s.Seconds, s.Action)
+		//fmt.Printf("%s: %s pid<%d> <%ds>, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
+		fmt.Printf(
+			"path[%s] status[%s] pid<%d> seconds<%dh%dm%ds> action[%s]"+NL,
+			s.Path, s.Status, s.PID,
+			s.Seconds/3600, (s.Seconds%3600)/60, s.Seconds%60,
+			s.Action,
+		)
 	}
 }
