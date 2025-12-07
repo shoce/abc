@@ -435,7 +435,7 @@ func logstatus() {
 	if Status != "" {
 		s = TermInverse(s)
 	}
-	s += fmt.Sprintf(" Hostname=%s Host=%s User=%s hs ; ", Hostname, Host, User)
+	s += fmt.Sprintf(" Hostname=%s Host=%s User=%s hs -- ", Hostname, Host, User)
 	s = TermUnderline(s)
 	log(s)
 }
@@ -601,7 +601,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	}
 
 	if !SILENT {
-		log(fmt.Sprintf("Host=%s User=%s hs -- %s: ", Host, User, cmds))
+		log(fmt.Sprintf("Host=%s User=%s hs -- %s ", Host, User, cmds))
 	}
 
 	copyoutnotify := make(chan error)
