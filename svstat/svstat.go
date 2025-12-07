@@ -186,7 +186,7 @@ func main() {
 		}
 		//fmt.Printf("%s: %s pid<%d> <%ds>, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
 		fmt.Printf(
-			"path[%s] status[%s] pid<%d> seconds<%dd%ds> action[%s]"+NL,
+			"path[%s] status[%s] pid<%d> seconds<%dd.%ds> action[%s]"+NL,
 			s.Path, s.Status, s.PID,
 			s.Seconds/(24*3600), s.Seconds%(24*3600),
 			s.Action,

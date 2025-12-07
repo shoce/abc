@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.1
 
 require (
-	github.com/ipfs/go-cid v0.5.0
+	github.com/ipfs/go-cid v0.6.0
 	github.com/multiformats/go-multihash v0.2.3
 )
 
@@ -18,7 +18,7 @@ require (
 	github.com/multiformats/go-multibase v0.2.0 // indirect
 	github.com/multiformats/go-varint v0.1.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
