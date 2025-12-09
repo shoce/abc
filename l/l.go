@@ -110,13 +110,13 @@ func printinfo(path string, info os.FileInfo) error {
 	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink == 0) {
 		f, err := os.Open(path)
 		if err != nil {
-			log("%v", err)
+			perr("%v", err)
 			return err
 		}
 		defer f.Close()
 		fmh, err := mh.SumStream(f, mh.SHA2_256, -1)
 		if err != nil {
-			log("%v", err)
+			perr("%v", err)
 			return err
 		}
 		c := cid.NewCidV1(cid.Raw, fmh)
@@ -129,20 +129,20 @@ func printinfo(path string, info os.FileInfo) error {
 
 func fls(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		log("%v", err)
+		perr("%v", err)
 		return err
 	}
 	if err2 := printinfo(path, info); err2 != nil {
-		log("%v", err2)
+		perr("%v", err2)
 		return err2
 	}
 	return nil
 }
 
 func list(path string) error {
-	var listcontents bool
+	var listdir bool
 	if strings.HasSuffix(path, "/") {
-		listcontents = true
+		listdir = true
 	}
 
 	path, err := filepath.Abs(path)
@@ -167,10 +167,10 @@ func list(path string) error {
 		if err != nil {
 			return err
 		}
-		if !linktargetstat.Mode().IsDir() && listcontents {
+		if !linktargetstat.Mode().IsDir() && listdir {
 			return fmt.Errorf("%s symblink[%s] is not a dir", path, linktargetpath)
 		}
-	} else if !pathstat.Mode().IsDir() && listcontents {
+	} else if !pathstat.Mode().IsDir() && listdir {
 		return fmt.Errorf("%s is not a dir", path)
 	}
 
@@ -179,7 +179,11 @@ func list(path string) error {
 		if err != nil {
 			return err
 		}
-	} else if listcontents {
+	} else if listdir {
+		if err := printinfo(path, pathstat); err != nil {
+			return err
+		}
+
 		ff, err := ioutil.ReadDir(path)
 		if err != nil {
 			return err
@@ -191,7 +195,6 @@ func list(path string) error {
 		}
 	} else {
 		if err := printinfo(path, pathstat); err != nil {
-			log("%v", err)
 			return err
 		}
 	}
@@ -270,7 +273,7 @@ func main() {
 			ShowCid = false
 			ShowOwner = false
 		default:
-			log("invalid option [%s]", p)
+			perr("invalid option [%s]", p)
 			os.Exit(1)
 		}
 		paths = paths[1:]
@@ -283,7 +286,7 @@ func main() {
 	for _, p := range paths {
 		err = list(p)
 		if err != nil {
-			log("%v", err)
+			perr("%v", err)
 			os.Exit(1)
 		}
 	}
@@ -328,6 +331,6 @@ func ts() string {
 	)
 }
 
-func log(msg string, args ...interface{}) {
+func perr(msg string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, ts()+" "+msg+NL, args...)
 }
