@@ -114,33 +114,21 @@ func print() {
 	diskgauge := (strings.Repeat("=", diskpercent/VisualRatio) +
 		strings.Repeat("-", 100/VisualRatio-diskpercent/VisualRatio))
 
-	uptimes, err := pshost.Uptime()
+	uptime, err := pshost.Uptime()
 	if err != nil {
 		log("pshost.Uptime: %v", err)
 		os.Exit(1)
 	}
-	uptime := time.Duration(uptimes) * time.Second
-	uptimedays, uptime := uptime/(24*time.Hour), uptime%(24*time.Hour)
-	uptimeweeks, uptimedays := uptimedays/7, uptimedays%7
-	uptimeweeksdays := ""
-	if uptimeweeks > 0 {
-		uptimeweeksdays += fmt.Sprintf("%dw", uptimeweeks)
-	}
-	if uptimedays > 0 {
-		uptimeweeksdays += fmt.Sprintf("%dd", uptimedays)
-	}
-	if uptimeweeksdays != "" {
-		uptimeweeksdays += "."
-	}
+	uptimedays, uptimesecs := uptime/(24*3600), uptime%(24*3600)
 
 	fmt.Printf(
-		"%s %s"+TAB+"cpu%s%d mem%s%dgb swap%s%dgb disk%s%dgb uptime:%s%s"+NL,
+		"%s %s"+TAB+"cpu%s%d mem%s%dgb swap%s%dgb disk%s%dgb uptime<%dd.%ds>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, memsizegb,
 		swapgauge, swapsizegb,
 		diskgauge, disksizegb,
-		uptimeweeksdays, uptime,
+		uptimedays, uptimesecs,
 	)
 }
 
