@@ -18,10 +18,10 @@ import (
 	"strings"
 	"time"
 
-	pscpu "github.com/shirou/gopsutil/v3/cpu"
-	psdisk "github.com/shirou/gopsutil/v3/disk"
-	pshost "github.com/shirou/gopsutil/v3/host"
-	psmem "github.com/shirou/gopsutil/v3/mem"
+	pscpu "github.com/shirou/gopsutil/v4/cpu"
+	psdisk "github.com/shirou/gopsutil/v4/disk"
+	pshost "github.com/shirou/gopsutil/v4/host"
+	psmem "github.com/shirou/gopsutil/v4/mem"
 )
 
 const (
@@ -42,14 +42,13 @@ var (
 
 func tsnow() string {
 	t := time.Now().Local()
-	ts := fmt.Sprintf(
-		"%03d:"+"%02d%02d:"+"%02d%02d",
+	return fmt.Sprintf(
+		"%03d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
-	return ts
 }
 
-func log(msg string, args ...interface{}) {
+func perr(msg string, args ...interface{}) {
 	ts := tsnow()
 	if len(args) == 0 {
 		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
@@ -67,7 +66,7 @@ func print() {
 	}
 	cpupercents, err := pscpu.Percent(cpuInterval, false)
 	if err != nil {
-		log("pscpu.Percent: %v", err)
+		perr("pscpu.Percent %v", err)
 		os.Exit(1)
 	}
 	cpupercent := int(cpupercents[0])
@@ -75,13 +74,13 @@ func print() {
 		strings.Repeat("-", 100/VisualRatio-cpupercent/VisualRatio))
 	cpunumber, err := pscpu.Counts(false)
 	if err != nil {
-		log("pscpu.Counts: %v", err)
+		perr("pscpu.Counts %v", err)
 		os.Exit(1)
 	}
 
 	mem, err := psmem.VirtualMemory()
 	if err != nil {
-		log("psmem.VirtualMemory: %v", err)
+		perr("psmem.VirtualMemory %v", err)
 		os.Exit(1)
 	}
 	memsizegb := int(mem.Total / (1 << 30))
@@ -91,7 +90,7 @@ func print() {
 
 	swap, err := psmem.SwapMemory()
 	if err != nil {
-		log("psmem.SwapMemory: %v", err)
+		perr("psmem.SwapMemory %v", err)
 		os.Exit(1)
 	}
 	swapsizegb := int(swap.Total / (1 << 30))
@@ -106,7 +105,7 @@ func print() {
 
 	disk, err := psdisk.Usage("/")
 	if err != nil {
-		log("psdisk.Usage: %v", err)
+		perr("psdisk.Usage %v", err)
 		os.Exit(1)
 	}
 	disksizegb := int(disk.Total / (1 << 30))
@@ -116,7 +115,7 @@ func print() {
 
 	uptime, err := pshost.Uptime()
 	if err != nil {
-		log("pshost.Uptime: %v", err)
+		perr("pshost.Uptime %v", err)
 		os.Exit(1)
 	}
 	uptimedays, uptimesecs := uptime/(24*3600), uptime%(24*3600)
@@ -144,7 +143,7 @@ func main() {
 
 	Hostname, err = os.Hostname()
 	if err != nil {
-		log("Hostname: %v", err)
+		perr("Hostname %v", err)
 		os.Exit(1)
 	}
 	//Hostname = strings.TrimSuffix(Hostname, ".local")
@@ -155,7 +154,7 @@ func main() {
 	if len(os.Args) > 1 {
 		ri, err := strconv.Atoi(os.Args[1])
 		if err != nil {
-			log("invalid integer `%s` for repeat interval in seconds", os.Args[1])
+			perr("invalid integer [%s] for repeat interval in seconds", os.Args[1])
 			os.Exit(1)
 		}
 		PollInterval = time.Duration(ri) * time.Second
@@ -163,7 +162,7 @@ func main() {
 		if len(os.Args) > 2 {
 			tl, err := strconv.Atoi(os.Args[2])
 			if err != nil {
-				log("invalid integer `%s` for time limit in seconds", os.Args[2])
+				perr("invalid integer [%s] for time limit in seconds", os.Args[2])
 				os.Exit(1)
 			}
 			TimeLimit = time.Duration(tl) * time.Second
