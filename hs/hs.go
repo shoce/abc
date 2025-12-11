@@ -435,7 +435,7 @@ func logstatus() {
 	if Status != "" {
 		s = TermInverse(s)
 	}
-	s += fmt.Sprintf(" Hostname[%s] Host[%s] User[%s] hs -- ", Hostname, Host, User)
+	s += fmt.Sprintf(" Hostname[%s] Host=%s User=%s hs -- ", Hostname, Host, User)
 	s = TermUnderline(s)
 	log(s)
 }
