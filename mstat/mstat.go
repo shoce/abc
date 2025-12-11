@@ -1,10 +1,9 @@
 /*
 history:
 2019/11/1 v2
-
-GoGet GoFmt GoBuildNull GoBuild
-GoRun
 */
+
+// GoGet GoFmt GoBuildNull GoBuild GoRun
 
 package main
 
@@ -14,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	psdisk "github.com/shirou/gopsutil/disk"
-	pshost "github.com/shirou/gopsutil/host"
-	psload "github.com/shirou/gopsutil/load"
-	psmem "github.com/shirou/gopsutil/mem"
-	psnet "github.com/shirou/gopsutil/net"
-	psproc "github.com/shirou/gopsutil/process"
+	psdisk "github.com/shirou/gopsutil/v4/disk"
+	pshost "github.com/shirou/gopsutil/v4/host"
+	psload "github.com/shirou/gopsutil/v4/load"
+	psmem "github.com/shirou/gopsutil/v4/mem"
+	psnet "github.com/shirou/gopsutil/v4/net"
+	psproc "github.com/shirou/gopsutil/v4/process"
 )
 
 const (

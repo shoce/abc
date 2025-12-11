@@ -1,9 +1,9 @@
 /*
 history:
 20/1123 v1
-
-GoFmt GoBuild GoRelease
 */
+
+// GoGet GoFmt GoBuildNull GoBuild GoRun
 
 package main
 
@@ -15,10 +15,11 @@ import (
 	"strings"
 	"time"
 
-	psproc "github.com/shirou/gopsutil/process"
+	psproc "github.com/shirou/gopsutil/v4/process"
 )
 
 const (
+	SP = " "
 	NL = "\n"
 )
 
@@ -58,19 +59,19 @@ func main() {
 	for _, p := range procs {
 		pname, err := p.Name()
 		if err != nil {
-			//log.Fatalf("p.Name: %s", err)
+			//log.Fatalf("p.Name %s", err)
 			pname = ""
 		}
 
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
-			log.Fatalf("p.CreateTime: %s", err)
+			log.Fatalf("p.CreateTime %s", err)
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 
 		pconns, err := p.Connections()
 		if err != nil {
-			log.Fatalf("p.Connections: %s", err)
+			log.Fatalf("p.Connections %s", err)
 		}
 
 		sort.Slice(pconns, func(i, j int) bool {
@@ -141,8 +142,10 @@ func main() {
 		}
 
 		fmt.Printf(
-			"/proc/%d %s uptime=%s listens=%v"+NL,
-			p.Pid, pname, fmtdur(puptime), plistens,
+			"pid <%d> name [%s] uptime <%s> listens (%v)"+NL,
+			p.Pid, pname,
+			fmtdur(puptime),
+			strings.Join(plistens, SP),
 		)
 	}
 }
