@@ -1,7 +1,5 @@
-/*
-GoGet GoFmt GoBuildNull
-GoBuild
-*/
+// GoGet GoFmt GoBuildNull
+// GoBuild
 
 package main
 
@@ -33,24 +31,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	ipaddr := os.Args[1]
-	requrl := fmt.Sprintf("https://ipinfo.io/%s/json", ipaddr)
+	for _, ipaddr := range os.Args[1:] {
 
-	resp, err := http.Get(requrl)
-	if err != nil {
-		fmt.Println("error http.Get:", err)
-		os.Exit(1)
+		requrl := fmt.Sprintf("https://ipinfo.io/%s/json", ipaddr)
+
+		resp, err := http.Get(requrl)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR http.Get [%s] %v"+NL, requrl, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		var ipinfo IPInfo
+		if err := json.NewDecoder(resp.Body).Decode(&ipinfo); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR json.Decode %v"+NL, err)
+			continue
+		}
+
+		fmt.Printf(
+			"@ip <%s> @country [%s] @region [%s] @org [%s]"+NL,
+			ipaddr, ipinfo.Country, ipinfo.Region, ipinfo.Org,
+		)
+
 	}
-	defer resp.Body.Close()
-
-	var ipinfo IPInfo
-	if err := json.NewDecoder(resp.Body).Decode(&ipinfo); err != nil {
-		fmt.Println("error json.Decode:", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf(
-		"ip <%s> country [%s] region [%s] org [%s]"+NL,
-		ipaddr, ipinfo.Country, ipinfo.Region, ipinfo.Org,
-	)
 }
