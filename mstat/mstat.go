@@ -255,28 +255,28 @@ func main() {
 		pcpu, err := p.CPUPercent()
 		if err != nil {
 			perr("p.CPUPercent %s", err)
-			os.Exit(1)
+			continue
 		}
 		pmem, err := p.MemoryPercent()
 		if err != nil {
 			perr("p.MemoryPercent %s", err)
-			os.Exit(1)
+			continue
 		}
 		pname, err := p.Name()
 		if err != nil {
 			perr("p.Name %s", err)
-			os.Exit(1)
+			continue
 		}
 		pfiles, err := p.OpenFiles()
 		if err != nil {
 			perr("p.OpenFiles %s", err)
-			os.Exit(1)
+			continue
 		}
 
 		pconns, err := p.Connections()
 		if err != nil {
 			perr("p.Connections %s", err)
-			os.Exit(1)
+			continue
 		}
 
 		var plistens []string
