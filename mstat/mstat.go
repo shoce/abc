@@ -332,5 +332,5 @@ func pout(text string, args ...interface{}) (int, error) {
 }
 
 func perr(text string, args ...interface{}) (int, error) {
-	return fmt.Fprintf(os.Stderr, text, args...)
+	return fmt.Fprintf(os.Stderr, text+NL, args...)
 }
