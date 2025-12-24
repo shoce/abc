@@ -27,18 +27,12 @@ var (
 	VERSION string
 )
 
-func fmtdur(d time.Duration) string {
-	days := d / (time.Minute * 1440)
-	mins := d % (time.Minute * 1440) / time.Minute
-	s := ""
-	if mins > 0 {
-		s = fmt.Sprintf("%dm%s", mins, s)
-	}
+func fmtdur(d time.Duration) (s string) {
+	days := d / (time.Hour * 24)
+	secs := d % (time.Hour * 24) / time.Second
+	s = fmt.Sprintf("%ds", secs)
 	if days > 0 {
-		s = fmt.Sprintf("%dd%s", days, s)
-	}
-	if s == "" {
-		s = "0m"
+		s = fmt.Sprintf("%dd", days) + s
 	}
 	return s
 }
@@ -109,6 +103,7 @@ func main() {
 			if craddr != "" {
 				l += "/" + craddr
 			}
+			l = "[" + l + "]"
 			add := true
 			for _, p := range plistens {
 				if l == p {
@@ -142,7 +137,7 @@ func main() {
 		}
 
 		fmt.Printf(
-			"pid <%d> name [%s] uptime <%s> listens (%v)"+NL,
+			"@pid <%d> @name [%s] @uptime <%s> @listens (%v)"+NL,
 			p.Pid, pname,
 			fmtdur(puptime),
 			strings.Join(plistens, SP),

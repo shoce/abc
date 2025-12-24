@@ -31,9 +31,9 @@ var (
 )
 
 func fmtdur(d time.Duration) (s string) {
-	days := d / (time.Minute * 1440)
-	mins := d % (time.Minute * 1440) / time.Minute
-	s = fmt.Sprintf("%dm", mins)
+	days := d / (time.Hour * 24)
+	secs := d % (time.Hour * 24) / time.Second
+	s = fmt.Sprintf("%ds", secs)
 	if days > 0 {
 		s = fmt.Sprintf("%dd", days) + s
 	}
@@ -304,7 +304,12 @@ func main() {
 			if c.Raddr.Port != 0 {
 				craddr = fmt.Sprintf("%s:%d", craddr, c.Raddr.Port)
 			}
-			plistens = append(plistens, fmt.Sprintf("%s/%s", claddr, craddr))
+			pl := claddr
+			if craddr != "" {
+				pl += "/" + craddr
+			}
+			pl = "[" + pl + "]"
+			plistens = append(plistens, pl)
 		}
 
 		if !PRINTALL && puptime > 10*time.Minute {
