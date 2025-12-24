@@ -1,10 +1,9 @@
 /*
 history: 2015-1210 v1
-
-GoFmt GoBuildNull
-GoBuild
-GoRun /etc/service/*
 */
+
+// GoFmt GoBuildNull GoBuild
+// GoRun /etc/service/*
 
 package main
 
@@ -186,7 +185,7 @@ func main() {
 		}
 		//fmt.Printf("%s: %s pid<%d> <%ds>, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
 		fmt.Printf(
-			"path[%s] status[%s] pid<%d> seconds<%dd.%ds> action[%s]"+NL,
+			"@path [%s] @status [%s] @pid <%d> @seconds <%dd.%ds> @action [%s]"+NL,
 			s.Path, s.Status, s.PID,
 			s.Seconds/(24*3600), s.Seconds%(24*3600),
 			s.Action,
