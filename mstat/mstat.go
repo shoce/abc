@@ -182,20 +182,20 @@ func main() {
 
 	*/
 
-	if PRINTALL || loadavg.Load1*100 > 100 {
+	if PRINTALL || loadavg.Load1*100 > 40 {
 		pout("@cpu1m <%.0f%%> ", loadavg.Load1*100)
 	}
-	if PRINTALL || loadavg.Load15*100 > 80 {
+	if PRINTALL || loadavg.Load15*100 > 40 {
 		pout("@cpu15m <%.0f%%> ", loadavg.Load15*100)
 	}
-	if PRINTALL || vmem.UsedPercent > 60 {
+	if PRINTALL || vmem.UsedPercent > 40 {
 		pout("@mem <%.0f%%> ", vmem.UsedPercent)
 	}
-	if PRINTALL || swapmem.UsedPercent > 60 {
+	if PRINTALL || swapmem.UsedPercent > 40 {
 		pout("@swap <%.0f%%> ", swapmem.UsedPercent)
 	}
 
-	if PRINTALL || diskstat.UsedPercent > 60 {
+	if PRINTALL || diskstat.UsedPercent > 40 {
 		pout("@disk <%.0f%%> ", diskstat.UsedPercent)
 	}
 	if PRINTALL || diskread>>10 > 1000 {
@@ -205,10 +205,10 @@ func main() {
 		pout("@diskwrite <%dkbps> ", diskwrite>>10)
 	}
 
-	if PRINTALL || len(ip4conns) > 20 {
+	if PRINTALL || len(ip4conns) > 10 {
 		pout("@ip4conns <%d> ", len(ip4conns))
 	}
-	if PRINTALL || len(ip6conns) > 20 {
+	if PRINTALL || len(ip6conns) > 10 {
 		pout("@ip6conns <%d> ", len(ip6conns))
 	}
 	if PRINTALL || netrecv>>10 > 1000 {
@@ -223,7 +223,7 @@ func main() {
 	}
 
 	uptime := time.Since(boottime).Truncate(time.Minute)
-	if PRINTALL || uptime < 100*time.Minute {
+	if PRINTALL || uptime < 100*time.Hour {
 		pout("@uptime <%s> ", fmtdur(uptime))
 	}
 
@@ -312,10 +312,10 @@ func main() {
 			plistens = append(plistens, pl)
 		}
 
-		if !PRINTALL && puptime > 10*time.Minute {
+		if !PRINTALL && puptime > 40*time.Minute {
 			continue
 		}
-		if !PRINTALL && pcpu < 20 && pmem < 20 && len(pfiles) < 100 && len(pconns) < 100 && len(plistens) == 0 {
+		if !PRINTALL && pcpu < 6 && pmem < 6 && len(pfiles) < 100 && len(pconns) < 60 && len(plistens) == 0 {
 			continue
 		}
 
