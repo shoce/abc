@@ -118,15 +118,19 @@ func print() {
 		os.Exit(1)
 	}
 	uptimedays, uptimesecs := uptime/(24*3600), uptime%(24*3600)
+	uptimefmt := fmt.Sprintf("%ds", uptimesecs)
+	if uptimedays > 0 {
+		uptimefmt = fmt.Sprintf("%dd"+"·", uptimedays) + uptimefmt
+	}
 
 	fmt.Printf(
-		"%s %s"+TAB+"cpu%s%d mem%s%dgb swap%s%dgb disk%s%dgb uptime<%dd·%ds>"+NL,
+		"%s %s"+TAB+"cpu%s%d mem%s%dgb swap%s%dgb disk%s%dgb uptime<%s>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, memsizegb,
 		swapgauge, swapsizegb,
 		diskgauge, disksizegb,
-		uptimedays, uptimesecs,
+		uptimefmt,
 	)
 }
 
