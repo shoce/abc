@@ -3,11 +3,10 @@ history:
 20/1030 v1
 20/1106 suffix every line with shortened hostname
 23/0827 github.com/shirou/gopsutil/v3
-
-GoGet GoFmt GoBuildNull
-GoBuild
-GoRun
 */
+
+// GoGet GoFmt GoBuildNull
+// GoBuild GoRun
 
 package main
 
@@ -121,7 +120,7 @@ func print() {
 	uptimedays, uptimesecs := uptime/(24*3600), uptime%(24*3600)
 
 	fmt.Printf(
-		"%s %s"+TAB+"cpu%s%d mem%s%dgb swap%s%dgb disk%s%dgb uptime<%dd.%ds>"+NL,
+		"%s %s"+TAB+"cpu%s%d mem%s%dgb swap%s%dgb disk%s%dgb uptime<%dd·%ds>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, memsizegb,
@@ -132,7 +131,7 @@ func print() {
 }
 
 func init() {
-	if len(os.Args) == 2 && os.Args[1] == "-version" {
+	if len(os.Args) == 2 && (os.Args[1] == "-version" || os.Args[1] == "version") {
 		fmt.Println(VERSION)
 		os.Exit(0)
 	}
