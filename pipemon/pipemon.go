@@ -3,13 +3,15 @@ history:
 2015-04-19 v1
 2020-0127 ignore SIGURG
 2025-0807 seps + end of stdin
+*/
 
-GoGet GoFmt GoBuild
-
+/*
 pipemon </dev/random >/dev/null
 pipemon </etc/passwd >/dev/null
 pipemon </dev/null >/dev/null
 */
+
+// GoGet GoFmt GoBuild
 
 package main
 
@@ -24,6 +26,9 @@ import (
 )
 
 const (
+	SEP = "·"
+	//SEP = "."
+
 	NL = "\n"
 
 	CopyNBytes = 64 << 10
@@ -67,7 +72,7 @@ func main() {
 			if s == syscall.SIGURG {
 				continue
 			}
-			log("signal: %v", s)
+			log("signal %v", s)
 			report()
 			os.Exit(1)
 		case e := <-copychan:
@@ -76,7 +81,7 @@ func main() {
 				log("end of stdin")
 				os.Exit(0)
 			} else {
-				log("error copy: %v", e)
+				log("error copy %v", e)
 				report()
 				os.Exit(1)
 			}
@@ -90,17 +95,17 @@ func seps(i uint64, e int) string {
 		return fmt.Sprintf("%d", i%ee)
 	} else {
 		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s·%"+f, seps(i/ee, e), i%ee)
+		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
 
 func log(format string, args ...interface{}) (n int, err error) {
-	return fmt.Fprintf(os.Stderr, "pipemon: "+format+NL, args...)
+	return fmt.Fprintf(os.Stderr, "pipemon "+format+NL, args...)
 }
 
 func report() {
 	dt := time.Since(t0).Seconds()
-	log("time <%ss> written <%skb> rate <%skbps>",
+	log("time <%s"+SEP+"s> written <%s"+SEP+"kb> rate <%s"+SEP+"kbps>",
 		seps(uint64(dt), 2),
 		seps(written>>10, 3),
 		seps(uint64(float64(written>>10)/dt), 3),
