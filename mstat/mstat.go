@@ -218,7 +218,7 @@ func main() {
 		pout("@netsent <%dkbps> ", netsent>>10)
 	}
 
-	if PRINTALL || len(procs) > 150 {
+	if PRINTALL || len(procs) > 100 {
 		pout("@nprocs <%d> ", len(procs))
 	}
 
@@ -319,8 +319,8 @@ func main() {
 			continue
 		}
 
-		pout(TAB+"{ @proc %s @uptime <%s> @cpu <%.0f%%> @mem <%.0f%%> @files <%d> @conns <%d> @listens (%s) }"+NL,
-			pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), strings.Join(plistens, " "),
+		pout(TAB+"{ @pid <%d> @name [%s] @uptime <%s> @cpu <%.0f%%> @mem <%.0f%%> @files <%d> @conns <%d> @listens (%s) }"+NL,
+			p.Pid, pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), strings.Join(plistens, " "),
 		)
 	}
 	pout(")" + NL)
