@@ -9,7 +9,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -32,13 +31,13 @@ func fmtdur(d time.Duration) (s string) {
 	secs := d % (time.Hour * 24) / time.Second
 	s = fmt.Sprintf("%ds", secs)
 	if days > 0 {
-		s = fmt.Sprintf("%dd", days) + s
+		s = fmt.Sprintf("%dd·", days) + s
 	}
 	return s
 }
 
 func init() {
-	if len(os.Args) == 2 && os.Args[1] == "version" {
+	if len(os.Args) == 2 && (os.Args[1] == "version" || os.Args[1] == "-version") {
 		fmt.Println(VERSION)
 		os.Exit(0)
 	}
@@ -47,25 +46,27 @@ func init() {
 func main() {
 	procs, err := psproc.Processes()
 	if err != nil {
-		log.Fatalf("psproc.Processes: %s", err)
+		fmt.Fprintf(os.Stderr, "error psproc.Processes %v", err)
+		os.Exit(1)
 	}
 
 	for _, p := range procs {
 		pname, err := p.Name()
 		if err != nil {
-			//log.Fatalf("p.Name %s", err)
 			pname = ""
 		}
 
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
-			log.Fatalf("p.CreateTime %s", err)
+			fmt.Fprintf(os.Stderr, "error p.CreateTime %v", err)
+			os.Exit(1)
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 
 		pconns, err := p.Connections()
 		if err != nil {
-			log.Fatalf("p.Connections %s", err)
+			fmt.Fprintf(os.Stderr, "error p.Connections %v", err)
+			os.Exit(1)
 		}
 
 		sort.Slice(pconns, func(i, j int) bool {
@@ -137,10 +138,8 @@ func main() {
 		}
 
 		fmt.Printf(
-			"@pid <%d> @name [%s] @uptime <%s> @listens (%v)"+NL,
-			p.Pid, pname,
-			fmtdur(puptime),
-			strings.Join(plistens, SP),
+			"{ @pid <%d> @name [%s] @uptime <%s> @listens (%v) }"+NL,
+			p.Pid, pname, fmtdur(puptime), strings.Join(plistens, SP),
 		)
 	}
 }
