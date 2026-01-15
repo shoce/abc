@@ -60,6 +60,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
+	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -90,6 +92,7 @@ var (
 	ProxyConn   net.Conn
 
 	Hostname string
+	BootTime int64
 	Host     string // host network address to run commands on: empty or localhost to run with exec() and hostname[:port] to use ssh transport
 
 	SshKeepAliveInterval time.Duration = 12 * time.Second
@@ -262,15 +265,15 @@ func main() {
 
 		Hostname, err = os.Hostname()
 		if err != nil {
-			log("Hostname: %v", err)
+			log("ERROR Hostname %v", err)
 			os.Exit(1)
 		}
 		Hostname = strings.TrimSuffix(Hostname, ".local")
-		//log("Hostname:%s", Hostname)
+		//log("Hostname [%s]", Hostname)
 
 		u, err := user.Current()
 		if err != nil {
-			log("user.Current: %v", err)
+			log("WARNING user.Current %v", err)
 		}
 		User = u.Username
 
@@ -435,7 +438,18 @@ func logstatus() {
 	if Status != "" {
 		s = TermInverse(s)
 	}
-	s += fmt.Sprintf(" Hostname[%s] Host=%s User=%s hs -- ", Hostname, Host, User)
+	uptime := "nil"
+	if BootTime > 0 {
+		uptimesecs := time.Now().Unix() - BootTime
+		uptime = fmt.Sprintf("%ds", uptimesecs%86400)
+		if uptimesecs/86400 > 0 {
+			uptime = fmt.Sprintf("%dd·", uptimesecs/86400) + uptime
+		}
+	}
+	s += fmt.Sprintf(
+		" Uptime<%s> Hostname[%s] Host=%s User=%s hs -- ",
+		uptime, Hostname, Host, User,
+	)
 	s = TermUnderline(s)
 	log(s)
 }
@@ -460,13 +474,13 @@ func copynotify(dst io.Writer, src io.Reader, notify chan error) {
 func connectssh() (err error) {
 	ProxyConn, err = ProxyDialer.Dial("tcp", Host)
 	if err != nil {
-		log("Dial: %v", err)
+		log("ERROR Dial %v", err)
 		return err
 	}
 
 	SshConn, SshNewChannelCh, SshRequestCh, err := ssh.NewClientConn(ProxyConn, Host, SshClientConfig)
 	if err != nil {
-		log("NewClientConn: %v", err)
+		log("ERROR NewClientConn %v", err)
 		return err
 	}
 
@@ -474,14 +488,32 @@ func connectssh() (err error) {
 
 	session, err := SshClient.NewSession()
 	if err != nil {
-		log("NewSession for hostname: %v", err)
+		log("ERROR hostname NewSession %v", err)
 		return err
 	}
 	hostnamebb, err := session.Output("hostname -f")
 	if err != nil {
-		log("Output for hostname: %v", err)
+		log("WARNING hostname Output %v", err)
 	}
 	Hostname = strings.TrimSpace(string(hostnamebb))
+	session.Close()
+
+	session, err = SshClient.NewSession()
+	if err != nil {
+		log("ERROR procstat NewSession %v", err)
+		return err
+	}
+	procstatbb, err := session.Output("cat /proc/stat")
+	if err != nil {
+		log("WARNING procstat Output %v", err)
+	}
+	if boottimem := regexp.MustCompile(`(?m)^btime ([0-9]+)$`).FindStringSubmatch(string(procstatbb)); boottimem != nil {
+		BootTime, err = strconv.ParseInt(boottimem[1], 10, 64)
+		if err != nil {
+			log("WARNING procstat btime ParseInt %v", err)
+		}
+	}
+	session.Close()
 
 	return nil
 }
