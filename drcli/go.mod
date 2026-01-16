@@ -13,6 +13,6 @@ require (
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	github.com/sirupsen/logrus v1.9.4 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 )
