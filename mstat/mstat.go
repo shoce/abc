@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	// https://pkg.go.dev/github.com/shirou/gopsutil
 	psdisk "github.com/shirou/gopsutil/v4/disk"
 	pshost "github.com/shirou/gopsutil/v4/host"
 	psload "github.com/shirou/gopsutil/v4/load"
@@ -50,30 +51,30 @@ func main() {
 
 	loadavg, err := psload.Avg()
 	if err != nil {
-		perr("psload.Avg %s", err)
+		perr("psload.Avg %v", err)
 		os.Exit(1)
 	}
 
 	vmem, err := psmem.VirtualMemory()
 	if err != nil {
-		perr("psmem.VirtualMemory %s", err)
+		perr("psmem.VirtualMemory %v", err)
 		os.Exit(1)
 	}
 	swapmem, err := psmem.SwapMemory()
 	if err != nil {
-		perr("psmem.SwapMemory %s", err)
+		perr("psmem.SwapMemory %v", err)
 		os.Exit(1)
 	}
 
 	diskstat, err := psdisk.Usage("/")
 	if err != nil {
-		perr("psdisk.Usage %s", err)
+		perr("psdisk.Usage %v", err)
 		os.Exit(1)
 	}
 
 	parts, err := psdisk.Partitions(true)
 	if err != nil {
-		perr("psdisk.Partitions %s", err)
+		perr("psdisk.Partitions %v", err)
 		os.Exit(1)
 	}
 	rootpart := ""
@@ -91,12 +92,12 @@ func main() {
 
 	diskcounts1map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
-		perr("psdisk.IOCounters %s", err)
+		perr("psdisk.IOCounters %v", err)
 		os.Exit(1)
 	}
 	netcounts1map, err := psnet.IOCounters(false)
 	if err != nil {
-		perr("psnet.IOCounters %s", err)
+		perr("psnet.IOCounters %v", err)
 		os.Exit(1)
 	}
 
@@ -104,12 +105,12 @@ func main() {
 
 	diskcounts2map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
-		perr("psdisk.IOCounters %s", err)
+		perr("psdisk.IOCounters %v", err)
 		os.Exit(1)
 	}
 	netcounts2map, err := psnet.IOCounters(false)
 	if err != nil {
-		perr("psnet.IOCounters %s", err)
+		perr("psnet.IOCounters %v", err)
 		os.Exit(1)
 	}
 
@@ -129,12 +130,12 @@ func main() {
 
 	ip4conns, err := psnet.Connections("inet4")
 	if err != nil {
-		perr("psnet.Connections %s", err)
+		perr("psnet.Connections %v", err)
 		os.Exit(1)
 	}
 	ip6conns, err := psnet.Connections("inet6")
 	if err != nil {
-		perr("psnet.Connections %s", err)
+		perr("psnet.Connections %v", err)
 		os.Exit(1)
 	}
 
@@ -152,19 +153,19 @@ func main() {
 
 	users, err := pshost.Users()
 	if err != nil {
-		perr("pshost.Users %s", err)
-		os.Exit(1)
+		perr("WARNING pshost.Users %v", err)
+		//os.Exit(1)
 	}
 
 	procs, err := psproc.Processes()
 	if err != nil {
-		perr("psproc.Processes %s", err)
+		perr("psproc.Processes %v", err)
 		os.Exit(1)
 	}
 
 	boottimeunix, err := pshost.BootTime()
 	if err != nil {
-		perr("pshost.BootTime %s", err)
+		perr("pshost.BootTime %v", err)
 		os.Exit(1)
 	}
 	boottime := time.Unix(int64(boottimeunix), 0)
@@ -248,34 +249,34 @@ func main() {
 	for _, p := range procs {
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
-			perr("p.CreateTime %s", err)
+			perr("p.CreateTime %v", err)
 			os.Exit(1)
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 		pcpu, err := p.CPUPercent()
 		if err != nil {
-			perr("p.CPUPercent %s", err)
+			perr("p.CPUPercent %v", err)
 			continue
 		}
 		pmem, err := p.MemoryPercent()
 		if err != nil {
-			perr("p.MemoryPercent %s", err)
+			perr("p.MemoryPercent %v", err)
 			continue
 		}
 		pname, err := p.Name()
 		if err != nil {
-			perr("p.Name %s", err)
+			perr("p.Name %v", err)
 			continue
 		}
 		pfiles, err := p.OpenFiles()
 		if err != nil {
-			perr("p.OpenFiles %s", err)
+			perr("p.OpenFiles %v", err)
 			continue
 		}
 
 		pconns, err := p.Connections()
 		if err != nil {
-			perr("p.Connections %s", err)
+			perr("p.Connections %v", err)
 			continue
 		}
 
