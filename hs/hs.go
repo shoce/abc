@@ -71,7 +71,10 @@ import (
 )
 
 const (
+	SP = " "
 	NL = "\n"
+
+	PortDefault = "22"
 
 	InReaderBufferSize = 100 * 1000
 )
@@ -138,22 +141,22 @@ func init() {
 
 	Proxy = os.Getenv("Proxy")
 	if VERBOSE {
-		log("Proxy:%s", Proxy)
+		perr("Proxy [%s]", Proxy)
 	}
 	ProxyChain = strings.FieldsFunc(Proxy, func(c rune) bool { return c == ';' })
 	if VERBOSE {
-		log("ProxyChain:(%d)%v", len(ProxyChain), ProxyChain)
+		perr("ProxyChain <%d> %v", len(ProxyChain), ProxyChain)
 	}
 	ProxyDialer = proxy.Direct
 
 	Host = os.Getenv("Host")
 	if VERBOSE {
-		log("Host:%s", Host)
+		perr("Host [%s]", Host)
 	}
 
 	User = os.Getenv("User")
 	if VERBOSE {
-		log("User:%s", User)
+		perr("User [%s]", User)
 	}
 
 	UserPassword = os.Getenv("UserPassword")
@@ -161,13 +164,13 @@ func init() {
 		UserAuthMethod = ssh.Password(UserPassword)
 	}
 	if VERBOSE {
-		log("UserPassword:%s", UserPassword)
+		perr("UserPassword [%s]", UserPassword)
 	}
 
 	if os.Getenv("home") == "" {
 		err = os.Setenv("home", os.Getenv("HOME"))
 		if err != nil {
-			log("Setenv home: %v", err)
+			perr("WARNING Setenv home %v", err)
 		}
 	}
 
@@ -175,7 +178,7 @@ func init() {
 	if UserKeyFile != "" {
 		userkeybb, err := ioutil.ReadFile(UserKeyFile)
 		if err != nil {
-			log("Read UserKeyFile: %v", err)
+			perr("ERROR Read UserKeyFile %v", err)
 			os.Exit(1)
 		}
 		UserKey = string(userkeybb)
@@ -188,17 +191,17 @@ func init() {
 	if UserKey != "" {
 		UserSigner, err = ssh.ParsePrivateKey([]byte(UserKey))
 		if err != nil {
-			log("ParsePrivateKey: %v", err)
+			perr("ERROR ParsePrivateKey %v", err)
 			os.Exit(1)
 		}
 		UserAuthMethod = ssh.PublicKeys(UserSigner)
 	}
 	if VERBOSE {
-		log("UserKey:%s", UserKey)
+		perr("UserKey [%s]", UserKey)
 	}
 
 	if UserAuthMethod == nil {
-		log("No user auth method provided: no password and no user key")
+		perr("ERROR No user auth method provided: no password and no user key")
 		os.Exit(1)
 	}
 
@@ -210,17 +213,17 @@ func init() {
 		//HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			if VERBOSE {
-				log("SSH server public key: type:%s hex:%s", key.Type(), hex.EncodeToString(key.Marshal()))
+				perr("SSH server public key: type:%s hex:%s", key.Type(), hex.EncodeToString(key.Marshal()))
 			}
 			return nil
 		},
 		BannerCallback: func(msg string) error {
 			msg = strings.TrimSpace(msg)
-			sep := " "
+			sep := SP
 			if strings.Contains(msg, "\n") {
-				sep = "\n"
+				sep = NL
 			}
-			log("SSH server banner:%s%s", sep, msg)
+			perr("SSH server banner %s%s", sep, msg)
 			return nil
 		},
 	}
@@ -236,8 +239,8 @@ func main() {
 			s := <-sigintchan
 			switch s {
 			case syscall.SIGINT:
-				log(NL)
-				log("interrupt signal")
+				perr(NL)
+				perr("interrupt signal")
 				if InterruptChan != nil {
 					InterruptChan <- true
 				}
@@ -252,8 +255,8 @@ func main() {
 			s := <-sighupchan
 			switch s {
 			case syscall.SIGHUP:
-				log(NL)
-				log("hangup signal")
+				perr(NL)
+				perr("hangup signal")
 				os.Exit(2)
 			}
 		}
@@ -265,15 +268,15 @@ func main() {
 
 		Hostname, err = os.Hostname()
 		if err != nil {
-			log("ERROR Hostname %v", err)
+			perr("ERROR Hostname %v", err)
 			os.Exit(1)
 		}
 		Hostname = strings.TrimSuffix(Hostname, ".local")
-		//log("Hostname [%s]", Hostname)
+		//perr("Hostname [%s]", Hostname)
 
 		u, err := user.Current()
 		if err != nil {
-			log("WARNING user.Current %v", err)
+			perr("WARNING user.Current %v", err)
 		}
 		User = u.Username
 
@@ -283,26 +286,40 @@ func main() {
 			for _, p := range ProxyChain {
 				proxyurl, err := url.Parse(p)
 				if err != nil {
-					log("Proxy url `%s`: %v", p, err)
+					perr("ERROR proxy url [%s]` %v", p, err)
 					os.Exit(1)
 				}
 				pd, err := proxy.FromURL(proxyurl, ProxyDialer)
 				if err != nil {
-					log("Proxy from url: %v", err)
+					perr("ERROR proxy from url [%s] %v", p, err)
 					os.Exit(1)
 				}
 				ProxyDialer = pd
 			}
 		}
 
-		if len(strings.Split(Host, ":")) < 2 {
-			Host = fmt.Sprintf("%s:22", Host)
-			//log("Host:%s", Host)
+		var addrerr *net.AddrError
+		if _, _, err := net.SplitHostPort(Host); err != nil {
+			if errors.As(err, &addrerr) && addrerr.Err == "missing port in address" {
+				if len(Host) > 2 && Host[0] == '[' && Host[len(Host)-1] == ']' && net.ParseIP(Host[1:len(Host)-1]) != nil {
+					Host = Host[1 : len(Host)-1]
+				}
+				if ip := net.ParseIP(Host); ip != nil {
+					//perr("DEBUG ip [%s]", ip.String())
+					Host = net.JoinHostPort(ip.String(), PortDefault)
+				} else {
+					Host = net.JoinHostPort(Host, PortDefault)
+				}
+			} else {
+				perr("ERROR SplitHostPort %v", err)
+				os.Exit(1)
+			}
 		}
 
+		//perr("DEBUG Host [%s]", Host)
 		err = connectssh()
 		if err != nil {
-			//log("connect ssh: %v", err)
+			//perr("ERROR connect ssh %v", err)
 		}
 		if SshClient != nil {
 			defer SshClient.Close()
@@ -312,7 +329,7 @@ func main() {
 	inreader := bufio.NewReaderSize(os.Stdin, InReaderBufferSize)
 
 	if len(args) > 0 && args[0] != "--" {
-		log("the first argument should be `--`, example `hs -- id`")
+		perr("ERROR the first argument should be `--`, example `hs -- id`")
 		os.Exit(1)
 	}
 
@@ -324,7 +341,7 @@ func main() {
 			cmd = cmd[:len(cmd)-1]
 			cmds = strings.Join(cmd, " ")
 			if !SILENT {
-				log("%s stdin: ", cmds)
+				perr("%s stdin: ", cmds)
 			}
 		}
 
@@ -333,7 +350,7 @@ func main() {
 			os.Exit(1)
 		}
 		if Status != "" {
-			log("%s: %s", cmds, TermInverse(fmt.Sprintf("status %s", Status)))
+			perr("%s: %s", cmds, TermInverse(fmt.Sprintf("status %s", Status)))
 		}
 		os.Exit(0)
 	}
@@ -345,10 +362,10 @@ func main() {
 		cmds, err := inreader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				log("EOF")
+				perr("EOF")
 				break
 			}
-			log("ReadString: %v", err)
+			perr("WARNING ReadString %v", err)
 			continue
 		}
 
@@ -364,11 +381,11 @@ func main() {
 			cmd = cmd[:len(cmd)-1]
 			cmds = cmds[:len(cmds)-1]
 			if !SILENT {
-				log("%s stdin: ", cmds)
+				perr("%s stdin: ", cmds)
 			}
 			stdinbb, err = ioutil.ReadAll(os.Stdin)
 			if err != nil {
-				log("read stdin: %v", err)
+				perr("ERROR read stdin %v", err)
 				continue
 			}
 		}
@@ -408,7 +425,7 @@ func TermUnderlineInverse(s string) string {
 	return s
 }
 
-func log(msg string, args ...interface{}) {
+func perr(msg string, args ...interface{}) {
 	var t time.Time = time.Now().Local()
 	var ts string
 	if LogBeatTime {
@@ -451,7 +468,7 @@ func logstatus() {
 		uptime, Hostname, Host, User,
 	)
 	s = TermUnderline(s)
-	log(s)
+	perr(s)
 }
 
 func seps(i int, e int) string {
@@ -474,13 +491,13 @@ func copynotify(dst io.Writer, src io.Reader, notify chan error) {
 func connectssh() (err error) {
 	ProxyConn, err = ProxyDialer.Dial("tcp", Host)
 	if err != nil {
-		log("ERROR Dial %v", err)
+		perr("ERROR Dial %v", err)
 		return err
 	}
 
 	SshConn, SshNewChannelCh, SshRequestCh, err := ssh.NewClientConn(ProxyConn, Host, SshClientConfig)
 	if err != nil {
-		log("ERROR NewClientConn %v", err)
+		perr("ERROR NewClientConn %v", err)
 		return err
 	}
 
@@ -488,29 +505,29 @@ func connectssh() (err error) {
 
 	session, err := SshClient.NewSession()
 	if err != nil {
-		log("ERROR hostname NewSession %v", err)
+		perr("ERROR hostname NewSession %v", err)
 		return err
 	}
 	hostnamebb, err := session.Output("hostname -f")
 	if err != nil {
-		log("WARNING hostname Output %v", err)
+		perr("WARNING hostname Output %v", err)
 	}
 	Hostname = strings.TrimSpace(string(hostnamebb))
 	session.Close()
 
 	session, err = SshClient.NewSession()
 	if err != nil {
-		log("ERROR procstat NewSession %v", err)
+		perr("ERROR procstat NewSession %v", err)
 		return err
 	}
 	procstatbb, err := session.Output("cat /proc/stat")
 	if err != nil {
-		log("WARNING procstat Output %v", err)
+		perr("WARNING procstat Output %v", err)
 	}
 	if boottimem := regexp.MustCompile(`(?m)^btime ([0-9]+)$`).FindStringSubmatch(string(procstatbb)); boottimem != nil {
 		BootTime, err = strconv.ParseInt(boottimem[1], 10, 64)
 		if err != nil {
-			log("WARNING procstat btime ParseInt %v", err)
+			perr("WARNING procstat btime ParseInt %v", err)
 		}
 	}
 	session.Close()
@@ -523,7 +540,7 @@ func connectssh() (err error) {
 // https://pkg.go.dev/golang.org/x/crypto/ssh
 func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) {
 	if VERBOSE {
-		log("keepalive start")
+		perr("keepalive start")
 	}
 	t := time.NewTicker(SshKeepAliveInterval)
 	defer t.Stop()
@@ -532,7 +549,7 @@ func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) {
 			err = conn.SetDeadline(time.Now().Add(2 * SshKeepAliveInterval))
 			if err != nil {
 				if VERBOSE {
-					log("keepalive failed to set deadline: %v", err)
+					perr("keepalive failed to set deadline: %v", err)
 				}
 				return fmt.Errorf("failed to set deadline: %w", err)
 			}
@@ -542,9 +559,9 @@ func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) {
 			_, _, err = cl.SendRequest("keepalive@github.com/shoce/hs", true, nil)
 			if VERBOSE {
 				if err == nil {
-					log("keepalive request sent and confirmed")
+					perr("keepalive request sent and confirmed")
 				} else {
-					log("keepalive failed to send request: %v", err)
+					perr("keepalive failed to send request: %v", err)
 				}
 			}
 			if err != nil {
@@ -552,7 +569,7 @@ func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) {
 			}
 		case <-done:
 			if VERBOSE {
-				log("keepalive done")
+				perr("keepalive done")
 			}
 			return nil
 		}
@@ -569,8 +586,8 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 
 	session, err := SshClient.NewSession()
 	if err != nil {
-		log("NewSession: %v", err)
-		log("reconnecting...")
+		perr("NewSession: %v", err)
+		perr("reconnecting...")
 		err = connectssh()
 		if err != nil {
 			return "", err
@@ -578,7 +595,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		session, err = SshClient.NewSession()
 	}
 	if err != nil {
-		log("NewSession: %v", err)
+		perr("NewSession: %v", err)
 		return "", err
 	}
 
@@ -589,7 +606,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 			}
 			if err := session.Setenv(s, os.Getenv(s)); err != nil {
 				// ( echo ; echo AcceptEnv Dir ) >>/etc/ssh/sshd_config && systemctl reload sshd
-				log("Session.Setenv %s: %v", s, err)
+				perr("Session.Setenv %s: %v", s, err)
 				return "", err
 			}
 		}
@@ -598,7 +615,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	/*
 		if err := session.Setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"); err != nil {
 			// ( echo ; echo AcceptEnv PATH ) >>/etc/ssh/sshd_config && systemctl reload sshd
-			log("Session.Setenv PATH: %v", err)
+			perr("Session.Setenv PATH: %v", err)
 			return "", err
 		}
 	*/
@@ -612,12 +629,12 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		go func() {
 			_, err := io.Copy(stdinpipe, stdin)
 			if err != nil {
-				log("copy to stdin pipe: %v", err)
+				perr("copy to stdin pipe: %v", err)
 			}
 
 			err = stdinpipe.Close()
 			if err != nil {
-				log("close stdin pipe: %v", err)
+				perr("close stdin pipe: %v", err)
 			}
 		}()
 	}
@@ -633,7 +650,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	}
 
 	if !SILENT {
-		log(fmt.Sprintf("Host=%s User=%s hs -- %s : ", Host, User, cmds))
+		perr(fmt.Sprintf("Host=%s User=%s hs -- %s : ", Host, User, cmds))
 	}
 
 	copyoutnotify := make(chan error)
@@ -644,7 +661,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	err = session.Start(cmds)
 
 	if err != nil {
-		log("Start command: %v", err)
+		perr("Start command: %v", err)
 		return "", err
 	}
 
@@ -660,7 +677,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		}
 		err := session.Signal(ssh.SIGINT)
 		if err != nil {
-			log("Signal to session: %v", err)
+			perr("Signal to session: %v", err)
 		}
 	}()
 
@@ -684,19 +701,19 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 				status += "-" + sig
 			}
 		default:
-			log("Wait: %v", err)
+			perr("Wait: %v", err)
 			return "", err
 		}
 	}
 
 	err = <-copyoutnotify
 	if err != nil {
-		log(fmt.Sprintf("%s: copy out: %v", cmds, err))
+		perr(fmt.Sprintf("%s: copy out: %v", cmds, err))
 	}
 
 	err = <-copyerrnotify
 	if err != nil {
-		log(fmt.Sprintf("%s: copy err: %v", cmds, err))
+		perr(fmt.Sprintf("%s: copy err: %v", cmds, err))
 	}
 
 	return status, nil
@@ -722,12 +739,12 @@ func runlocal(cmds string, cmd []string, stdin io.Reader) (status string, err er
 		go func() {
 			_, err := io.Copy(stdinpipe, stdin)
 			if err != nil {
-				log("write to stdin pipe: %v", err)
+				perr("write to stdin pipe: %v", err)
 			}
 
 			err = stdinpipe.Close()
 			if err != nil {
-				log("close stdin pipe: %v", err)
+				perr("close stdin pipe: %v", err)
 			}
 		}()
 	}
@@ -747,7 +764,7 @@ func runlocal(cmds string, cmd []string, stdin io.Reader) (status string, err er
 	go copynotify(os.Stderr, stderrpipe, copyerrnotify)
 
 	if !SILENT {
-		log(fmt.Sprintf("%s: ", cmds))
+		perr(fmt.Sprintf("%s: ", cmds))
 	}
 
 	err = command.Start()

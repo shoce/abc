@@ -1,4 +1,6 @@
-// history: 2015-1209 v1
+// history:
+// 2015-1209 v1
+// 2026-0117 aton
 // go run server_info.go
 // go fmt server_info.go
 // GoGet GoFmt GoBuildNull GoBuild GoRun
@@ -6,9 +8,9 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
+	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
@@ -22,38 +24,39 @@ const (
 )
 
 type ServerInfo struct {
-	CPUInfo        string `json:"cpu_info"`
-	CPUCount       uint64 `json:"cpu_count"`
-	HWCPUCount     uint64 `json:"hw_cpu_count"`
-	MemTotalBytes  uint64 `json:"mem_total_bytes"`
-	MemFreeBytes   uint64 `json:"mem_free_bytes"`
-	SwapTotalBytes uint64 `json:"swap_total_bytes"`
-	SwapFreeBytes  uint64 `json:"swap_free_bytes"`
-	Disks          []Disk `json:"disks"`
-	PrivateIP      string `json:"private_ip"`
+	CPUInfo        string
+	CPUCount       uint64
+	HWCPUCount     uint64
+	MemTotalBytes  uint64
+	MemFreeBytes   uint64
+	SwapTotalBytes uint64
+	SwapFreeBytes  uint64
+	Disks          []Disk
+	PrivateIP      string
 }
 type Disk struct {
-	Device     string   `json:"device"`
-	FSType     string   `json:"fstype"`
-	MountPoint string   `json:"mountpoint"`
-	Opts       []string `json:"opts"`
+	Device     string
+	FSType     string
+	MountPoint string
+	Opts       []string
 
-	Total   uint64  `json:"total"`
-	Free    uint64  `json:"free"`
-	Used    uint64  `json:"used"`
-	Percent float64 `json:"percent"`
+	Total   uint64
+	Free    uint64
+	Used    uint64
+	Percent float64
 }
 
 func main() {
 	var serverInfo ServerInfo
 	dpp, err := disk.Partitions(false)
 	if err != nil {
-		log.Fatal("disk.DiskPartitions ", err)
+		perr("ERROR disk.DiskPartitions %v", err)
+		os.Exit(1)
 	}
 	for _, dp := range dpp {
 		dps, err := disk.Usage(dp.Device)
 		if err != nil {
-			//log.Printf("disk.DiskUsage %s %s", dp.Device, err)
+			//perr("ERROR disk.DiskUsage %s %s", dp.Device, err)
 			continue
 		}
 		var p Disk
@@ -70,27 +73,32 @@ func main() {
 
 	cpuCount, err := cpu.Counts(true)
 	if err != nil {
-		log.Fatal("cpu.CPUCounts true ", err)
+		perr("ERROR cpu.CPUCounts true %v", err)
+		os.Exit(1)
 	}
 	serverInfo.CPUCount = uint64(cpuCount)
 	hwCpuCount, err := cpu.Counts(false)
 	if err != nil {
-		log.Fatal("cpu.CPUCounts false ", err)
+		perr("cpu.CPUCounts false %v", err)
+		os.Exit(1)
 	}
 	serverInfo.HWCPUCount = uint64(hwCpuCount)
 
 	cpuInfo, err := cpu.Info()
 	if err != nil {
-		log.Fatal("cpu.CPUInfo ", err)
+		perr("ERROR cpu.CPUInfo %v", err)
+		os.Exit(1)
 	}
 	if len(cpuInfo) == 0 {
-		log.Fatal("cpu.CPUInfo empty result")
+		perr("ERROR cpu.CPUInfo empty result")
+		os.Exit(1)
 	}
 	serverInfo.CPUInfo = cpuInfo[0].ModelName
 
 	vm, err := mem.VirtualMemory()
 	if err != nil {
-		log.Fatal("mem.VirtualMemory ", err)
+		perr("ERROR mem.VirtualMemory %v", err)
+		os.Exit(1)
 	}
 	serverInfo.MemTotalBytes = vm.Total
 	//serverInfo.MemFreeBytes = vm.Available
@@ -98,14 +106,28 @@ func main() {
 
 	sm, err := mem.SwapMemory()
 	if err != nil {
-		log.Fatal("mem.SwapMemory ", err)
+		perr("ERROR mem.SwapMemory %v", err)
+		os.Exit(1)
 	}
 	serverInfo.SwapTotalBytes = sm.Total
 	serverInfo.SwapFreeBytes = sm.Free
 
-	serverInfoEncoded, err := json.MarshalIndent(map[string]ServerInfo{"server_info": serverInfo}, "", TAB)
-	if err != nil {
-		log.Fatal("json.MarshalIndent ", err)
+	t := reflect.TypeOf(serverInfo)
+	v := reflect.ValueOf(serverInfo)
+	for i := 0; i < t.NumField(); i++ {
+		ft := t.Field(i)
+		if ft.PkgPath != "" {
+			continue
+		}
+		fv := v.Field(i)
+		pout("@%s %+v"+NL, ft.Name, fv.Interface())
 	}
-	os.Stdout.Write(serverInfoEncoded)
+}
+
+func pout(text string, args ...interface{}) (int, error) {
+	return fmt.Printf(text, args...)
+}
+
+func perr(text string, args ...interface{}) (int, error) {
+	return fmt.Fprintf(os.Stderr, text+NL, args...)
 }
