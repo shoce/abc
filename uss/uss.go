@@ -82,7 +82,7 @@ func print() {
 		perr("psmem.VirtualMemory %v", err)
 		os.Exit(1)
 	}
-	memsizegb := int(mem.Total / (1 << 30))
+	memsizemb := int(mem.Total / (1 << 20))
 	mempercent := int(mem.UsedPercent)
 	memgauge := (strings.Repeat("=", mempercent/VisualRatio) +
 		strings.Repeat("-", 100/VisualRatio-mempercent/VisualRatio))
@@ -92,7 +92,7 @@ func print() {
 		perr("psmem.SwapMemory %v", err)
 		os.Exit(1)
 	}
-	swapsizegb := int(swap.Total / (1 << 30))
+	swapsizemb := int(swap.Total / (1 << 20))
 	swappercent := int(swap.UsedPercent)
 	var swapgauge string
 	if swap.Total > 0 {
@@ -124,11 +124,11 @@ func print() {
 	}
 
 	fmt.Printf(
-		"%s %s"+TAB+"cpu%s%d mem%s%dgb swap%s%dgb disk%s%dgb uptime<%s>"+NL,
+		"%s %s"+TAB+"cpu%s%d mem%s%dmb swap%s%dmb disk%s%dgb uptime<%s>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
-		memgauge, memsizegb,
-		swapgauge, swapsizegb,
+		memgauge, memsizemb,
+		swapgauge, swapsizemb,
 		diskgauge, disksizegb,
 		uptimefmt,
 	)
