@@ -12,6 +12,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ import (
 const (
 	NL  = "\n"
 	TAB = "\t"
+	SEP = "·"
 
 	VisualRatio    = 5
 	HostnameMaxLen = 32
@@ -38,23 +40,6 @@ var (
 	PollInterval time.Duration
 	TimeLimit    time.Duration
 )
-
-func tsnow() string {
-	t := time.Now().Local()
-	return fmt.Sprintf(
-		"%03d:%02d%02d:%02d%02d",
-		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
-	)
-}
-
-func perr(msg string, args ...interface{}) {
-	ts := tsnow()
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
-	}
-}
 
 func print() {
 	ts := tsnow()
@@ -120,15 +105,15 @@ func print() {
 	uptimedays, uptimesecs := uptime/(24*3600), uptime%(24*3600)
 	uptimefmt := fmt.Sprintf("%ds", uptimesecs)
 	if uptimedays > 0 {
-		uptimefmt = fmt.Sprintf("%dd"+"·", uptimedays) + uptimefmt
+		uptimefmt = fmt.Sprintf("%dd"+SEP, uptimedays) + uptimefmt
 	}
 
 	fmt.Printf(
-		"%s %s"+TAB+"cpu%s%d mem%s%dmb swap%s%dmb disk%s%dgb uptime<%s>"+NL,
+		"%s %s"+TAB+"cpu%s%d mem%s%smb swap%s%smb disk%s%dgb uptime<%s>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
-		memgauge, memsizemb,
-		swapgauge, swapsizemb,
+		memgauge, seps(memsizemb, 3),
+		swapgauge, seps(swapsizemb, 3),
 		diskgauge, disksizegb,
 		uptimefmt,
 	)
@@ -183,5 +168,32 @@ func main() {
 		}
 	} else {
 		print()
+	}
+}
+
+func tsnow() string {
+	t := time.Now().Local()
+	return fmt.Sprintf(
+		"%03d:%02d%02d:%02d%02d",
+		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
+	)
+}
+
+func perr(msg string, args ...interface{}) {
+	ts := tsnow()
+	if len(args) == 0 {
+		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
+	} else {
+		fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
+	}
+}
+
+func seps(i int, e int) string {
+	ee := int(math.Pow(10, float64(e)))
+	if i < ee {
+		return fmt.Sprintf("%d", i%ee)
+	} else {
+		f := fmt.Sprintf("0%dd", e)
+		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
