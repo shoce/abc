@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	NL = "\n"
+	NL  = "\n"
+	SEP = "·"
 
 	DOWN   = "down"
 	UP     = "up"
@@ -183,12 +184,18 @@ func main() {
 			fmt.Fprintf(os.Stderr, "ERROR Service.ReadStatus %s\n", err)
 			os.Exit(1)
 		}
+
+		durdays, dursecs := s.Seconds/(24*3600), s.Seconds%(24*3600)
+		durfmt := fmt.Sprintf("%ds", dursecs)
+		if durdays > 0 {
+			durfmt = fmt.Sprintf("%dd"+SEP, durdays) + durfmt
+		}
+
 		//fmt.Printf("%s: %s pid<%d> <%ds>, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
 		fmt.Printf(
-			"@path [%s] @status [%s] @pid <%d> @seconds <%dd.%ds> @action [%s]"+NL,
+			"@path [%s] @status [%s] @pid <%d> @seconds <%s> @action [%s]"+NL,
 			s.Path, s.Status, s.PID,
-			s.Seconds/(24*3600), s.Seconds%(24*3600),
-			s.Action,
+			durfmt, s.Action,
 		)
 	}
 }

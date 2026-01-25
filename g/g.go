@@ -32,20 +32,25 @@ var (
 )
 
 func main() {
+	PNAME = path.Base(os.Args[0])
+
 	if len(os.Args) < 2 {
-		perr(
-			"usage: g S"+NL+
-				SPAC+"S is a literal string"+NL+
-				"usage: gr R"+NL+
-				SPAC+"R is a regexp"+NL,
-			"usage: gv S"+NL+
-				SPAC+"S is a literal string"+NL,
-			"usage: gvr R"+NL+
-				SPAC+"R is a regexp"+NL,
-		)
+		switch PNAME {
+		case "g":
+			perr("usage: g S" + NL +
+				SPAC + "S is a literal string")
+		case "gr":
+			perr("usage: gr R" + NL +
+				SPAC + "R is a regexp")
+		case "gv":
+			perr("usage: gv S" + NL +
+				SPAC + "S is a literal string")
+		case "gvr":
+			perr("usage: gvr R" + NL +
+				SPAC + "R is a regexp")
+		}
 		os.Exit(1)
 	}
-	PNAME = path.Base(os.Args[0])
 	SS = os.Args[1:]
 
 	if PNAME == "gv" || PNAME == "gvr" {
@@ -125,9 +130,17 @@ func main() {
 }
 
 func perr(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg+NL, args...)
+	if len(args) > 0 {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
+	} else {
+		fmt.Fprint(os.Stderr, msg+NL)
+	}
 }
 
 func pout(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stdout, msg+NL, args...)
+	if len(args) > 0 {
+		fmt.Fprintf(os.Stdout, msg+NL, args...)
+	} else {
+		fmt.Fprint(os.Stdout, msg+NL)
+	}
 }
