@@ -180,14 +180,13 @@ func main() {
 		}
 
 		pidss := ""
-		for _, pid := range p.Pids[:len(p.Pids)-1] {
+		for _, pid := range p.Pids {
 			pidss += fmt.Sprintf("%d"+TAB, pid)
 		}
-		pidss += fmt.Sprintf("%d", p.Pids[len(p.Pids)-1])
 		if p.Kubepod {
 			pidss += "(k)"
 		}
 
-		fmt.Printf("%s"+TAB+"%s"+NL, pidss, p.Name)
+		fmt.Printf("%s"+TAB+"%s"+NL, pidss, p.Cmdline)
 	}
 }
