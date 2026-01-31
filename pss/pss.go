@@ -31,11 +31,20 @@ import (
 	ps "github.com/mitchellh/go-ps"
 )
 
+const (
+	SP  = " "
+	TAB = "\t"
+	NL  = "\n"
+)
+
 type Process struct {
-	Pid  int64
-	Ppid int64
-	Pids []int64
-	Name string
+	Pid     int64
+	Ppid    int64
+	Pids    []int64
+	Name    string
+	Cmdline string
+	Cgroup  string
+	Kubepod bool
 }
 
 type Filter struct {
@@ -75,7 +84,7 @@ func main() {
 
 	pp0, err := ps.Processes()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "%v"+NL, err)
 		os.Exit(1)
 	}
 
@@ -83,15 +92,22 @@ func main() {
 		pid := p0.Pid()
 		ppid := p0.PPid()
 		name := p0.Executable()
+		cmdline := name
+		cgroup := ""
 		if runtime.GOOS == "linux" {
-			namebb, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", p0.Pid()))
-			if err == nil && len(namebb) > 0 {
-				namebb = bytes.ReplaceAll(namebb, []byte{0}, []byte(" "))
-				namebb = bytes.ReplaceAll(namebb, []byte("\n"), []byte(" "))
-				name = string(namebb)
+			cmdlinebb, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", p0.Pid()))
+			if err == nil && len(cmdlinebb) > 0 {
+				cmdlinebb = bytes.ReplaceAll(cmdlinebb, []byte{0}, []byte(SP))
+				cmdlinebb = bytes.ReplaceAll(cmdlinebb, []byte(NL), []byte(SP))
+				cmdline = string(cmdlinebb)
+			}
+			cgroupbb, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cgroup", p0.Pid()))
+			if err == nil && len(cgroupbb) > 0 {
+				cgroup = string(cgroupbb)
 			}
 		}
-		p := Process{Pid: int64(pid), Ppid: int64(ppid), Name: name}
+		p := Process{Pid: int64(pid), Ppid: int64(ppid), Name: name, Cmdline: cmdline, Cgroup: cgroup}
+		p.Kubepod = strings.Contains(p.Cgroup, "/kubepods/")
 		pp = append(pp, p)
 	}
 
@@ -138,6 +154,7 @@ func main() {
 
 	for _, p := range pp {
 		skip := true
+
 		for _, f := range ff {
 			if f.Name == "0" {
 				skip = false
@@ -158,13 +175,19 @@ func main() {
 			}
 		}
 
-		pidss := ""
-		for _, pid := range p.Pids {
-			pidss += fmt.Sprintf("%d\t", pid)
-		}
 		if skip {
 			continue
 		}
-		fmt.Printf("%s%s\n", pidss, p.Name)
+
+		pidss := ""
+		for _, pid := range p.Pids[:len(p.Pids)-1] {
+			pidss += fmt.Sprintf("%d"+TAB, pid)
+		}
+		pidss += fmt.Sprintf("%d", p.Pids[len(p.Pids)-1])
+		if p.Kubepod {
+			pidss += "(k)"
+		}
+
+		fmt.Printf("%s"+TAB+"%s"+NL, pidss, p.Name)
 	}
 }
