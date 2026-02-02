@@ -4,10 +4,11 @@ history:
 020/1106 print only file name by default, add options -r, -s, -t, -m, -l
 021/0329 add cid printing
 021/1026 add -1 option
+*/
 
+/*
 GoGet GoFmt GoBuildNull
-GoBuild
-GoRun
+GoBuild GoRun
 
  && ln -sf l /bin/ls && ln -sf l /bin/lsr && ln -sf l /bin/lt && ln -sf l /bin/ll && ln -sf l /bin/lr && ln -sf l /bin/llr
 
@@ -17,7 +18,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"path"
@@ -184,14 +185,28 @@ func list(path string) error {
 			return err
 		}
 
-		ff, err := ioutil.ReadDir(path)
+		d, err := os.Open(path)
 		if err != nil {
 			return err
 		}
+		defer d.Close()
 
-		for _, fstat := range ff {
-			fpath := filepath.Join(path, fstat.Name())
-			printinfo(fpath, fstat)
+		for {
+			ee, err := d.ReadDir(999)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			for _, e := range ee {
+				fstat, err := e.Info()
+				if err != nil {
+					return err
+				}
+				fpath := filepath.Join(path, e.Name())
+				printinfo(fpath, fstat)
+			}
 		}
 	} else {
 		if err := printinfo(path, pathstat); err != nil {
@@ -201,6 +216,7 @@ func list(path string) error {
 
 	return nil
 }
+
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "-version" {
 		fmt.Println(VERSION)
