@@ -43,14 +43,13 @@ func main() {
 	var mode os.FileMode = os.FileMode(0644)
 	var modearg *os.FileMode
 
-	if len(os.Args) <= 3 {
-		fpath = os.Args[1]
-	} else {
+	if len(os.Args) < 2 || len(os.Args) > 3 {
 		log("usage: put path [mode]")
 		os.Exit(1)
 	}
 
-	if len(os.Args) > 2 {
+	fpath = os.Args[1]
+	if len(os.Args) == 3 {
 		var m uint64
 		m, err = strconv.ParseUint(os.Args[2], 8, 32)
 		if err != nil {
