@@ -1,10 +1,18 @@
 /*
+history:
+2020/8/31 copy from tik
+20/289 (2020/10/15) add options for version printing and not printing beats but date only
+20/209 add options f and ff
+21/1215 -m option to show date with months and time in military 24 hour
+*/
+
+/*
 it = internet time in beats, there are one thousand beats between midnights
 
 usage: it [options]
 options:
 	y = print year since last millenium
-	d = print date or day number since last january first
+	d = print date or day number since last january 1st
 	s = print seconds or subbeats (there are one hundred subbeats in one beat)
 	m = print military time, with date in month and day format, if printing date
 	n = not to print time
@@ -12,17 +20,9 @@ options:
 	ff = yds = print year, date, time and seconds/subbeats
 	v = print string of year and day suitable for version tagging like 20.289
 	vv = print string of year, day and beats suitable for version tagging like 20.289.499
-	vvv = print string of year, day and beats and subbeats suitable for version tagging like 20.289.499.38
+	vvv = print string of year, day and beats and subbeats suitable for version tagging like 20.289.49938
 
-history:
-2020/8/31 copy from tik
-20/289 (2020/10/15) add options for version printing and not printing beats but date only
-20/209 add options f and ff
-21/1215 -m option to show date with months and time in military 24 hour
-
-GoFmt
-GoBuildNull
-GoBuild
+GoFmt GoBuildNull GoBuild
 GoRun
 */
 
@@ -147,9 +147,9 @@ func main() {
 		}
 		if plonglongversion {
 			if pmilitarytime {
-				version += "." + secondsfmt(td)
+				version += secondsfmt(td)
 			} else {
-				version += "." + subbeatsfmt(td)
+				version += subbeatsfmt(td)
 			}
 		}
 		fmt.Println(version)
@@ -166,9 +166,9 @@ func main() {
 	}
 	if pseconds {
 		if pmilitarytime {
-			s += "." + secondsfmt(td)
+			s += secondsfmt(td)
 		} else {
-			s += "." + subbeatsfmt(td)
+			s += subbeatsfmt(td)
 		}
 	}
 	if pdate {
@@ -179,7 +179,7 @@ func main() {
 		}
 	}
 	if pyear {
-		s = yearfmt(tnow, false) + "/" + s
+		s = yearfmt(tnow, false) + s
 	}
 
 	fmt.Println(s)
