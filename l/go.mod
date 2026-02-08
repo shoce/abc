@@ -7,6 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/ipfs/go-cid v0.6.0
 	github.com/multiformats/go-multihash v0.2.3
+	golang.org/x/exp v0.0.0-20260112195511-716be5621a96
 )
 
 require (

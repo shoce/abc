@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"os"
 	"path"
@@ -29,11 +30,14 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
+	"golang.org/x/exp/slices"
 )
 
 const (
 	NL  = "\n"
 	TAB = "\t"
+
+	ReadDirN = 9999
 )
 
 var (
@@ -192,13 +196,16 @@ func list(path string) error {
 		defer d.Close()
 
 		for {
-			ee, err := d.ReadDir(999)
+			ee, err := d.ReadDir(ReadDirN)
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
 				return err
 			}
+			slices.SortFunc(ee, func(a, b fs.DirEntry) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
 			for _, e := range ee {
 				fstat, err := e.Info()
 				if err != nil {
