@@ -46,7 +46,7 @@ func print() {
 
 	cpuInterval := PollInterval
 	if cpuInterval == 0 {
-		cpuInterval = time.Second / 10
+		cpuInterval = time.Second / 2
 	}
 	cpupercents, err := pscpu.Percent(cpuInterval, false)
 	if err != nil {
@@ -168,8 +168,12 @@ func main() {
 	if PollInterval > 0 {
 		st := time.Now()
 		for {
+			sti := time.Now()
 			print()
-			time.Sleep(PollInterval)
+			sli := PollInterval - time.Since(sti)
+			if sli > 0 {
+				time.Sleep(sli)
+			}
 			if TimeLimit > 0 && time.Since(st) > TimeLimit {
 				break
 			}
