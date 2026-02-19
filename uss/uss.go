@@ -27,9 +27,9 @@ import (
 const (
 	NL  = "\n"
 	TAB = "\t"
-	SEP = "·"
+	SEP = ","
 
-	VisualRatio    = 5
+	VisualRatio    = 8
 	HostnameMaxLen = 32
 )
 
@@ -67,7 +67,7 @@ func print() {
 		perr("psmem.VirtualMemory %v", err)
 		os.Exit(1)
 	}
-	memsizemb := int(mem.Total / (1 << 20))
+	memsizemb := mem.Total / (1 << 20)
 	mempercent := int(mem.UsedPercent)
 	memgauge := (strings.Repeat("=", mempercent/VisualRatio) +
 		strings.Repeat("-", 100/VisualRatio-mempercent/VisualRatio))
@@ -77,7 +77,7 @@ func print() {
 		perr("psmem.SwapMemory %v", err)
 		os.Exit(1)
 	}
-	swapsizemb := int(swap.Total / (1 << 20))
+	swapsizemb := swap.Total / (1 << 20)
 	swappercent := int(swap.UsedPercent)
 	var swapgauge string
 	if swap.Total > 0 {
@@ -97,24 +97,32 @@ func print() {
 	diskgauge := (strings.Repeat("=", diskpercent/VisualRatio) +
 		strings.Repeat("-", 100/VisualRatio-diskpercent/VisualRatio))
 
+	var diskrdt, diskwrt uint64
+	diskstats, err := psdisk.IOCounters()
+	if err != nil {
+		perr("psdisk.IOCounters %v", err)
+		os.Exit(1)
+	}
+	for _, dss := range diskstats {
+		diskrdt += dss.ReadTime
+		diskwrt += dss.WriteTime
+	}
+
 	uptime, err := pshost.Uptime()
 	if err != nil {
 		perr("pshost.Uptime %v", err)
 		os.Exit(1)
 	}
-	uptimedays, uptimesecs := uptime/(24*3600), uptime%(24*3600)
-	uptimefmt := fmt.Sprintf("%ds", uptimesecs)
-	if uptimedays > 0 {
-		uptimefmt = fmt.Sprintf("%dd"+SEP, uptimedays) + uptimefmt
-	}
+	uptimefmt := fmttime(uptime)
 
 	fmt.Printf(
-		"%s %s"+TAB+"cpu%s%d mem%s%smb swap%s%smb disk%s%dgb uptime<%s>"+NL,
+		"%s %s"+TAB+"cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> uptime<%s>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, seps(memsizemb, 3),
 		swapgauge, seps(swapsizemb, 3),
 		diskgauge, disksizegb,
+		fmttime(diskrdt/1000), fmttime(diskwrt/1000),
 		uptimefmt,
 	)
 }
@@ -179,6 +187,15 @@ func tsnow() string {
 	)
 }
 
+func fmttime(t uint64) string {
+	tdays, tsecs := t/(24*3600), t%(24*3600)
+	ts := fmt.Sprintf("%ds", tsecs)
+	if tdays > 0 {
+		ts = fmt.Sprintf("%dd"+SEP, tdays) + ts
+	}
+	return ts
+}
+
 func perr(msg string, args ...interface{}) {
 	ts := tsnow()
 	if len(args) == 0 {
@@ -188,8 +205,8 @@ func perr(msg string, args ...interface{}) {
 	}
 }
 
-func seps(i int, e int) string {
-	ee := int(math.Pow(10, float64(e)))
+func seps(i uint64, e uint64) string {
+	ee := uint64(math.Pow(10, float64(e)))
 	if i < ee {
 		return fmt.Sprintf("%d", i%ee)
 	} else {

@@ -446,7 +446,11 @@ func perr(msg string, args ...interface{}) {
 			t.Hour(), t.Minute(),
 		)
 	}
-	fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
+	if len(args) > 0 {
+		fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
+	} else {
+		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
+	}
 }
 
 func logstatus() {
