@@ -16,7 +16,7 @@ import (
 
 const (
 	NL  = "\n"
-	SEP = "·"
+	SEP = ","
 
 	DOWN   = "down"
 	UP     = "up"

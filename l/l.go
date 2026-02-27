@@ -36,6 +36,7 @@ import (
 const (
 	NL  = "\n"
 	TAB = "\t"
+	SEP = ","
 
 	ReadDirN = 9999
 )
@@ -342,7 +343,7 @@ func seps(i, e int) string {
 		return fmt.Sprintf("%d", i%ee)
 	} else {
 		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s.%"+f, seps(i/ee, e), i%ee)
+		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
 

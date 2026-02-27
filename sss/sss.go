@@ -20,6 +20,7 @@ import (
 const (
 	SP = " "
 	NL = "\n"
+	SEP = ","
 )
 
 var (
@@ -31,7 +32,7 @@ func fmtdur(d time.Duration) (s string) {
 	secs := d % (time.Hour * 24) / time.Second
 	s = fmt.Sprintf("%ds", secs)
 	if days > 0 {
-		s = fmt.Sprintf("%dd·", days) + s
+		s = fmt.Sprintf("%dd", days) + SEP + s
 	}
 	return s
 }

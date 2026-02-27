@@ -71,8 +71,9 @@ import (
 )
 
 const (
-	SP = " "
-	NL = "\n"
+	SP  = " "
+	NL  = "\n"
+	SEP = ","
 
 	PortDefault = "22"
 
@@ -84,8 +85,8 @@ var (
 
 	LogBeatTime bool
 
+	DEBUG   bool
 	VERBOSE bool
-	SILENT  bool
 
 	TERM string
 
@@ -125,12 +126,11 @@ func init() {
 		os.Exit(0)
 	}
 
+	if os.Getenv("DEBUG") != "" {
+		DEBUG = true
+	}
 	if os.Getenv("VERBOSE") != "" {
 		VERBOSE = true
-	}
-
-	if os.Getenv("SILENT") != "" {
-		SILENT = true
 	}
 
 	if v := os.Getenv("TERM"); v != "" {
@@ -140,32 +140,30 @@ func init() {
 	var err error
 
 	Proxy = os.Getenv("Proxy")
-	if VERBOSE {
-		perr("Proxy [%s]", Proxy)
-	}
+	perr("VERBOSE Proxy [%s]", Proxy)
 	ProxyChain = strings.FieldsFunc(Proxy, func(c rune) bool { return c == ';' })
-	if VERBOSE {
-		perr("ProxyChain <%d> %v", len(ProxyChain), ProxyChain)
-	}
+	perr("VERBOSE ProxyChain <%d> %v", len(ProxyChain), ProxyChain)
 	ProxyDialer = proxy.Direct
 
 	Host = os.Getenv("Host")
-	if VERBOSE {
-		perr("Host [%s]", Host)
+	perr("VERBOSE Host [%s]", Host)
+	if Host == "" {
+		perr("ERROR Host env var empty")
+		os.Exit(1)
 	}
 
 	User = os.Getenv("User")
-	if VERBOSE {
-		perr("User [%s]", User)
+	perr("VERBOSE User [%s]", User)
+	if User == "" {
+		perr("ERROR User env var empty")
+		os.Exit(1)
 	}
 
 	UserPassword = os.Getenv("UserPassword")
 	if UserPassword != "" {
 		UserAuthMethod = ssh.Password(UserPassword)
 	}
-	if VERBOSE {
-		perr("UserPassword [%s]", UserPassword)
-	}
+	perr("VERBOSE UserPassword [%s]", UserPassword)
 
 	if os.Getenv("home") == "" {
 		err = os.Setenv("home", os.Getenv("HOME"))
@@ -196,12 +194,10 @@ func init() {
 		}
 		UserAuthMethod = ssh.PublicKeys(UserSigner)
 	}
-	if VERBOSE {
-		perr("UserKey [%s]", UserKey)
-	}
+	perr("VERBOSE UserKey [%s]", UserKey)
 
 	if UserAuthMethod == nil {
-		perr("ERROR No user auth method provided: no password and no user key")
+		perr("ERROR no user auth method provided: no password and no user key")
 		os.Exit(1)
 	}
 
@@ -212,9 +208,7 @@ func init() {
 		//ClientVersion: "hs", // NewClientConn: ssh: handshake failed: ssh: invalid packet length, packet too large
 		//HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			if VERBOSE {
-				perr("SSH server public key: type:%s hex:%s", key.Type(), hex.EncodeToString(key.Marshal()))
-			}
+			perr("VERBOSE SSH server public key: type:%s hex:%s", key.Type(), hex.EncodeToString(key.Marshal()))
 			return nil
 		},
 		BannerCallback: func(msg string) error {
@@ -305,7 +299,7 @@ func main() {
 					Host = Host[1 : len(Host)-1]
 				}
 				if ip := net.ParseIP(Host); ip != nil {
-					//perr("DEBUG ip [%s]", ip.String())
+					perr("DEBUG ip [%s]", ip.String())
 					Host = net.JoinHostPort(ip.String(), PortDefault)
 				} else {
 					Host = net.JoinHostPort(Host, PortDefault)
@@ -316,7 +310,7 @@ func main() {
 			}
 		}
 
-		//perr("DEBUG Host [%s]", Host)
+		perr("DEBUG Host [%s]", Host)
 		err = connectssh()
 		if err != nil {
 			//perr("ERROR connect ssh %v", err)
@@ -340,9 +334,7 @@ func main() {
 		if cmd[len(cmd)-1] == "<" {
 			cmd = cmd[:len(cmd)-1]
 			cmds = strings.Join(cmd, " ")
-			if !SILENT {
-				perr("%s stdin: ", cmds)
-			}
+			perr("%s stdin: ", cmds)
 		}
 
 		Status, err = run(cmds, cmd, inreader)
@@ -380,12 +372,10 @@ func main() {
 		if cmd[len(cmd)-1] == "<" {
 			cmd = cmd[:len(cmd)-1]
 			cmds = cmds[:len(cmds)-1]
-			if !SILENT {
-				perr("%s stdin: ", cmds)
-			}
+			perr("%s stdin: ", cmds)
 			stdinbb, err = ioutil.ReadAll(os.Stdin)
 			if err != nil {
-				perr("ERROR read stdin %v", err)
+				perr("ERROR stdin read %v", err)
 				continue
 			}
 		}
@@ -426,6 +416,12 @@ func TermUnderlineInverse(s string) string {
 }
 
 func perr(msg string, args ...interface{}) {
+	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
+		return
+	}
+	if strings.HasPrefix(msg, "VERBOSE ") && !VERBOSE {
+		return
+	}
 	var t time.Time = time.Now().Local()
 	var ts string
 	if LogBeatTime {
@@ -464,7 +460,7 @@ func logstatus() {
 		uptimesecs := time.Now().Unix() - BootTime
 		uptime = fmt.Sprintf("%ds", uptimesecs%86400)
 		if uptimesecs/86400 > 0 {
-			uptime = fmt.Sprintf("%dd·", uptimesecs/86400) + uptime
+			uptime = fmt.Sprintf("%dd", uptimesecs/86400) + SEP + uptime
 		}
 	}
 	s += fmt.Sprintf(
@@ -543,38 +539,28 @@ func connectssh() (err error) {
 // https://github.com/golang/go/issues/19338
 // https://pkg.go.dev/golang.org/x/crypto/ssh
 func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) {
-	if VERBOSE {
-		perr("keepalive start")
-	}
+	perr("VERBOSE keepalive start")
 	t := time.NewTicker(SshKeepAliveInterval)
 	defer t.Stop()
 	for {
 		/*
 			err = conn.SetDeadline(time.Now().Add(2 * SshKeepAliveInterval))
 			if err != nil {
-				if VERBOSE {
-					perr("keepalive failed to set deadline: %v", err)
-				}
-				return fmt.Errorf("failed to set deadline: %w", err)
+				perr("VERBOSE keepalive failed to set deadline %v", err)
+				return fmt.Errorf("failed to set deadline %w", err)
 			}
 		*/
 		select {
 		case <-t.C:
 			_, _, err = cl.SendRequest("keepalive@github.com/shoce/hs", true, nil)
-			if VERBOSE {
-				if err == nil {
-					perr("keepalive request sent and confirmed")
-				} else {
-					perr("keepalive failed to send request: %v", err)
-				}
-			}
 			if err != nil {
-				return fmt.Errorf("failed to send keep alive: %w", err)
+				perr("VERBOSE keepalive failed to send request %v", err)
+				return fmt.Errorf("keepalive failed to send request %w", err)
+			} else {
+				perr("VERBOSE keepalive request sent and confirmed")
 			}
 		case <-done:
-			if VERBOSE {
-				perr("keepalive done")
-			}
+			perr("VERBOSE keepalive done")
 			return nil
 		}
 	}
@@ -590,7 +576,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 
 	session, err := SshClient.NewSession()
 	if err != nil {
-		perr("NewSession: %v", err)
+		perr("ERROR NewSession %v", err)
 		perr("reconnecting...")
 		err = connectssh()
 		if err != nil {
@@ -599,7 +585,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		session, err = SshClient.NewSession()
 	}
 	if err != nil {
-		perr("NewSession: %v", err)
+		perr("ERROR NewSession %v", err)
 		return "", err
 	}
 
@@ -610,7 +596,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 			}
 			if err := session.Setenv(s, os.Getenv(s)); err != nil {
 				// ( echo ; echo AcceptEnv Dir ) >>/etc/ssh/sshd_config && systemctl reload sshd
-				perr("Session.Setenv %s: %v", s, err)
+				perr("ERROR Session.Setenv [%s] %v", s, err)
 				return "", err
 			}
 		}
@@ -619,7 +605,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	/*
 		if err := session.Setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"); err != nil {
 			// ( echo ; echo AcceptEnv PATH ) >>/etc/ssh/sshd_config && systemctl reload sshd
-			perr("Session.Setenv PATH: %v", err)
+			perr("ERROR Session.Setenv [PATH] %v", err)
 			return "", err
 		}
 	*/
@@ -627,35 +613,33 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	if stdin != nil {
 		stdinpipe, err := session.StdinPipe()
 		if err != nil {
-			return "", fmt.Errorf("stdin pipe for session: %v", err)
+			return "", fmt.Errorf("ERROR session stdin pipe %v", err)
 		}
 
 		go func() {
 			_, err := io.Copy(stdinpipe, stdin)
 			if err != nil {
-				perr("copy to stdin pipe: %v", err)
+				perr("ERROR stdin pipe Copy %v", err)
 			}
 
 			err = stdinpipe.Close()
 			if err != nil {
-				perr("close stdin pipe: %v", err)
+				perr("ERROR stdin pipe Close %v", err)
 			}
 		}()
 	}
 
 	stdoutpipe, err := session.StdoutPipe()
 	if err != nil {
-		return "", fmt.Errorf("stdout pipe for session: %v", err)
+		return "", fmt.Errorf("stdout pipe for session %v", err)
 	}
 
 	stderrpipe, err := session.StderrPipe()
 	if err != nil {
-		return "", fmt.Errorf("stderr pipe for session: %v", err)
+		return "", fmt.Errorf("stderr pipe for session %v", err)
 	}
 
-	if !SILENT {
-		perr(fmt.Sprintf("Host=%s User=%s hs -- %s : ", Host, User, cmds))
-	}
+	perr("Host=%s User=%s hs -- %s : ", Host, User, cmds)
 
 	copyoutnotify := make(chan error)
 	go copynotify(os.Stdout, stdoutpipe, copyoutnotify)
@@ -665,7 +649,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	err = session.Start(cmds)
 
 	if err != nil {
-		perr("Start command: %v", err)
+		perr("ERROR Start %v", err)
 		return "", err
 	}
 
@@ -673,15 +657,18 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	go keepalive(SshClient, ProxyConn, keepalivedonechan)
 
 	InterruptChan = make(chan bool)
-
 	go func() {
 		interrupt := <-InterruptChan
 		if !interrupt {
 			return
 		}
+		// https://pkg.go.dev/golang.org/x/crypto/ssh
 		err := session.Signal(ssh.SIGINT)
 		if err != nil {
-			perr("Signal to session: %v", err)
+			perr("ERROR session Signal [SIGINT] %v", err)
+			if err == io.EOF {
+				perr("ERROR session Signal [SIGINT] EOF", err)
+			}
 		}
 	}()
 
@@ -705,19 +692,19 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 				status += "-" + sig
 			}
 		default:
-			perr("Wait: %v", err)
+			perr("ERROR Wait %v", err)
 			return "", err
 		}
 	}
 
 	err = <-copyoutnotify
 	if err != nil {
-		perr(fmt.Sprintf("%s: copy out: %v", cmds, err))
+		perr("(%s) ERROR out copy %v", cmds, err)
 	}
 
 	err = <-copyerrnotify
 	if err != nil {
-		perr(fmt.Sprintf("%s: copy err: %v", cmds, err))
+		perr("(%s) ERROR err copy %v", cmds, err)
 	}
 
 	return status, nil
@@ -743,12 +730,12 @@ func runlocal(cmds string, cmd []string, stdin io.Reader) (status string, err er
 		go func() {
 			_, err := io.Copy(stdinpipe, stdin)
 			if err != nil {
-				perr("write to stdin pipe: %v", err)
+				perr("ERROR stdin pipe Copy %v", err)
 			}
 
 			err = stdinpipe.Close()
 			if err != nil {
-				perr("close stdin pipe: %v", err)
+				perr("ERROR stdin pipe Close %v", err)
 			}
 		}()
 	}
@@ -767,9 +754,7 @@ func runlocal(cmds string, cmd []string, stdin io.Reader) (status string, err er
 	copyerrnotify := make(chan error)
 	go copynotify(os.Stderr, stderrpipe, copyerrnotify)
 
-	if !SILENT {
-		perr(fmt.Sprintf("%s: ", cmds))
-	}
+	perr("%s: ", cmds)
 
 	err = command.Start()
 	if err != nil {

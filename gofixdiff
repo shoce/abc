@@ -1,0 +1,10 @@
+#!/bin/sh
+
+for d in */ ; do (
+	echo
+	echo $d
+	cd $d
+	GoFixDiff
+) ;
+done
+
