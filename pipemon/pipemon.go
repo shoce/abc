@@ -104,7 +104,7 @@ func log(format string, args ...interface{}) (n int, err error) {
 
 func report() {
 	dt := time.Since(t0).Seconds()
-	log("time <%s"+SEP+"s> written <%s"+SEP+"kb> rate <%s"+SEP+"kbps>",
+	log("time <%ss> written <%skb> rate <%skbps>",
 		seps(uint64(dt), 2),
 		seps(written>>10, 3),
 		seps(uint64(float64(written>>10)/dt), 3),
