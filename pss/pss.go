@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	ps "github.com/shoce/go-ps"
+	sysconf "github.com/tklauser/go-sysconf"
 )
 
 const (
@@ -44,6 +45,11 @@ type Process struct {
 	Name    string
 	Cmdline string
 
+	Utime uint64
+	Stime uint64
+
+	Starttime uint64
+
 	Vsize uint64
 	Rss   uint32
 
@@ -59,6 +65,9 @@ type Filter struct {
 var (
 	VERSION string
 
+	ClkTck   int64
+	PageSize int
+
 	pp []Process
 	ff []Filter
 )
@@ -72,6 +81,14 @@ func init() {
 
 func main() {
 	var err error
+
+	ClkTck, err = sysconf.Sysconf(sysconf.SC_CLK_TCK)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR %v"+NL, err)
+		os.Exit(1)
+	}
+
+	PageSize = os.Getpagesize()
 
 	for _, a := range os.Args[1:] {
 		a = strings.TrimSpace(a)
@@ -89,20 +106,23 @@ func main() {
 	// https://pkg.go.dev/github.com/shoce/go-ps#Processes
 	pp0, err := ps.Processes()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v"+NL, err)
+		fmt.Fprintf(os.Stderr, "ERROR %v"+NL, err)
 		os.Exit(1)
 	}
 
 	for _, p0 := range pp0 {
 		p := Process{
-			Pid:     int64(p0.Pid()),
-			Ppid:    int64(p0.PPid()),
-			Name:    p0.Executable(),
-			Cmdline: p0.Cmdline(),
-			Vsize:   p0.Vsize(),
-			Rss:     p0.Rss(),
-			Cgroup:  p0.Cgroup(),
-			Kubepod: strings.Contains(p0.Cgroup(), "/kubepods/"),
+			Pid:       int64(p0.Pid()),
+			Ppid:      int64(p0.PPid()),
+			Name:      p0.Executable(),
+			Cmdline:   p0.Cmdline(),
+			Utime:     p0.Utime(),
+			Stime:     p0.Stime(),
+			Starttime: p0.Starttime(),
+			Vsize:     p0.Vsize(),
+			Rss:       p0.Rss(),
+			Cgroup:    p0.Cgroup(),
+			Kubepod:   strings.Contains(p0.Cgroup(), "/kubepods/"),
 		}
 		pp = append(pp, p)
 	}
@@ -184,13 +204,21 @@ func main() {
 			kubepods = "(k)" + TAB
 		}
 
-		pagesize := os.Getpagesize()
+		procstats := ""
+		if p.Utime > 0 || p.Vsize > 0 {
+			procstats = fmt.Sprintf(
+				"utime<%ss>stime<%ss>vsize<%skb>rss<%skb>",
+				seps(p.Utime/uint64(ClkTck), 2),
+				seps(p.Stime/uint64(ClkTck), 2),
+				seps(p.Vsize/1024, 3),
+				seps(uint64(p.Rss)*uint64(PageSize)/1024, 3),
+			) + TAB
+		}
 		fmt.Printf(
-			"%s"+"%s"+"vsize<%skb> rss<%skb>"+TAB+"%s"+NL,
+			"%s"+"%s"+"%s"+"%s"+NL,
 			pidss,
 			kubepods,
-			seps(p.Vsize/1024, 3),
-			seps(uint64(p.Rss)*uint64(pagesize)/1024, 3),
+			procstats,
 			p.Cmdline,
 		)
 	}
