@@ -20,6 +20,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -32,6 +33,7 @@ const (
 	SP  = " "
 	TAB = "\t"
 	NL  = "\n"
+	SEP = ","
 )
 
 type Process struct {
@@ -184,12 +186,22 @@ func main() {
 
 		pagesize := os.Getpagesize()
 		fmt.Printf(
-			"%s"+"%s"+"vsize<%dkb> rss<%dkb>"+TAB+"%s"+NL,
+			"%s"+"%s"+"vsize<%skb> rss<%skb>"+TAB+"%s"+NL,
 			pidss,
 			kubepods,
-			p.Vsize/1024,
-			p.Rss*uint32(pagesize)/1024,
+			seps(p.Vsize/1024, 3),
+			seps(uint64(p.Rss)*uint64(pagesize)/1024, 3),
 			p.Cmdline,
 		)
+	}
+}
+
+func seps(i uint64, e uint64) string {
+	ee := uint64(math.Pow(10, float64(e)))
+	if i < ee {
+		return fmt.Sprintf("%d", i%ee)
+	} else {
+		f := fmt.Sprintf("0%dd", e)
+		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
