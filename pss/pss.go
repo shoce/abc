@@ -182,12 +182,13 @@ func main() {
 			kubepods = "(k)" + TAB
 		}
 
+		pagesize := os.Getpagesize()
 		fmt.Printf(
-			"%s"+"%s"+"vsize<%d> rss<%d>"+TAB+"%s"+NL,
+			"%s"+"%s"+"vsize<%dkb> rss<%dkb>"+TAB+"%s"+NL,
 			pidss,
 			kubepods,
-			p.Vsize,
-			p.Rss,
+			p.Vsize/1024,
+			p.Rss*uint32(pagesize)/1024,
 			p.Cmdline,
 		)
 	}
