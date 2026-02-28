@@ -6,13 +6,8 @@ history:
 20/307 proper sorting to build visual process tree
 20/307 accept any number of arguments as filters by process id or by process name
 
-go mod init github.com/shoce/pss
-go get -a -u -v
-go mod tidy
-
-GoFmt
-GoBuildNull
-GoBuild
+GoFixDiff
+GoFmt GoBuildNull GoBuild
 GoRun
 */
 
