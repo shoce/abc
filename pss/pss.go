@@ -195,22 +195,21 @@ func main() {
 		for _, pid := range p.Pids {
 			pids = append(pids, fmt.Sprintf("<%d>", pid))
 		}
-		pidss := strings.Join(pids, N) + SP
+		pidss := strings.Join(pids, N)
 
-		procstats := ""
+		procstatss := []string{}
 		if p.Utime > 0 || p.Vsize > 0 {
-			procstats += fmt.Sprintf(
-				"time<%ss>rss<%skb>",
-				seps((p.Utime+p.Stime)/uint64(ClkTck), 2),
-				seps(uint64(p.Rss)*uint64(PageSize)/1024, 3),
+			procstatss = append(procstatss,
+				fmt.Sprintf("time<%ss>",
+					seps((p.Utime+p.Stime)/uint64(ClkTck), 2)),
+				fmt.Sprintf("rss<%skb>",
+					seps(uint64(p.Rss)*uint64(PageSize)/1024, 3)),
 			)
 		}
 		if p.Kubepod {
-			procstats += "[kubepod]"
+			procstatss = append(procstatss, "[kubepod]")
 		}
-		if procstats != "" {
-			procstats += SP
-		}
+		procstats := strings.Join(procstatss, SP)
 
 		cmdlines := make([]string, 0, len(p.Cmdline))
 		for _, a := range p.Cmdline {
@@ -221,8 +220,9 @@ func main() {
 			}
 		}
 		cmdline := strings.Join(cmdlines, N)
+
 		fmt.Printf(
-			"%s"+"%s"+"(%s)"+NL,
+			"%s %s (%s)"+NL,
 			pidss, procstats, cmdline,
 		)
 	}
