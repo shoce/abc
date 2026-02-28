@@ -199,27 +199,26 @@ func main() {
 		for _, pid := range p.Pids {
 			pidss += fmt.Sprintf("%d", pid) + TAB
 		}
-		kubepods := ""
-		if p.Kubepod {
-			kubepods = "(k)" + TAB
-		}
 
 		procstats := ""
+		if p.Kubepod {
+			procstats += "(kubepod)"
+		}
 		if p.Utime > 0 || p.Vsize > 0 {
-			procstats = fmt.Sprintf(
+			procstats += fmt.Sprintf(
 				"utime<%ss>stime<%ss>vsize<%skb>rss<%skb>",
 				seps(p.Utime/uint64(ClkTck), 2),
 				seps(p.Stime/uint64(ClkTck), 2),
 				seps(p.Vsize/1024, 3),
 				seps(uint64(p.Rss)*uint64(PageSize)/1024, 3),
-			) + TAB
+			)
+		}
+		if procstats != "" {
+			procstats += TAB
 		}
 		fmt.Printf(
-			"%s"+"%s"+"%s"+"%s"+NL,
-			pidss,
-			kubepods,
-			procstats,
-			p.Cmdline,
+			"%s"+"%s"+"%s"+NL,
+			pidss, procstats, p.Cmdline,
 		)
 	}
 }
