@@ -1,2 +1,2 @@
-github.com/mitchellh/go-ps v1.0.0 h1:i6ampVEEF4wQFF+bkYfwYgY+F/uYJDktmvLPf7qIgjc=
-github.com/mitchellh/go-ps v1.0.0/go.mod h1:J4lOc8z8yJs6vUwklHw2XEIiT4z4C40KtWVN3nvg8Pg=
+github.com/shoce/go-ps v0.0.0-20260228074721-de445c5c6963 h1:I1e4Opruz237iHAR9VIdgpcJBK+iqaeE1ImOUOeU7hQ=
+github.com/shoce/go-ps v0.0.0-20260228074721-de445c5c6963/go.mod h1:rCJ1EtyyqdRYfF/uDIqQuptPrdwXjQ9kEXY5bS7zqBs=

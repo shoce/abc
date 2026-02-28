@@ -19,16 +19,13 @@ GoRun
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 
-	ps "github.com/mitchellh/go-ps"
+	ps "github.com/shoce/go-ps"
 )
 
 const (
@@ -38,11 +35,16 @@ const (
 )
 
 type Process struct {
-	Pid     int64
-	Ppid    int64
-	Pids    []int64
+	Pid  int64
+	Ppid int64
+	Pids []int64
+
 	Name    string
 	Cmdline string
+
+	Vsize uint64
+	Rss   uint32
+
 	Cgroup  string
 	Kubepod bool
 }
@@ -82,6 +84,7 @@ func main() {
 		ff = []Filter{Filter{Pid: 1}}
 	}
 
+	// https://pkg.go.dev/github.com/shoce/go-ps#Processes
 	pp0, err := ps.Processes()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v"+NL, err)
@@ -89,25 +92,16 @@ func main() {
 	}
 
 	for _, p0 := range pp0 {
-		pid := p0.Pid()
-		ppid := p0.PPid()
-		name := p0.Executable()
-		cmdline := name
-		cgroup := ""
-		if runtime.GOOS == "linux" {
-			cmdlinebb, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", p0.Pid()))
-			if err == nil && len(cmdlinebb) > 0 {
-				cmdlinebb = bytes.ReplaceAll(cmdlinebb, []byte{0}, []byte(SP))
-				cmdlinebb = bytes.ReplaceAll(cmdlinebb, []byte(NL), []byte(SP))
-				cmdline = string(cmdlinebb)
-			}
-			cgroupbb, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cgroup", p0.Pid()))
-			if err == nil && len(cgroupbb) > 0 {
-				cgroup = string(cgroupbb)
-			}
+		p := Process{
+			Pid:     int64(p0.Pid()),
+			Ppid:    int64(p0.PPid()),
+			Name:    p0.Executable(),
+			Cmdline: p0.Cmdline(),
+			Vsize:   p0.Vsize(),
+			Rss:     p0.Rss(),
+			Cgroup:  p0.Cgroup(),
+			Kubepod: strings.Contains(p0.Cgroup(), "/kubepods/"),
 		}
-		p := Process{Pid: int64(pid), Ppid: int64(ppid), Name: name, Cmdline: cmdline, Cgroup: cgroup}
-		p.Kubepod = strings.Contains(p.Cgroup, "/kubepods/")
 		pp = append(pp, p)
 	}
 
@@ -181,12 +175,20 @@ func main() {
 
 		pidss := ""
 		for _, pid := range p.Pids {
-			pidss += fmt.Sprintf("%d"+TAB, pid)
+			pidss += fmt.Sprintf("%d", pid) + TAB
 		}
+		kubepods := ""
 		if p.Kubepod {
-			pidss += "(k)"
+			kubepods = "(k)" + TAB
 		}
 
-		fmt.Printf("%s"+TAB+"%s"+NL, pidss, p.Cmdline)
+		fmt.Printf(
+			"%s"+"%s"+"vsize<%d> rss<%d>"+TAB+"%s"+NL,
+			pidss,
+			kubepods,
+			p.Vsize,
+			p.Rss,
+			p.Cmdline,
+		)
 	}
 }
