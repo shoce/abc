@@ -195,10 +195,11 @@ func main() {
 			continue
 		}
 
-		pidss := ""
+		pids := make([]string, 0, 10)
 		for _, pid := range p.Pids {
-			pidss += fmt.Sprintf("%d", pid) + TAB
+			pids = append(pids, fmt.Sprintf("%d", pid))
 		}
+		pidss := strings.Join(pids, SEP) + TAB
 
 		procstats := ""
 		if p.Utime > 0 || p.Vsize > 0 {
