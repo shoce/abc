@@ -214,7 +214,11 @@ func main() {
 
 		cmdlines := make([]string, 0, len(p.Cmdline))
 		for _, a := range p.Cmdline {
-			cmdlines = append(cmdlines, "["+a+"]")
+			if strings.Contains(a, NL) {
+				cmdlines = append(cmdlines, "[-"+NL+a+NL+"-]")
+			} else {
+				cmdlines = append(cmdlines, "["+a+"]")
+			}
 		}
 		cmdline := strings.Join(cmdlines, N)
 		fmt.Printf(
