@@ -211,7 +211,7 @@ func main() {
 			)
 		}
 		if p.Kubepod {
-			procstats += "([kubepod])"
+			procstats += "[kubepod]"
 		}
 		if procstats != "" {
 			procstats += SP
