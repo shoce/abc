@@ -201,17 +201,15 @@ func main() {
 		}
 
 		procstats := ""
-		if p.Kubepod {
-			procstats += "(kubepod)"
-		}
 		if p.Utime > 0 || p.Vsize > 0 {
 			procstats += fmt.Sprintf(
-				"utime<%ss>stime<%ss>vsize<%skb>rss<%skb>",
-				seps(p.Utime/uint64(ClkTck), 2),
-				seps(p.Stime/uint64(ClkTck), 2),
-				seps(p.Vsize/1024, 3),
+				"time<%ss>rss<%skb>",
+				seps((p.Utime+p.Stime)/uint64(ClkTck), 2),
 				seps(uint64(p.Rss)*uint64(PageSize)/1024, 3),
 			)
+		}
+		if p.Kubepod {
+			procstats += "([kubepod])"
 		}
 		if procstats != "" {
 			procstats += TAB
