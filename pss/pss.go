@@ -35,6 +35,7 @@ const (
 	TAB = "\t"
 	NL  = "\n"
 	SEP = ","
+	N   = ""
 )
 
 type Process struct {
@@ -43,7 +44,7 @@ type Process struct {
 	Pids []int64
 
 	Name    string
-	Cmdline string
+	Cmdline []string
 
 	Utime uint64
 	Stime uint64
@@ -197,9 +198,9 @@ func main() {
 
 		pids := make([]string, 0, 10)
 		for _, pid := range p.Pids {
-			pids = append(pids, fmt.Sprintf("%d", pid))
+			pids = append(pids, fmt.Sprintf("<%d>", pid))
 		}
-		pidss := strings.Join(pids, SEP) + TAB
+		pidss := strings.Join(pids, N) + SP
 
 		procstats := ""
 		if p.Utime > 0 || p.Vsize > 0 {
@@ -213,11 +214,17 @@ func main() {
 			procstats += "([kubepod])"
 		}
 		if procstats != "" {
-			procstats += TAB
+			procstats += SP
 		}
+
+		cmdlines := make([]string, 0, len(p.Cmdline))
+		for _, a := range p.Cmdline {
+			cmdlines = append(cmdlines, "["+a+"]")
+		}
+		cmdline := strings.Join(cmdlines, N)
 		fmt.Printf(
-			"%s"+"%s"+"%s"+NL,
-			pidss, procstats, p.Cmdline,
+			"%s"+"%s"+"(%s)"+NL,
+			pidss, procstats, cmdline,
 		)
 	}
 }

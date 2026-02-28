@@ -116,7 +116,7 @@ func print() {
 	uptimefmt := fmttime(uptime)
 
 	fmt.Printf(
-		"%s %s"+TAB+"cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> uptime<%s>"+NL,
+		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> uptime<%s>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, seps(memsizemb, 3),
