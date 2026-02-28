@@ -1,5 +1,5 @@
-github.com/shoce/go-ps v0.0.0-20260228133334-dbf6da6819b7 h1:6EE95nJvOJNz7ytBsoRd8S2V4kYhkONoW+NEg+rOz/8=
-github.com/shoce/go-ps v0.0.0-20260228133334-dbf6da6819b7/go.mod h1:rCJ1EtyyqdRYfF/uDIqQuptPrdwXjQ9kEXY5bS7zqBs=
+github.com/shoce/go-ps v0.0.0-20260228134343-10e7e4523636 h1:AGy/B8c+Q2E3G1tHSr6gW/Q9SdGxrmZ4xU3SVBG98nQ=
+github.com/shoce/go-ps v0.0.0-20260228134343-10e7e4523636/go.mod h1:rCJ1EtyyqdRYfF/uDIqQuptPrdwXjQ9kEXY5bS7zqBs=
 github.com/tklauser/go-sysconf v0.3.16 h1:frioLaCQSsF5Cy1jgRBrzr6t502KIIwQ0MArYICU0nA=
 github.com/tklauser/go-sysconf v0.3.16/go.mod h1:/qNL9xxDhc7tx3HSRsLWNnuzbVfh3e7gh/BmM179nYI=
 github.com/tklauser/numcpus v0.11.0 h1:nSTwhKH5e1dMNsCdVBukSZrURJRoHbSEQjdEbY+9RXw=
