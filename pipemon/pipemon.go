@@ -71,16 +71,16 @@ func main() {
 			if s == syscall.SIGURG {
 				continue
 			}
-			log("signal %v", s)
+			perr("signal %v", s)
 			report()
 			os.Exit(1)
 		case e := <-copychan:
 			if e == io.EOF {
 				report()
-				log("end of stdin")
+				perr("end of stdin")
 				os.Exit(0)
 			} else {
-				log("error copy %v", e)
+				perr("error copy %v", e)
 				report()
 				os.Exit(1)
 			}
@@ -98,13 +98,17 @@ func seps(i uint64, e int) string {
 	}
 }
 
-func log(format string, args ...interface{}) (n int, err error) {
-	return fmt.Fprintf(os.Stderr, "pipemon "+format+NL, args...)
+func perr(msg string, args ...interface{}) {
+	msgtext := msg
+	if len(args) > 0 {
+		msgtext = fmt.Sprintf(msg, args...)
+	}
+	fmt.Fprint(os.Stderr, "pipemon "+msgtext+NL)
 }
 
 func report() {
 	dt := time.Since(t0).Seconds()
-	log("time <%ss> written <%skb> rate <%skbps>",
+	perr("time <%ss> written <%skb> rate <%skbps>",
 		seps(uint64(dt), 2),
 		seps(written>>10, 3),
 		seps(uint64(float64(written>>10)/dt), 3),

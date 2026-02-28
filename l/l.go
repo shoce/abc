@@ -116,13 +116,13 @@ func printinfo(path string, info os.FileInfo) error {
 	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink == 0) {
 		f, err := os.Open(path)
 		if err != nil {
-			perr("%v", err)
+			perr("ERROR %v", err)
 			return err
 		}
 		defer f.Close()
 		fmh, err := mh.SumStream(f, mh.SHA2_256, -1)
 		if err != nil {
-			perr("%v", err)
+			perr("ERROR %v", err)
 			return err
 		}
 		c := cid.NewCidV1(cid.Raw, fmh)
@@ -135,11 +135,11 @@ func printinfo(path string, info os.FileInfo) error {
 
 func fls(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		perr("%v", err)
+		perr("ERROR %v", err)
 		return err
 	}
 	if err2 := printinfo(path, info); err2 != nil {
-		perr("%v", err2)
+		perr("ERROR %v", err2)
 		return err2
 	}
 	return nil
@@ -297,7 +297,7 @@ func main() {
 			ShowCid = false
 			ShowOwner = false
 		default:
-			perr("invalid option [%s]", p)
+			perr("ERROR invalid option [%s]", p)
 			os.Exit(1)
 		}
 		paths = paths[1:]
@@ -310,7 +310,7 @@ func main() {
 	for _, p := range paths {
 		err = list(p)
 		if err != nil {
-			perr("%v", err)
+			perr("ERROR %v", err)
 			os.Exit(1)
 		}
 	}
@@ -356,5 +356,9 @@ func ts() string {
 }
 
 func perr(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, ts()+" "+msg+NL, args...)
+	msgtext := msg
+	if len(args) > 0 {
+		msgtext = fmt.Sprintf(msg, args...)
+	}
+	fmt.Fprint(os.Stderr, ts()+" "+msgtext+NL)
 }
