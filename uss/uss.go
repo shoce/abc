@@ -109,12 +109,14 @@ func print() {
 		diskwrt += dss.WriteTime
 	}
 
-	users, err := pshost.Users()
-	if err != nil {
-		perr("ERROR pshost.Users %v", err)
-		os.Exit(1)
-	}
-	//perr("DEBUG users %+v", users)
+	/*
+		users, err := pshost.Users()
+		if err != nil {
+			perr("ERROR pshost.Users %v", err)
+			//os.Exit(1)
+		}
+		//perr("DEBUG users %+v", users)
+	*/
 
 	procs, err := psproc.Processes()
 	if err != nil {
@@ -130,14 +132,14 @@ func print() {
 	uptimefmt := fmttime(uptime)
 
 	fmt.Printf(
-		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> nusers<%d> nprocs<%d> uptime<%s>"+NL,
+		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> nprocs<%d> uptime<%s> listens()"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, seps(memsizemb, 3),
 		swapgauge, seps(swapsizemb, 3),
 		diskgauge, disksizegb,
 		fmttime(diskrdt/1000), fmttime(diskwrt/1000),
-		len(users), len(procs),
+		len(procs),
 		uptimefmt,
 	)
 }
