@@ -29,15 +29,21 @@ const (
 )
 
 var (
+	VERSION string
+
 	PRINTALL bool
 )
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "version" {
+		pout(VERSION + NL)
+		os.Exit(0)
+	}
+
 	if len(os.Args) > 1 {
 		if os.Args[1] == "-a" || os.Args[1] == "-all" {
 			PRINTALL = true
 		}
-
 	}
 
 	loadavg, err := psload.Avg()
