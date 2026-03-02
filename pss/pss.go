@@ -20,8 +20,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
-	ps "github.com/shoce/go-ps"
 	sysconf "github.com/tklauser/go-sysconf"
 )
 
@@ -34,26 +34,34 @@ const (
 )
 
 type Process struct {
-	Pid  int64
-	Ppid int64
-	Pids []int64
+	Pid   int64   // process id
+	Ppid  int64   // parent process id
+	Pids  []int64 // all ancestors process ids and process id
+	Pgid  int64   // process group id
+	Sid   int64   // session id
+	TtyNr int     // controlling tty number
+	Tpgid int
 
-	Name    string
-	Cmdline []string
+	State   rune     // process state
+	Name    string   // process name
+	Cmdline []string // command line
 
-	Utime uint64
-	Stime uint64
+	utimeticks     uint64 // user cpu time in cpu ticks
+	stimeticks     uint64 // system cpu time in cpu ticks
+	starttimeticks uint64 // start time in cpu ticks
 
-	Starttime uint64
+	Utime     time.Duration // user cpu time
+	Stime     time.Duration // system cpu time
+	Starttime time.Time     // start time
 
-	Vsize uint64
-	Rss   uint32
+	Vsize int64 // virtual size
+	Rss   int64 // resident set size
 
-	Cgroup  string
+	Cgroup  string // cgroup
 	Kubepod bool
 }
 
-type Filter struct {
+type ProcessFilter struct {
 	Pid  int64
 	Name string
 }
@@ -61,30 +69,46 @@ type Filter struct {
 var (
 	VERSION string
 
+	BootTime time.Time
 	ClkTck   int64
 	PageSize int
 
-	pp []Process
-	ff []Filter
+	PP []Process
+	FF []ProcessFilter
 )
 
 func init() {
+	var err error
+
 	if len(os.Args) == 2 && os.Args[1] == "version" {
 		fmt.Println(VERSION)
 		os.Exit(0)
 	}
+
+	BootTime, err = GetBootTime()
+	if err != nil {
+		perr("ERROR GetBootTime %v", err)
+		os.Exit(1)
+	}
+	perr("DEBUG BootTime <%s>", BootTime.Format("2006:0102:150405"))
+
+	ClkTck, err = GetClkTck()
+	if err != nil {
+		perr("ERROR GetClkTck %v", err)
+		os.Exit(1)
+	}
+	perr("DEBUG ClkTck <%d>", ClkTck)
+
+	PageSize = os.Getpagesize()
+	perr("DEBUG PageSize <%d>", PageSize)
+}
+
+func GetClkTck() (int64, error) {
+	return sysconf.Sysconf(sysconf.SC_CLK_TCK)
 }
 
 func main() {
 	var err error
-
-	ClkTck, err = sysconf.Sysconf(sysconf.SC_CLK_TCK)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR %v"+NL, err)
-		os.Exit(1)
-	}
-
-	PageSize = os.Getpagesize()
 
 	for _, a := range os.Args[1:] {
 		a = strings.TrimSpace(a)
@@ -93,81 +117,63 @@ func main() {
 		if err != nil {
 			filtername = a
 		}
-		ff = append(ff, Filter{Pid: int64(filterpid), Name: filtername})
+		FF = append(FF, ProcessFilter{Pid: int64(filterpid), Name: filtername})
 	}
-	if len(ff) == 0 {
-		ff = []Filter{Filter{Pid: 1}}
+	if len(FF) == 0 {
+		FF = []ProcessFilter{ProcessFilter{Pid: 1}}
 	}
 
-	// https://pkg.go.dev/github.com/shoce/go-ps#Processes
-	pp0, err := ps.Processes()
+	PP, err = GetProcesses()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR %v"+NL, err)
+		fmt.Fprintf(os.Stderr, "ERROR GetProcesses %v"+NL, err)
 		os.Exit(1)
 	}
 
-	for _, p0 := range pp0 {
-		p := Process{
-			Pid:       int64(p0.Pid()),
-			Ppid:      int64(p0.PPid()),
-			Name:      p0.Executable(),
-			Cmdline:   p0.Cmdline(),
-			Utime:     p0.Utime(),
-			Stime:     p0.Stime(),
-			Starttime: p0.Starttime(),
-			Vsize:     p0.Vsize(),
-			Rss:       p0.Rss(),
-			Cgroup:    p0.Cgroup(),
-			Kubepod:   strings.Contains(p0.Cgroup(), "/kubepods/"),
-		}
-		pp = append(pp, p)
-	}
-
-	sort.Slice(pp, func(i, j int) bool {
-		if pp[i].Ppid < pp[j].Ppid {
+	sort.Slice(PP, func(i, j int) bool {
+		if PP[i].Ppid < PP[j].Ppid {
 			return true
 		}
-		if pp[i].Ppid > pp[j].Ppid {
+		if PP[i].Ppid > PP[j].Ppid {
 			return false
 		}
-		return pp[i].Pid < pp[j].Pid
+		return PP[i].Pid < PP[j].Pid
 	})
 
-	for i, p := range pp {
-		pp[i].Pids = []int64{p.Pid}
+	for i, p := range PP {
+		PP[i].Pids = []int64{p.Pid}
 		if p.Pid == p.Ppid || p.Ppid == 0 {
 			continue
 		}
-		for _, q := range pp {
+		for _, q := range PP {
 			if q.Pid == p.Ppid {
-				pp[i].Pids = append(q.Pids, pp[i].Pids...)
+				PP[i].Pids = append(q.Pids, PP[i].Pids...)
 			}
 		}
 	}
 
-	sort.Slice(pp, func(i, j int) bool {
-		ml := len(pp[i].Pids)
-		if len(pp[j].Pids) < ml {
-			ml = len(pp[j].Pids)
+	sort.Slice(PP, func(i, j int) bool {
+		ml := len(PP[i].Pids)
+		if len(PP[j].Pids) < ml {
+			ml = len(PP[j].Pids)
 		}
 		for k := 0; k < ml; k++ {
-			if pp[i].Pids[k] < pp[j].Pids[k] {
+			if PP[i].Pids[k] < PP[j].Pids[k] {
 				return true
 			}
-			if pp[i].Pids[k] > pp[j].Pids[k] {
+			if PP[i].Pids[k] > PP[j].Pids[k] {
 				return false
 			}
 		}
-		if len(pp[i].Pids) < len(pp[j].Pids) {
+		if len(PP[i].Pids) < len(PP[j].Pids) {
 			return true
 		}
 		return false
 	})
 
-	for _, p := range pp {
+	for _, p := range PP {
 		skip := true
 
-		for _, f := range ff {
+		for _, f := range FF {
 			if f.Name == "0" {
 				skip = false
 				break
@@ -198,10 +204,14 @@ func main() {
 		pidss := strings.Join(pids, N)
 
 		procstatss := []string{}
-		if p.Utime > 0 || p.Vsize > 0 {
+		if p.Utime > 0 || p.Stime > 0 {
 			procstatss = append(procstatss,
 				fmt.Sprintf("time<%ss>",
-					seps((p.Utime+p.Stime)/uint64(ClkTck), 2)),
+					seps(uint64((p.Utime+p.Stime)/time.Second), 2)),
+			)
+		}
+		if p.Vsize > 0 {
+			procstatss = append(procstatss,
 				fmt.Sprintf("rss<%skb>",
 					seps(uint64(p.Rss)*uint64(PageSize)/1024, 3)),
 			)
@@ -225,6 +235,14 @@ func main() {
 			"%s %s (%s)"+NL,
 			pidss, procstats, cmdline,
 		)
+	}
+}
+
+func perr(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		fmt.Fprint(os.Stderr, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
 	}
 }
 
