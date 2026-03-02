@@ -22,6 +22,7 @@ import (
 	psdisk "github.com/shirou/gopsutil/v4/disk"
 	pshost "github.com/shirou/gopsutil/v4/host"
 	psmem "github.com/shirou/gopsutil/v4/mem"
+	psproc "github.com/shirou/gopsutil/v4/process"
 )
 
 const (
@@ -50,7 +51,7 @@ func print() {
 	}
 	cpupercents, err := pscpu.Percent(cpuInterval, false)
 	if err != nil {
-		perr("pscpu.Percent %v", err)
+		perr("ERROR pscpu.Percent %v", err)
 		os.Exit(1)
 	}
 	cpupercent := int(cpupercents[0])
@@ -58,13 +59,13 @@ func print() {
 		strings.Repeat("-", 100/VisualRatio-cpupercent/VisualRatio))
 	cpunumber, err := pscpu.Counts(false)
 	if err != nil {
-		perr("pscpu.Counts %v", err)
+		perr("ERROR pscpu.Counts %v", err)
 		os.Exit(1)
 	}
 
 	mem, err := psmem.VirtualMemory()
 	if err != nil {
-		perr("psmem.VirtualMemory %v", err)
+		perr("ERROR psmem.VirtualMemory %v", err)
 		os.Exit(1)
 	}
 	memsizemb := mem.Total / (1 << 20)
@@ -74,7 +75,7 @@ func print() {
 
 	swap, err := psmem.SwapMemory()
 	if err != nil {
-		perr("psmem.SwapMemory %v", err)
+		perr("ERROR psmem.SwapMemory %v", err)
 		os.Exit(1)
 	}
 	swapsizemb := swap.Total / (1 << 20)
@@ -89,7 +90,7 @@ func print() {
 
 	disk, err := psdisk.Usage("/")
 	if err != nil {
-		perr("psdisk.Usage %v", err)
+		perr("ERROR psdisk.Usage %v", err)
 		os.Exit(1)
 	}
 	disksizegb := int(disk.Total / (1 << 30))
@@ -100,7 +101,7 @@ func print() {
 	var diskrdt, diskwrt uint64
 	diskstats, err := psdisk.IOCounters()
 	if err != nil {
-		perr("psdisk.IOCounters %v", err)
+		perr("ERROR psdisk.IOCounters %v", err)
 		os.Exit(1)
 	}
 	for _, dss := range diskstats {
@@ -108,21 +109,35 @@ func print() {
 		diskwrt += dss.WriteTime
 	}
 
+	users, err := pshost.Users()
+	if err != nil {
+		perr("ERROR pshost.Users %v", err)
+		os.Exit(1)
+	}
+	//perr("DEBUG users %+v", users)
+
+	procs, err := psproc.Processes()
+	if err != nil {
+		perr("ERROR psproc.Processes %v", err)
+		os.Exit(1)
+	}
+
 	uptime, err := pshost.Uptime()
 	if err != nil {
-		perr("pshost.Uptime %v", err)
+		perr("ERROR pshost.Uptime %v", err)
 		os.Exit(1)
 	}
 	uptimefmt := fmttime(uptime)
 
 	fmt.Printf(
-		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> uptime<%s>"+NL,
+		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> nusers<%d> nprocs<%d> uptime<%s>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, seps(memsizemb, 3),
 		swapgauge, seps(swapsizemb, 3),
 		diskgauge, disksizegb,
 		fmttime(diskrdt/1000), fmttime(diskwrt/1000),
+		len(users), len(procs),
 		uptimefmt,
 	)
 }
@@ -139,7 +154,7 @@ func main() {
 
 	Hostname, err = os.Hostname()
 	if err != nil {
-		perr("Hostname %v", err)
+		perr("ERROR Hostname %v", err)
 		os.Exit(1)
 	}
 	//Hostname = strings.TrimSuffix(Hostname, ".local")
@@ -150,7 +165,7 @@ func main() {
 	if len(os.Args) > 1 {
 		ri, err := strconv.Atoi(os.Args[1])
 		if err != nil {
-			perr("invalid integer [%s] for repeat interval in seconds", os.Args[1])
+			perr("ERROR invalid integer [%s] for repeat interval in seconds", os.Args[1])
 			os.Exit(1)
 		}
 		PollInterval = time.Duration(ri) * time.Second
@@ -158,7 +173,7 @@ func main() {
 		if len(os.Args) > 2 {
 			tl, err := strconv.Atoi(os.Args[2])
 			if err != nil {
-				perr("invalid integer [%s] for time limit in seconds", os.Args[2])
+				perr("ERROR invalid integer [%s] for time limit in seconds", os.Args[2])
 				os.Exit(1)
 			}
 			TimeLimit = time.Duration(tl) * time.Second
