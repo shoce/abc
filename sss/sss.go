@@ -47,7 +47,7 @@ func init() {
 func main() {
 	procs, err := psproc.Processes()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR psproc.Processes %v", err)
+		perr("ERROR psproc.Processes %v", err)
 		os.Exit(1)
 	}
 
@@ -59,14 +59,14 @@ func main() {
 
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR p.CreateTime %v", err)
+			perr("ERROR p.CreateTime %v", err)
 			os.Exit(1)
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 
 		pconns, err := p.Connections()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR p.Connections %v", err)
+			perr("ERROR p.Connections %v", err)
 			os.Exit(1)
 		}
 
@@ -142,5 +142,13 @@ func main() {
 			"pid<%d> name[%s] uptime<%s> listens(%v)"+NL,
 			p.Pid, pname, fmtdur(puptime), strings.Join(plistens, SP),
 		)
+	}
+}
+
+func perr(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		fmt.Fprint(os.Stderr, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
 	}
 }
