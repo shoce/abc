@@ -33,6 +33,10 @@ const (
 	N   = ""
 )
 
+var (
+	DEBUG bool
+)
+
 type Process struct {
 	Pid   int64   // process id
 	Ppid  int64   // parent process id
@@ -83,6 +87,10 @@ func init() {
 	if len(os.Args) == 2 && os.Args[1] == "version" {
 		fmt.Println(VERSION)
 		os.Exit(0)
+	}
+
+	if os.Getenv("DEBUG") != "" {
+		DEBUG = true
 	}
 
 	BootTime, err = GetBootTime()
@@ -245,6 +253,9 @@ func main() {
 }
 
 func perr(msg string, args ...interface{}) {
+	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
+		return
+	}
 	if len(args) == 0 {
 		fmt.Fprint(os.Stderr, msg+NL)
 	} else {
