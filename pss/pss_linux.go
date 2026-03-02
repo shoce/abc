@@ -94,8 +94,8 @@ func GetProcesses() ([]Process, error) {
 			return nil, err
 		}
 
-		p.Utime = time.Duration(p.utimeticks/uint64(ClkTck)) * time.Second
-		p.Stime = time.Duration(p.stimeticks/uint64(ClkTck)) * time.Second
+		p.Utime = time.Duration(p.utimeticks) * time.Second / time.Duration(ClkTck)
+		p.Stime = time.Duration(p.stimeticks) * time.Second / time.Duration(ClkTck)
 		p.Starttime = BootTime.Add(time.Duration(p.starttimeticks/uint64(ClkTck)) * time.Second)
 
 		cmdlinepath := fmt.Sprintf("/proc/%d/cmdline", p.Pid)
