@@ -191,11 +191,15 @@ func main() {
 			durfmt = fmt.Sprintf("%dd"+SEP, durdays) + durfmt
 		}
 
-		//fmt.Printf("%s: %s pid<%d> <%ds>, %s\n", s.Path, s.Status, s.PID, s.Seconds, s.Action)
+		/*
+			fmt.Printf(
+				"%s: %s pid<%d> <%ds>, %s\n",
+				s.Path, s.Status, s.PID, s.Seconds, s.Action,
+			)
+		*/
 		fmt.Printf(
-			"@path [%s] @status [%s] @pid <%d> @seconds <%s> @action [%s]"+NL,
-			s.Path, s.Status, s.PID,
-			durfmt, s.Action,
+			"path[%s] status[%s] pid<%d> seconds<%s> action[%s]"+NL,
+			s.Path, s.Status, s.PID, durfmt, s.Action,
 		)
 	}
 }

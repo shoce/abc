@@ -5,13 +5,13 @@ history:
 2025-0807 seps + end of stdin
 */
 
+// GoGet GoFmt GoBuild
+
 /*
 pipemon </dev/random >/dev/null
 pipemon </etc/passwd >/dev/null
 pipemon </dev/null >/dev/null
 */
-
-// GoGet GoFmt GoBuild
 
 package main
 

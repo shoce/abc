@@ -1,6 +1,4 @@
-/*
-GoFmt GoBuildNull GoBuild
-*/
+// GoFmt GoBuildNull GoBuild
 
 package main
 
@@ -8,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -15,7 +14,23 @@ const (
 	NL = "\n"
 )
 
+var (
+	VERSION string
+
+	VERBOSE bool
+)
+
 func main() {
+
+	if len(os.Args) == 2 && os.Args[1] == "version" {
+		fmt.Print(VERSION + NL)
+		os.Exit(0)
+	}
+
+	if os.Getenv("VERBOSE") != "" {
+		VERBOSE = true
+	}
+
 	var err error
 
 	var Duration time.Duration
@@ -26,20 +41,20 @@ func main() {
 	var Command *exec.Cmd
 
 	if len(os.Args) < 4 || (os.Args[2] != "--" && os.Args[3] != "--") {
-		fmt.Fprintf(os.Stderr, "usage: until.ok duration [stopafter] -- command [args]"+NL)
+		perr("usage: until.ok duration [stopafter] -- command [args]")
 		os.Exit(1)
 	}
 
 	Duration, err = time.ParseDuration(os.Args[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR time.ParseDuration [%s] %v"+NL, os.Args[1], err)
+		perr("ERROR time.ParseDuration [%s] %v", os.Args[1], err)
 		os.Exit(1)
 	}
 
 	if os.Args[2] != "--" {
 		StopAfter, err = time.ParseDuration(os.Args[2])
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR time.ParseDuration [%s] %v"+NL, os.Args[2], err)
+			perr("ERROR time.ParseDuration [%s] %v", os.Args[2], err)
 			os.Exit(1)
 		}
 	}
@@ -51,7 +66,7 @@ func main() {
 		cmd = os.Args[4]
 		args = os.Args[5:]
 	} else {
-		fmt.Fprintf(os.Stderr, "ERROR there must be `--` before the command"+NL)
+		perr("ERROR there must be `--` before the command")
 		os.Exit(1)
 	}
 
@@ -60,26 +75,37 @@ func main() {
 	for {
 		Command = exec.Command(cmd, args...)
 		Command.Stdin, Command.Stdout, Command.Stderr = os.Stdin, os.Stdout, os.Stderr
-		fmt.Fprintf(os.Stderr, NL+"%s:"+NL, Command)
+		perr("VERBOSE %s :", Command)
 
 		err = Command.Run()
 		os.Stdout.Sync()
 		os.Stderr.Sync()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, NL+"ERROR %v"+NL, err)
+			perr("ERROR %v", err)
 		}
 		if err == nil {
 			os.Exit(0)
 		}
 
-		fmt.Fprintf(os.Stderr, NL+"VERBOSE sleeping %v"+NL, Duration)
+		perr("VERBOSE sleeping %v", Duration)
 		time.Sleep(Duration)
 
-		fmt.Fprintf(os.Stderr, "VERBOSE passed %v"+NL, time.Now().Sub(StartTime).Round(time.Second))
+		perr("VERBOSE passed %v", time.Now().Sub(StartTime).Round(time.Second))
 		if StopAfter > 0 && time.Now().Sub(StartTime) > StopAfter {
-			fmt.Fprintf(os.Stderr, NL+"VERBOSE stopping after %v passed"+NL, StopAfter)
+			perr("VERBOSE stopping after %v passed", StopAfter)
 			break
 		}
 	}
 
+}
+
+func perr(msg string, args ...interface{}) {
+	if strings.HasPrefix(msg, "VERBOSE ") && !VERBOSE {
+		return
+	}
+	if len(args) == 0 {
+		fmt.Fprint(os.Stderr, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
+	}
 }

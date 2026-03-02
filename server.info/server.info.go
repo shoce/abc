@@ -1,8 +1,9 @@
-// history:
-// 2015-1209 v1
-// 2026-0117 aton
-// go run server_info.go
-// go fmt server_info.go
+/*
+history:
+2015-1209 v1
+2026-0117 aton
+*/
+
 // GoGet GoFmt GoBuildNull GoBuild GoRun
 
 package main
@@ -39,7 +40,6 @@ type Disk struct {
 	FSType     string
 	MountPoint string
 	Opts       []string
-
 	Total   uint64
 	Free    uint64
 	Used    uint64

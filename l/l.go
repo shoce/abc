@@ -6,12 +6,11 @@ history:
 021/1026 add -1 option
 */
 
+// GoGet GoFmt GoBuildNull
+// GoBuild GoRun
+
 /*
-GoGet GoFmt GoBuildNull
-GoBuild GoRun
-
  && ln -sf l /bin/ls && ln -sf l /bin/lsr && ln -sf l /bin/lt && ln -sf l /bin/ll && ln -sf l /bin/lr && ln -sf l /bin/llr
-
 */
 
 package main
@@ -26,7 +25,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
@@ -88,7 +86,7 @@ func printinfo(path string, info os.FileInfo) error {
 	}
 
 	if ShowPerm {
-		s += TAB + fmt.Sprintf("perm:%04o", finfo.Mode().Perm())
+		s += TAB + fmt.Sprintf("perm<%04o>", finfo.Mode().Perm())
 	}
 
 	if ShowOwner {
@@ -96,21 +94,21 @@ func printinfo(path string, info os.FileInfo) error {
 		if fstat, ok := finfo.Sys().(*syscall.Stat_t); ok {
 			fstatuid, fstatgid = int64(fstat.Uid), int64(fstat.Gid)
 		}
-		s += TAB + fmt.Sprintf("uid:%d gid:%d", fstatuid, fstatgid)
+		s += TAB + fmt.Sprintf("uid<%d> gid<%d>", fstatuid, fstatgid)
 	}
 
 	if ShowSize && !finfo.Mode().IsDir() && (info.Mode()&os.ModeSymlink == 0) {
-		s += TAB + fmt.Sprintf("size:%s", seps(int(finfo.Size()), 3))
+		s += TAB + fmt.Sprintf("size<%s>", seps(int(finfo.Size()), 3))
 	}
 	if ShowSize && finfo.Mode().IsDir() {
-		s += TAB + "size:dir"
+		s += TAB + "size<dir>"
 	}
 	if ShowSize && (info.Mode()&os.ModeSymlink != 0) {
-		s += TAB + "size:symlink"
+		s += TAB + "size<symlink>"
 	}
 
 	if ShowTime {
-		s += TAB + fmt.Sprintf("mtime:%s", finfo.ModTime().UTC().Format("06.0102.1504"))
+		s += TAB + fmt.Sprintf("mtime<%s>", finfo.ModTime().UTC().Format("06:0102:150405"))
 	}
 
 	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink == 0) {
@@ -126,7 +124,7 @@ func printinfo(path string, info os.FileInfo) error {
 			return err
 		}
 		c := cid.NewCidV1(cid.Raw, fmh)
-		s += TAB + fmt.Sprintf("cid:%s", c)
+		s += TAB + fmt.Sprintf("cid[%s]", c)
 	}
 
 	fmt.Println(s)
@@ -347,18 +345,10 @@ func seps(i, e int) string {
 	}
 }
 
-func ts() string {
-	t := time.Now().UTC()
-	return fmt.Sprintf(
-		"%03d:%02d%02d:%02d%02d+",
-		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
-	)
-}
-
 func perr(msg string, args ...interface{}) {
 	msgtext := msg
 	if len(args) > 0 {
 		msgtext = fmt.Sprintf(msg, args...)
 	}
-	fmt.Fprint(os.Stderr, ts()+" "+msgtext+NL)
+	fmt.Fprint(os.Stderr, msgtext+NL)
 }
