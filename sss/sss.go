@@ -139,7 +139,7 @@ func main() {
 		}
 
 		fmt.Printf(
-			"{ pid<%d> name[%s] uptime<%s> listens(%v) }"+NL,
+			"pid<%d> name[%s] uptime<%s> listens(%v)"+NL,
 			p.Pid, pname, fmtdur(puptime), strings.Join(plistens, SP),
 		)
 	}
