@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	SP = " "
-	NL = "\n"
+	SP  = " "
+	NL  = "\n"
 	SEP = ","
 )
 
@@ -38,8 +38,8 @@ func fmtdur(d time.Duration) (s string) {
 }
 
 func init() {
-	if len(os.Args) == 2 && (os.Args[1] == "version" || os.Args[1] == "-version") {
-		fmt.Println(VERSION)
+	if len(os.Args) == 2 && os.Args[1] == "version" {
+		fmt.Print(VERSION + NL)
 		os.Exit(0)
 	}
 }
@@ -47,7 +47,7 @@ func init() {
 func main() {
 	procs, err := psproc.Processes()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error psproc.Processes %v", err)
+		fmt.Fprintf(os.Stderr, "ERROR psproc.Processes %v", err)
 		os.Exit(1)
 	}
 
@@ -59,14 +59,14 @@ func main() {
 
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error p.CreateTime %v", err)
+			fmt.Fprintf(os.Stderr, "ERROR p.CreateTime %v", err)
 			os.Exit(1)
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 
 		pconns, err := p.Connections()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error p.Connections %v", err)
+			fmt.Fprintf(os.Stderr, "ERROR p.Connections %v", err)
 			os.Exit(1)
 		}
 
@@ -139,7 +139,7 @@ func main() {
 		}
 
 		fmt.Printf(
-			"{ @pid <%d> @name [%s] @uptime <%s> @listens (%v) }"+NL,
+			"{ pid<%d> name[%s] uptime<%s> listens(%v) }"+NL,
 			p.Pid, pname, fmtdur(puptime), strings.Join(plistens, SP),
 		)
 	}
