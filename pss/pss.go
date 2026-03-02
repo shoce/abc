@@ -214,7 +214,7 @@ func main() {
 		procstatss := []string{}
 		if !BootTime.IsZero() && !p.Starttime.IsZero() {
 			procstatss = append(procstatss,
-				fmt.Sprintf("uptime<%s>",
+				fmt.Sprintf("up<%s>",
 					fmttime(uint64(time.Since(p.Starttime).Seconds()))),
 			)
 		}
