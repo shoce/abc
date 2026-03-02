@@ -207,13 +207,13 @@ func main() {
 		if !BootTime.IsZero() && !p.Starttime.IsZero() {
 			procstatss = append(procstatss,
 				fmt.Sprintf("uptime<%ss>",
-					seps(uint64(time.Since(p.Starttime).Seconds()), 2)),
+					fmttime(uint64(time.Since(p.Starttime).Seconds()))),
 			)
 		}
-		if p.Utime > 0 || p.Stime > 0 {
+		if p.Utime+p.Stime > 0 {
 			procstatss = append(procstatss,
 				fmt.Sprintf("cpu<%ss>",
-					seps(uint64((p.Utime+p.Stime)/time.Second), 2)),
+					fmttime(uint64((p.Utime+p.Stime).Seconds()))),
 			)
 		}
 		if p.Vsize > 0 {
@@ -250,6 +250,15 @@ func perr(msg string, args ...interface{}) {
 	} else {
 		fmt.Fprintf(os.Stderr, msg+NL, args...)
 	}
+}
+
+func fmttime(t uint64) string {
+	tdays, tsecs := t/(24*3600), t%(24*3600)
+	ts := fmt.Sprintf("%ds", tsecs)
+	if tdays > 0 {
+		ts = fmt.Sprintf("%dd"+SEP, tdays) + ts
+	}
+	return ts
 }
 
 func seps(i uint64, e uint64) string {
