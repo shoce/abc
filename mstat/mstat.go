@@ -25,21 +25,12 @@ import (
 const (
 	TAB = "\t"
 	NL  = "\n"
+	SEP = ","
 )
 
 var (
 	PRINTALL bool
 )
-
-func fmtdur(d time.Duration) (s string) {
-	days := d / (time.Hour * 24)
-	secs := d % (time.Hour * 24) / time.Second
-	s = fmt.Sprintf("%ds", secs)
-	if days > 0 {
-		s = fmt.Sprintf("%dd", days) + s
-	}
-	return s
-}
 
 func main() {
 	if len(os.Args) > 1 {
@@ -51,30 +42,30 @@ func main() {
 
 	loadavg, err := psload.Avg()
 	if err != nil {
-		perr("psload.Avg %v", err)
+		perr("ERROR psload.Avg %v", err)
 		os.Exit(1)
 	}
 
 	vmem, err := psmem.VirtualMemory()
 	if err != nil {
-		perr("psmem.VirtualMemory %v", err)
+		perr("ERROR psmem.VirtualMemory %v", err)
 		os.Exit(1)
 	}
 	swapmem, err := psmem.SwapMemory()
 	if err != nil {
-		perr("psmem.SwapMemory %v", err)
+		perr("ERROR psmem.SwapMemory %v", err)
 		os.Exit(1)
 	}
 
 	diskstat, err := psdisk.Usage("/")
 	if err != nil {
-		perr("psdisk.Usage %v", err)
+		perr("ERROR psdisk.Usage %v", err)
 		os.Exit(1)
 	}
 
 	parts, err := psdisk.Partitions(true)
 	if err != nil {
-		perr("psdisk.Partitions %v", err)
+		perr("ERROR psdisk.Partitions %v", err)
 		os.Exit(1)
 	}
 	rootpart := ""
@@ -85,19 +76,19 @@ func main() {
 		}
 	}
 	if rootpart == "" {
-		perr("Could not find root partition device name")
+		perr("ERROR could not find root partition device name")
 		os.Exit(1)
 	}
-	//pout("@rootpart %s"+NL, rootpart)
+	//pout("rootpart[%s]"+NL, rootpart)
 
 	diskcounts1map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
-		perr("psdisk.IOCounters %v", err)
+		perr("ERROR psdisk.IOCounters %v", err)
 		os.Exit(1)
 	}
 	netcounts1map, err := psnet.IOCounters(false)
 	if err != nil {
-		perr("psnet.IOCounters %v", err)
+		perr("ERROR psnet.IOCounters %v", err)
 		os.Exit(1)
 	}
 
@@ -105,12 +96,12 @@ func main() {
 
 	diskcounts2map, err := psdisk.IOCounters(rootpart)
 	if err != nil {
-		perr("psdisk.IOCounters %v", err)
+		perr("ERROR psdisk.IOCounters %v", err)
 		os.Exit(1)
 	}
 	netcounts2map, err := psnet.IOCounters(false)
 	if err != nil {
-		perr("psnet.IOCounters %v", err)
+		perr("ERROR psnet.IOCounters %v", err)
 		os.Exit(1)
 	}
 
@@ -123,19 +114,19 @@ func main() {
 		diskcounts2 = c
 		break
 	}
-	//pout("@diskcounts1map %+v @diskcounts1 %+v @diskcounts2map %+v @diskcounts2 %+v"+NL,
+	//pout("diskcounts1map{%+v} diskcounts1{%+v} diskcounts2map{%+v} diskcounts2{%+v}"+NL,
 	//	diskcounts1map, diskcounts1, diskcounts2map, diskcounts2)
 	diskread := diskcounts2.ReadBytes - diskcounts1.ReadBytes
 	diskwrite := diskcounts2.WriteBytes - diskcounts1.WriteBytes
 
 	ip4conns, err := psnet.Connections("inet4")
 	if err != nil {
-		perr("psnet.Connections %v", err)
+		perr("ERROR psnet.Connections %v", err)
 		os.Exit(1)
 	}
 	ip6conns, err := psnet.Connections("inet6")
 	if err != nil {
-		perr("psnet.Connections %v", err)
+		perr("ERROR psnet.Connections %v", err)
 		os.Exit(1)
 	}
 
@@ -153,130 +144,130 @@ func main() {
 
 	users, err := pshost.Users()
 	if err != nil {
-		perr("WARNING pshost.Users %v", err)
+		perr("ERROR pshost.Users %v", err)
 		//os.Exit(1)
 	}
 
 	procs, err := psproc.Processes()
 	if err != nil {
-		perr("psproc.Processes %v", err)
+		perr("ERROR psproc.Processes %v", err)
 		os.Exit(1)
 	}
 
 	boottimeunix, err := pshost.BootTime()
 	if err != nil {
-		perr("pshost.BootTime %v", err)
+		perr("ERROR pshost.BootTime %v", err)
 		os.Exit(1)
 	}
 	boottime := time.Unix(int64(boottimeunix), 0)
 
 	/*
 
-		pout("@cpu1m <%.0f%%> @cpu15m <%.0f%%> @mem <%.0f%%> @swap <%.0f%%>"+NL,
+		pout("cpu1m<%.0f%%> cpu15m<%.0f%%> mem<%.0f%%> swap<%.0f%%>"+NL,
 			loadavg.Load1*100, loadavg.Load15*100, vmem.UsedPercent, swapmem.UsedPercent)
-		pout("@disk <%.0f%%> @diskread <%dkbps> @diskwrite <%dkbps>"+NL,
+		pout("disk<%.0f%%> diskread<%dkbps> diskwrite<%dkbps>"+NL,
 			diskstat.UsedPercent, diskread>>10, diskwrite>>10)
-		pout("@ip4conns <%d> @ip6conns <%d> @netrecv <%dkbps> @netsent <%dkbps>"+NL,
+		pout("ip4conns<%d> ip6conns<%d> netrecv<%dkbps> netsent<%dkbps>"+NL,
 			len(ip4conns), len(ip6conns), netrecv>>10, netsent>>10)
-		pout("@nusers <%d> @nprocs <%d> @boot <%s>"+NL,
+		pout("nusers<%d> nprocs<%d> boot<%s>"+NL,
 			len(users), len(procs), boottime.Format("Jan/2"))
 
 	*/
 
 	if PRINTALL || loadavg.Load1*100 > 40 {
-		pout("@cpu1m <%.0f%%> ", loadavg.Load1*100)
+		pout("cpu1m<%.0f%%> ", loadavg.Load1*100)
 	}
 	if PRINTALL || loadavg.Load15*100 > 40 {
-		pout("@cpu15m <%.0f%%> ", loadavg.Load15*100)
+		pout("cpu15m<%.0f%%> ", loadavg.Load15*100)
 	}
 	if PRINTALL || vmem.UsedPercent > 40 {
-		pout("@mem <%.0f%%> ", vmem.UsedPercent)
+		pout("mem<%.0f%%> ", vmem.UsedPercent)
 	}
 	if PRINTALL || swapmem.UsedPercent > 40 {
-		pout("@swap <%.0f%%> ", swapmem.UsedPercent)
+		pout("swap<%.0f%%> ", swapmem.UsedPercent)
 	}
 
 	if PRINTALL || diskstat.UsedPercent > 40 {
-		pout("@disk <%.0f%%> ", diskstat.UsedPercent)
+		pout("disk<%.0f%%> ", diskstat.UsedPercent)
 	}
 	if PRINTALL || diskread>>10 > 1000 {
-		pout("@diskread <%dkbps> ", diskread>>10)
+		pout("diskread<%dkbps> ", diskread>>10)
 	}
 	if PRINTALL || diskwrite>>10 > 1000 {
-		pout("@diskwrite <%dkbps> ", diskwrite>>10)
+		pout("diskwrite<%dkbps> ", diskwrite>>10)
 	}
 
 	if PRINTALL || len(ip4conns) > 10 {
-		pout("@ip4conns <%d> ", len(ip4conns))
+		pout("ip4conns<%d> ", len(ip4conns))
 	}
 	if PRINTALL || len(ip6conns) > 10 {
-		pout("@ip6conns <%d> ", len(ip6conns))
+		pout("ip6conns<%d> ", len(ip6conns))
 	}
 	if PRINTALL || netrecv>>10 > 1000 {
-		pout("@netrecv <%dkbps> ", netrecv>>10)
+		pout("netrecv<%dkbps> ", netrecv>>10)
 	}
 	if PRINTALL || netsent>>10 > 1000 {
-		pout("@netsent <%dkbps> ", netsent>>10)
+		pout("netsent<%dkbps> ", netsent>>10)
 	}
 
 	if PRINTALL || len(procs) > 100 {
-		pout("@nprocs <%d> ", len(procs))
+		pout("nprocs<%d> ", len(procs))
 	}
 
 	uptime := time.Since(boottime).Truncate(time.Minute)
 	if PRINTALL || uptime < 100*time.Hour {
-		pout("@uptime <%s> ", fmtdur(uptime))
+		pout("uptime<%s> ", fmtdur(uptime))
 	}
 
 	pout(NL)
 
-	pout("@users (")
+	pout("users(")
 	if len(users) > 0 {
 		pout(NL)
 	}
 	for _, u := range users {
 		ustarted := time.Unix(int64(u.Started), 0)
-		pout(TAB+"{ @user %s @host %s @duration <%s> }"+NL, u.User, u.Host,
+		pout(TAB+"{ user[%s] host[%s] duration<%s> }"+NL, u.User, u.Host,
 			fmtdur(time.Since(ustarted)),
 		)
 	}
 	pout(")" + NL)
 
-	pout("@procs (")
+	pout("procs(")
 	if len(procs) > 0 {
 		pout(NL)
 	}
 	for _, p := range procs {
 		pcreatetime, err := p.CreateTime()
 		if err != nil {
-			perr("p.CreateTime %v", err)
+			perr("ERROR p.CreateTime %v", err)
 			os.Exit(1)
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 		pcpu, err := p.CPUPercent()
 		if err != nil {
-			perr("p.CPUPercent %v", err)
+			perr("ERROR p.CPUPercent %v", err)
 			continue
 		}
 		pmem, err := p.MemoryPercent()
 		if err != nil {
-			perr("p.MemoryPercent %v", err)
+			perr("ERROR p.MemoryPercent %v", err)
 			continue
 		}
 		pname, err := p.Name()
 		if err != nil {
-			perr("p.Name %v", err)
+			perr("ERROR p.Name %v", err)
 			continue
 		}
 		pfiles, err := p.OpenFiles()
 		if err != nil {
-			perr("p.OpenFiles %v", err)
+			perr("ERROR p.OpenFiles %v", err)
 			continue
 		}
 
 		pconns, err := p.Connections()
 		if err != nil {
-			perr("p.Connections %v", err)
+			perr("ERROR p.Connections %v", err)
 			continue
 		}
 
@@ -320,7 +311,7 @@ func main() {
 			continue
 		}
 
-		pout(TAB+"{ @pid <%d> @name [%s] @uptime <%s> @cpu <%.0f%%> @mem <%.0f%%> @files <%d> @conns <%d> @listens (%s) }"+NL,
+		pout(TAB+"{ pid<%d> name[%s] uptime<%s> cpu<%.0f%%> mem<%.0f%%> files<%d> conns<%d> listens(%s) }"+NL,
 			p.Pid, pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), strings.Join(plistens, " "),
 		)
 	}
@@ -328,10 +319,28 @@ func main() {
 
 }
 
-func pout(text string, args ...interface{}) (int, error) {
-	return fmt.Printf(text, args...)
+func pout(msg string, args ...interface{}) {
+	if len(args) > 0 {
+		fmt.Printf(msg, args...)
+	} else {
+		fmt.Print(msg)
+	}
 }
 
-func perr(text string, args ...interface{}) (int, error) {
-	return fmt.Fprintf(os.Stderr, text+NL, args...)
+func perr(msg string, args ...interface{}) {
+	if len(args) > 0 {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
+	} else {
+		fmt.Fprint(os.Stderr, msg+NL)
+	}
+}
+
+func fmtdur(d time.Duration) (s string) {
+	days := d / (time.Hour * 24)
+	secs := d % (time.Hour * 24) / time.Second
+	s = fmt.Sprintf("%ds", secs)
+	if days > 0 {
+		s = fmt.Sprintf("%dd"+SEP, days) + s
+	}
+	return s
 }
