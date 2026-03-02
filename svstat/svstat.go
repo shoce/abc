@@ -117,7 +117,7 @@ func (s *Service) ReadStatus() error {
 		return fmt.Errorf("File.Close %s", err)
 	}
 
-	//fmt.Fprintf(os.Stderr, "% x\n", b)
+	//perr("DEBUG % x", b)
 	if n < 18 {
 		return fmt.Errorf("Service.Read returned %d bytes %s", n, err)
 	}
@@ -181,7 +181,7 @@ func main() {
 		s := Service{Path: sp}
 		err := s.ReadStatus()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR Service.ReadStatus %s\n", err)
+			perr("ERROR Service.ReadStatus %s", err)
 			os.Exit(1)
 		}
 
@@ -193,7 +193,7 @@ func main() {
 
 		/*
 			fmt.Printf(
-				"%s: %s pid<%d> <%ds>, %s\n",
+				"%s: %s pid<%d> <%ds>, %s"+NL,
 				s.Path, s.Status, s.PID, s.Seconds, s.Action,
 			)
 		*/
@@ -201,5 +201,13 @@ func main() {
 			"path[%s] status[%s] pid<%d> seconds<%s> action[%s]"+NL,
 			s.Path, s.Status, s.PID, durfmt, s.Action,
 		)
+	}
+}
+
+func perr(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		fmt.Fprint(os.Stderr, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
 	}
 }
