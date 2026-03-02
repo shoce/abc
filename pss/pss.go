@@ -204,9 +204,15 @@ func main() {
 		pidss := strings.Join(pids, N)
 
 		procstatss := []string{}
+		if !BootTime.IsZero() && !p.Starttime.IsZero() {
+			procstatss = append(procstatss,
+				fmt.Sprintf("uptime<%ss>",
+					seps(uint64(time.Since(p.Starttime).Seconds()), 2)),
+			)
+		}
 		if p.Utime > 0 || p.Stime > 0 {
 			procstatss = append(procstatss,
-				fmt.Sprintf("time<%ss>",
+				fmt.Sprintf("cpu<%ss>",
 					seps(uint64((p.Utime+p.Stime)/time.Second), 2)),
 			)
 		}
