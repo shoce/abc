@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -23,11 +24,14 @@ import (
 	pshost "github.com/shirou/gopsutil/v4/host"
 	psmem "github.com/shirou/gopsutil/v4/mem"
 	psproc "github.com/shirou/gopsutil/v4/process"
+	slices "golang.org/x/exp/slices"
 )
 
 const (
-	NL  = "\n"
+	N   = ""
+	SP  = " "
 	TAB = "\t"
+	NL  = "\n"
 	SEP = ","
 
 	VisualRatio    = 8
@@ -118,10 +122,32 @@ func print() {
 		//perr("DEBUG users %+v", users)
 	*/
 
+	var listens []string
 	procs, err := psproc.Processes()
 	if err != nil {
 		perr("ERROR psproc.Processes %v", err)
 		os.Exit(1)
+	}
+	for _, p := range procs {
+		pname, err := p.Exe()
+		if err != nil {
+			perr("ERROR p.Exe %v", err)
+			os.Exit(1)
+		}
+		pconns, err := p.Connections()
+		if err != nil {
+			perr("ERROR p.Connections %v", err)
+			os.Exit(1)
+		}
+		for _, c := range pconns {
+			if c.Status != "LISTEN" {
+				continue
+			}
+			cdesc := fmt.Sprintf("[%s:%s:%d]", path.Base(pname), c.Laddr.IP, c.Laddr.Port)
+			if !slices.Contains(listens, cdesc) {
+				listens = append(listens, cdesc)
+			}
+		}
 	}
 
 	uptime, err := pshost.Uptime()
@@ -132,7 +158,7 @@ func print() {
 	uptimefmt := fmttime(uptime)
 
 	fmt.Printf(
-		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> nprocs<%d> uptime<%s> listens()"+NL,
+		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb read<%s> write<%s> nprocs<%d> listens(%s) uptime<%s>"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, seps(memsizemb, 3),
@@ -140,6 +166,7 @@ func print() {
 		diskgauge, disksizegb,
 		fmttime(diskrdt/1000), fmttime(diskwrt/1000),
 		len(procs),
+		strings.Join(listens, N),
 		uptimefmt,
 	)
 }

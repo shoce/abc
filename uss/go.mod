@@ -1,10 +1,11 @@
 module github.com/shoce/abc/uss
 
-go 1.24.0
+go 1.25.0
 
-toolchain go1.24.1
-
-require github.com/shirou/gopsutil/v4 v4.26.2
+require (
+	github.com/shirou/gopsutil/v4 v4.26.2
+	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa
+)
 
 require (
 	github.com/ebitengine/purego v0.10.0 // indirect
