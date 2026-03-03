@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +22,7 @@ import (
 	psdisk "github.com/shirou/gopsutil/v4/disk"
 	pshost "github.com/shirou/gopsutil/v4/host"
 	psmem "github.com/shirou/gopsutil/v4/mem"
+	psnet "github.com/shirou/gopsutil/v4/net"
 	psproc "github.com/shirou/gopsutil/v4/process"
 	slices "golang.org/x/exp/slices"
 )
@@ -122,31 +122,32 @@ func print() {
 		//perr("DEBUG users %+v", users)
 	*/
 
-	var listens []string
 	procs, err := psproc.Processes()
 	if err != nil {
 		perr("ERROR psproc.Processes %v", err)
 		os.Exit(1)
 	}
-	for _, p := range procs {
-		pname, err := p.Exe()
-		if err != nil {
-			perr("ERROR p.Exe %v", err)
-			os.Exit(1)
+
+	var listens []string
+	inet4conns, err := psnet.Connections("inet4")
+	if err != nil {
+		perr("ERROR psnet.Connections inet4 %v", err)
+		os.Exit(1)
+	}
+	//perr("inet4conns<%d>", len(inet4conns))
+	inet6conns, err := psnet.Connections("inet6")
+	if err != nil {
+		perr("ERROR psnet.Connections inet6 %v", err)
+		os.Exit(1)
+	}
+	//perr("inet6conns<%d>", len(inet6conns))
+	for _, c := range append(inet4conns, inet6conns...) {
+		if c.Status != "LISTEN" {
+			continue
 		}
-		pconns, err := p.Connections()
-		if err != nil {
-			perr("ERROR p.Connections %v", err)
-			os.Exit(1)
-		}
-		for _, c := range pconns {
-			if c.Status != "LISTEN" {
-				continue
-			}
-			cdesc := fmt.Sprintf("[%s:%s:%d]", path.Base(pname), c.Laddr.IP, c.Laddr.Port)
-			if !slices.Contains(listens, cdesc) {
-				listens = append(listens, cdesc)
-			}
+		cdesc := fmt.Sprintf("[%s:%d]", c.Laddr.IP, c.Laddr.Port)
+		if !slices.Contains(listens, cdesc) {
+			listens = append(listens, cdesc)
 		}
 	}
 
@@ -245,11 +246,10 @@ func fmttime(t uint64) string {
 }
 
 func perr(msg string, args ...interface{}) {
-	ts := tsnow()
 	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
+		fmt.Fprint(os.Stderr, msg+NL)
 	} else {
-		fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
 	}
 }
 
