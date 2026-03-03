@@ -430,14 +430,14 @@ func perr(msg string, args ...interface{}) {
 		ty := t.Sub(time.Date(t.Year(), 1, 1, 0, 0, 0, 0, TzBiel))
 		td := t.Sub(time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, TzBiel))
 		ts = fmt.Sprintf(
-			"%d:%d:%d",
+			"<%03d:%d:%d>",
 			t.Year()%1000,
 			int(ty/(time.Duration(24)*time.Hour))+1,
 			int(td/BEAT),
 		)
 	} else {
 		ts = fmt.Sprintf(
-			"%d%02d%02d:%02d%02d+",
+			"<%03d:%02d%02d:%02d%02d+>",
 			t.Year()%1000, t.Month(), t.Day(),
 			t.Hour(), t.Minute(),
 		)
