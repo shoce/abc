@@ -145,7 +145,14 @@ func print() {
 		if c.Status != "LISTEN" {
 			continue
 		}
-		cdesc := fmt.Sprintf("[%s:%d]", c.Laddr.IP, c.Laddr.Port)
+		claddrip := c.Laddr.IP
+		if strings.HasPrefix(claddrip, "127.0.0.") {
+			continue
+		}
+		if claddrip == "0.0.0.0" || claddrip == "::" {
+			claddrip = "*"
+		}
+		cdesc := fmt.Sprintf("[%s:%d]", claddrip, c.Laddr.Port)
 		if !slices.Contains(listens, cdesc) {
 			listens = append(listens, cdesc)
 		}
