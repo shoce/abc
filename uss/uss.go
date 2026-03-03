@@ -146,7 +146,7 @@ func print() {
 			continue
 		}
 		claddrip := c.Laddr.IP
-		if strings.HasPrefix(claddrip, "127.0.0.") {
+		if strings.HasPrefix(claddrip, "10.") || strings.HasPrefix(claddrip, "127.") || strings.HasPrefix(claddrip, "192.168.") {
 			continue
 		}
 		if claddrip == "0.0.0.0" || claddrip == "::" {
