@@ -152,7 +152,15 @@ func print() {
 		if claddrip == "0.0.0.0" || claddrip == "::" {
 			claddrip = "*"
 		}
-		cdesc := fmt.Sprintf("[%s:%d]", claddrip, c.Laddr.Port)
+		p, err := psproc.NewProcess(c.Pid)
+		if err != nil {
+			perr("ERROR psproc.NewProcess <%d> %v", c.Pid, err)
+		}
+		pname, err := p.Name()
+		if err != nil {
+			perr("ERROR p.Name <%d> %v", p.Pid, err)
+		}
+		cdesc := fmt.Sprintf("[%s:%s:%d]", pname, claddrip, c.Laddr.Port)
 		if !slices.Contains(listens, cdesc) {
 			listens = append(listens, cdesc)
 		}
