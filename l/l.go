@@ -28,7 +28,7 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
-	"golang.org/x/exp/slices"
+	slices "golang.org/x/exp/slices"
 )
 
 const (
@@ -225,7 +225,7 @@ func list(path string) error {
 
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "-version" {
-		fmt.Println(VERSION)
+		fmt.Print(VERSION + NL)
 		os.Exit(0)
 	}
 
@@ -238,7 +238,9 @@ func main() {
 	var err error
 
 	cmdname := path.Base(os.Args[0])
+	//perr("DEBUG cmdname [%s]", cmdname)
 	switch cmdname {
+	case "l":
 	case "ls":
 		ShowSize = true
 		ShowSymlink = true
@@ -265,14 +267,32 @@ func main() {
 		//ShowTime = true
 		ShowSize = true
 		//ShowCid = true
+	default:
+		perr("ERROR invalid cmd name [%s]", cmdname)
+		os.Exit(1)
 	}
 
-	paths := os.Args[1:]
-	for _, p := range paths {
-		if !strings.HasPrefix(p, "-") {
+	args := os.Args[1:]
+	//perr("DEBUG args %#v", args)
+
+	n := 0
+	for _, a := range args {
+		if a != "" {
+			args[n] = a
+			n++
+		}
+	}
+	args = args[:n]
+	//perr("DEBUG n <%d> args %#v", n, args)
+
+	n = 0
+	for _, a := range args {
+		if !strings.HasPrefix(a, "-") {
 			break
 		}
-		switch p {
+		switch a {
+		case "--":
+			break
 		case "-r", "-recursive":
 			Recursive = true
 		case "-p", "-perm":
@@ -295,12 +315,18 @@ func main() {
 			ShowCid = false
 			ShowOwner = false
 		default:
-			perr("ERROR invalid option [%s]", p)
+			perr("ERROR invalid option [%s]", a)
 			os.Exit(1)
 		}
-		paths = paths[1:]
+		n++
 	}
+	//perr("DEBUG n <%d> args %#v", n, args)
 
+	var paths []string
+	if n <= len(args) {
+		paths = args[n:]
+	}
+	//perr("DEBUG paths %#v", paths)
 	if len(paths) == 0 {
 		paths = append(paths, "./")
 	}

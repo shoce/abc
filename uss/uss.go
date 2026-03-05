@@ -191,8 +191,8 @@ func print() {
 }
 
 func init() {
-	if len(os.Args) == 2 && (os.Args[1] == "-version" || os.Args[1] == "version") {
-		fmt.Println(VERSION)
+	if len(os.Args) == 2 && os.Args[1] == "version" {
+		fmt.Print(VERSION + NL)
 		os.Exit(0)
 	}
 }
