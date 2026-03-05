@@ -191,14 +191,45 @@ func print() {
 }
 
 func init() {
-	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Print(VERSION + NL)
-		os.Exit(0)
-	}
 }
 
 func main() {
 	var err error
+
+	args := os.Args[1:]
+	//perr("DEBUG args %#v", args)
+	n := 0
+	for _, a := range args {
+		if a != "" {
+			args[n] = a
+			n++
+		}
+	}
+	args = args[:n]
+	//perr("DEBUG n <%d> args %#v", n, args)
+
+	if len(args) == 1 && args[0] == "version" {
+		fmt.Print(VERSION + NL)
+		os.Exit(0)
+	}
+
+	if len(args) > 0 {
+		ri, err := strconv.Atoi(args[0])
+		if err != nil {
+			perr("ERROR invalid integer [%s] for repeat interval in seconds", args[0])
+			os.Exit(1)
+		}
+		PollInterval = time.Duration(ri) * time.Second
+	}
+
+	if len(args) > 1 {
+		tl, err := strconv.Atoi(args[1])
+		if err != nil {
+			perr("ERROR invalid integer [%s] for time limit in seconds", args[1])
+			os.Exit(1)
+		}
+		TimeLimit = time.Duration(tl) * time.Second
+	}
 
 	Hostname, err = os.Hostname()
 	if err != nil {
@@ -208,24 +239,6 @@ func main() {
 	//Hostname = strings.TrimSuffix(Hostname, ".local")
 	if len(Hostname) > HostnameMaxLen {
 		Hostname = Hostname[:HostnameMaxLen-7] + "~" + Hostname[len(Hostname)-6:]
-	}
-
-	if len(os.Args) > 1 {
-		ri, err := strconv.Atoi(os.Args[1])
-		if err != nil {
-			perr("ERROR invalid integer [%s] for repeat interval in seconds", os.Args[1])
-			os.Exit(1)
-		}
-		PollInterval = time.Duration(ri) * time.Second
-
-		if len(os.Args) > 2 {
-			tl, err := strconv.Atoi(os.Args[2])
-			if err != nil {
-				perr("ERROR invalid integer [%s] for time limit in seconds", os.Args[2])
-				os.Exit(1)
-			}
-			TimeLimit = time.Duration(tl) * time.Second
-		}
 	}
 
 	if PollInterval > 0 {
