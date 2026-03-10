@@ -7,7 +7,7 @@ history:
 20/307 accept any number of arguments as filters by process id or by process name
 */
 
-// GoFixDiff
+// GoFixDiff GoFixFix
 // GoGet GoFmt GoBuildNull GoBuild
 // GoRun
 
@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -159,10 +160,7 @@ func main() {
 	}
 
 	sort.Slice(PP, func(i, j int) bool {
-		ml := len(PP[i].Pids)
-		if len(PP[j].Pids) < ml {
-			ml = len(PP[j].Pids)
-		}
+		ml := min(len(PP[i].Pids), len(PP[j].Pids))
 		for k := 0; k < ml; k++ {
 			if PP[i].Pids[k] < PP[j].Pids[k] {
 				return true
@@ -195,11 +193,8 @@ func main() {
 				}
 			}
 			if f.Pid > 0 {
-				for _, p := range p.Pids {
-					if p == f.Pid {
-						skip = false
-						break
-					}
+				if slices.Contains(p.Pids, f.Pid) {
+					skip = false
 				}
 			}
 			if !skip {
