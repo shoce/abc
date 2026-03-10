@@ -5,11 +5,11 @@ history:
 20/301 first arg is pid to specify the root process
 20/307 proper sorting to build visual process tree
 20/307 accept any number of arguments as filters by process id or by process name
-
-GoFixDiff
-GoFmt GoBuildNull GoBuild
-GoRun
 */
+
+// GoFixDiff
+// GoGet GoFmt GoBuildNull GoBuild
+// GoRun
 
 package main
 
@@ -67,7 +67,7 @@ type Process struct {
 
 type ProcessFilter struct {
 	Pid  int64
-	Name string
+	Text string
 }
 
 var (
@@ -120,12 +120,9 @@ func main() {
 
 	for _, a := range os.Args[1:] {
 		a = strings.TrimSpace(a)
-		filtername := a
-		filterpid, err := strconv.Atoi(a)
-		if err != nil {
-			filtername = a
-		}
-		FF = append(FF, ProcessFilter{Pid: int64(filterpid), Name: filtername})
+		filtertext := a
+		filterpid, _ := strconv.Atoi(a)
+		FF = append(FF, ProcessFilter{Pid: int64(filterpid), Text: filtertext})
 	}
 	if len(FF) == 0 {
 		FF = []ProcessFilter{ProcessFilter{Pid: 1}}
@@ -179,25 +176,32 @@ func main() {
 	})
 
 	for _, p := range PP {
+
 		skip := true
 
 		for _, f := range FF {
-			if f.Name == "0" {
-				skip = false
-				break
-			}
-			if f.Name != "" && strings.Contains(p.Name, f.Name) {
-				skip = false
-				break
-			}
-			if f.Pid == 0 {
-				continue
-			}
-			for _, pid := range p.Pids {
-				if pid == f.Pid {
+			if f.Text != "" {
+				if strings.Contains(p.Name, f.Text) {
 					skip = false
 					break
 				}
+				for _, a := range p.Cmdline {
+					if strings.Contains(a, f.Text) {
+						skip = false
+						break
+					}
+				}
+			}
+			if f.Pid > 0 {
+				for _, p := range p.Pids {
+					if p == f.Pid {
+						skip = false
+						break
+					}
+				}
+			}
+			if !skip {
+				break
 			}
 		}
 
@@ -249,6 +253,7 @@ func main() {
 			"%s %s (%s)"+NL,
 			pidss, procstats, cmdline,
 		)
+
 	}
 }
 

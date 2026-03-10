@@ -664,11 +664,10 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		}
 		// https://pkg.go.dev/golang.org/x/crypto/ssh
 		err := session.Signal(ssh.SIGINT)
-		if err != nil {
+		if err != nil && err == io.EOF {
+			perr("ERROR session Signal [SIGINT] EOF")
+		} else if err != nil {
 			perr("ERROR session Signal [SIGINT] %v", err)
-			if err == io.EOF {
-				perr("ERROR session Signal [SIGINT] EOF", err)
-			}
 		}
 	}()
 

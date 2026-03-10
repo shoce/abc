@@ -1,10 +1,10 @@
 module github.com/shoce/abc/pss
 
-go 1.24.0
+go 1.25.0
 
 require github.com/tklauser/go-sysconf v0.3.16
 
 require (
 	github.com/tklauser/numcpus v0.11.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 )
