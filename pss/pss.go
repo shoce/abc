@@ -239,19 +239,20 @@ func main() {
 		}
 		procstats := strings.Join(procstatss, SP)
 
-		cmdlines := make([]string, 0, len(p.Cmdline))
-		for _, a := range p.Cmdline {
+		cmdargs := make([]string, 0, len(p.Cmdline))
+		for _, a := range p.Cmdline[1:] {
 			if strings.Contains(a, NL) {
-				cmdlines = append(cmdlines, "[-"+NL+a+NL+"-]")
+				cmdargs = append(cmdargs, "[-"+NL+a+NL+"-]")
 			} else {
-				cmdlines = append(cmdlines, "["+a+"]")
+				cmdargs = append(cmdargs, "["+a+"]")
 			}
 		}
-		cmdline := strings.Join(cmdlines, N)
+		cmds := "[" + p.Cmdline[0] + "]"
+		cmdargss := strings.Join(cmdargs, N)
 
 		fmt.Printf(
-			"%s %s (%s)"+NL,
-			pidss, procstats, cmdline,
+			"%s %s %s(%s)"+NL,
+			pidss, procstats, cmds, cmdargss,
 		)
 
 	}
