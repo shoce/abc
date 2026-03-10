@@ -255,6 +255,8 @@ func main() {
 		)
 		if len(cmdargs) > 0 {
 			procinfo += SP + fmt.Sprintf("( %s )", strings.Join(cmdargs, SP))
+		} else {
+			procinfo += SP + "()"
 		}
 		procinfo += NL
 		fmt.Print(procinfo)
