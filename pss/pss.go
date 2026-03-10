@@ -31,6 +31,8 @@ const (
 	NL  = "\n"
 	SEP = ","
 	N   = ""
+
+	TagKubepod = "kubepod"
 )
 
 var (
@@ -209,11 +211,23 @@ func main() {
 			continue
 		}
 
-		pids := make([]string, 0, 10)
+		pids := make([]string, 0, 12)
 		for _, pid := range p.Pids {
-			pids = append(pids, fmt.Sprintf("<%d>", pid))
+			pids = append(pids, fmt.Sprintf("%d", pid))
+		}
+		for i := range pids {
+			pids[i] = fmt.Sprintf("<%s>", pids[i])
 		}
 		pidss := strings.Join(pids, N)
+
+		var tags []string
+		if p.Kubepod {
+			tags = append(tags, TagKubepod)
+		}
+		for i := range tags {
+			tags[i] = fmt.Sprintf("[%s]", tags[i])
+		}
+		tagss := strings.Join(tags, N)
 
 		procstatss := []string{}
 		if !BootTime.IsZero() && !p.Starttime.IsZero() {
@@ -246,16 +260,17 @@ func main() {
 			}
 		}
 
-		var procinfo string
-		if p.Kubepod {
-			procinfo = "[kubepod]" + SP
+		procinfo := pidss
+		if tagss != "" {
+			procinfo += tagss
 		}
-		procinfo += fmt.Sprintf(
-			"%s %s %s",
-			pidss, procstats, cmd,
-		)
+		procinfo += SP
+		if procstats != "" {
+			procinfo += procstats + SP
+		}
+		procinfo += cmd
 		if len(cmdargs) > 0 {
-			procinfo += SP + fmt.Sprintf("( %s )", strings.Join(cmdargs, SP))
+			procinfo += SP + "(" + strings.Join(cmdargs, SP) + ")"
 		} else {
 			procinfo += SP + "()"
 		}
