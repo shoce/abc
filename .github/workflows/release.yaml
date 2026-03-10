@@ -13,6 +13,7 @@ on:
 jobs:
 
   build-push-ubuntu-24-04-amd64:
+
     runs-on: ubuntu-24.04
     steps:
 
@@ -33,7 +34,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           # https://go.dev/dl/
-          go-version: "1.25.6"
+          go-version: "1.26.1"
 
       - name: go build
         run: |
@@ -88,14 +89,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           for tag in $(
-            gh release list --order asc --limit 100 --json tagName --jq '.[] | select(.tagName | test("-")) | .tagName' | head -n -2
+            gh release list --order asc --limit 100 --json tagName --jq '.[] | select(.tagName | test("-${{env.BUILD_ARCH}}")) | .tagName' | head -n -2
           ) ; do
             gh release delete "$tag" -y || true
           done
 
 
   build-push-ubuntu-24-04-arm64:
-    runs-on: ubuntu-24.04
+
+    runs-on: ubuntu-24.04-arm
     steps:
 
       - uses: shoce/action-version@v1
@@ -115,7 +117,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           # https://go.dev/dl/
-          go-version: "1.25.6"
+          go-version: "1.26.1"
 
       - name: go build
         run: |
@@ -170,7 +172,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           for tag in $(
-            gh release list --order asc --limit 100 --json tagName --jq '.[] | select(.tagName | test("-")) | .tagName' | head -n -2
+            gh release list --order asc --limit 100 --json tagName --jq '.[] | select(.tagName | test("-${{env.BUILD_ARCH}}")) | .tagName' | head -n -2
           ) ; do
             gh release delete "$tag" -y || true
           done
