@@ -234,9 +234,6 @@ func main() {
 					seps(uint64(p.Rss)*uint64(PageSize)/1024, 3)),
 			)
 		}
-		if p.Kubepod {
-			procstatss = append(procstatss, "[kubepod]")
-		}
 		procstats := strings.Join(procstatss, SP)
 
 		cmd := "[" + p.Cmdline[0] + "]"
@@ -249,7 +246,11 @@ func main() {
 			}
 		}
 
-		procinfo := fmt.Sprintf(
+		var procinfo string
+		if p.Kubepod {
+			procinfo = "[kubepod]" + SP
+		}
+		procinfo += fmt.Sprintf(
 			"%s %s %s",
 			pidss, procstats, cmd,
 		)
