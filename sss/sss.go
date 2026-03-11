@@ -38,7 +38,7 @@ func fmtdur(d time.Duration) (s string) {
 }
 
 func init() {
-	if len(os.Args) == 2 && os.Args[1] == "version" {
+	if len(os.Args) == 2 && os.Args[1] == "-version" {
 		fmt.Print(VERSION + NL)
 		os.Exit(0)
 	}
@@ -139,16 +139,16 @@ func main() {
 		}
 
 		fmt.Printf(
-			"pid<%d> name[%s] uptime<%s> listens(%v)"+NL,
-			p.Pid, pname, fmtdur(puptime), strings.Join(plistens, SP),
+			"<%d> up<%s> [%s] listens( %v )"+NL,
+			p.Pid, fmtdur(puptime), pname, strings.Join(plistens, SP),
 		)
 	}
 }
 
 func perr(msg string, args ...interface{}) {
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
+	msgtext := msg
+	if len(args) > 0 {
+		msgtext = fmt.Sprintf(msg, args...)
 	}
+	fmt.Fprint(os.Stderr, msgtext+NL)
 }
