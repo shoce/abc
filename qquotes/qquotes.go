@@ -1,3 +1,5 @@
+// GoFixDiff GoFixFix GoGet GoFmt GoBuildNull GoBuild
+
 package main
 
 import (
@@ -7,12 +9,16 @@ import (
 	"strings"
 )
 
+const (
+	NL = "\n"
+)
+
 func main() {
 	var err error
 	var bb []byte
 	bb, err = ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "ReadAll:", err)
+		fmt.Fprintf(os.Stderr, "ERROR ReadAll %+v"+NL, err)
 		os.Exit(1)
 	}
 	s := string(bb)

@@ -1,9 +1,6 @@
-/*
 
-GoGet GoFmt GoBuildNull
-GoBuild GoRun
-
-*/
+// GoFixDiff GoGet GoFmt GoBuildNull
+// GoBuild GoRun
 
 package main
 
