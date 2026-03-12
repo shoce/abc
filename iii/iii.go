@@ -20,8 +20,9 @@ var (
 	VERSION string
 
 	ShowEmptyAddr = false
-	ShowLoopback  = false
 	ShowDown      = false
+	ShowLoopback  = false
+	ShowPtp       = true
 
 	III map[string]NetInterface
 )
@@ -52,8 +53,9 @@ func main() {
 			os.Exit(0)
 		case "-a":
 			ShowEmptyAddr = true
-			ShowLoopback = true
 			ShowDown = true
+			ShowLoopback = true
+			ShowPtp = true
 		}
 	}
 
@@ -90,10 +92,13 @@ func main() {
 			ni.PointToPoint = true
 		}
 
+		if !ShowDown && !ni.Up {
+			continue
+		}
 		if !ShowLoopback && ni.Loopback {
 			continue
 		}
-		if !ShowDown && !ni.Up {
+		if !ShowPtp && ni.PointToPoint {
 			continue
 		}
 
@@ -106,14 +111,13 @@ func main() {
 			ni.Addr = append(ni.Addr, fmt.Sprintf("<%s>", a))
 		}
 
-		if !ShowEmptyAddr && len(ni.Addr) == 0 {
-			continue
-		}
-
 		III[ni.Name] = ni
 	}
 
 	for _, ni := range III {
+		if !ShowEmptyAddr && len(ni.Addr) == 0 {
+			continue
+		}
 		iinfo := fmt.Sprintf(
 			"[%s]"+SP+"addr( %s )"+SP+"hwaddr<%s>",
 			ni.Name, strings.Join(ni.Addr, SP), ni.HwAddr,
@@ -123,6 +127,9 @@ func main() {
 		}
 		if ShowLoopback {
 			iinfo += SP + fmt.Sprintf("loopback<%t>", ni.Loopback)
+		}
+		if ShowPtp {
+			iinfo += SP + fmt.Sprintf("ptp<%t>", ni.PointToPoint)
 		}
 		if ni.Error != "" {
 			iinfo += SP + fmt.Sprintf("err[%s]", ni.Error)
