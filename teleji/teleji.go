@@ -17,12 +17,12 @@ teleji escape VAR_NAME - reads text from VAR_NAME env var, prints escaped text t
 teleji version - prints version to stdout
 
 https://core.telegram.org/bots/api
-
-GoGet GoFmt GoBuildNull GoBuild
-GoRun
-
-TODO escape in main
 */
+
+// GoFixDiff GoGet GoFmt GoBuildNull GoBuild
+// GoRun
+
+// TODO escape in main
 
 package main
 
@@ -61,7 +61,7 @@ const (
 
 func init() {
 
-	if len(os.Args) == 2 && os.Args[1] == "-version" {
+	if len(os.Args) == 2 && os.Args[1] == "version" {
 		fmt.Println(VERSION)
 		os.Exit(0)
 	}
