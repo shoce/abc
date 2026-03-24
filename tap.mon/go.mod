@@ -1,7 +1,7 @@
 module github.com/shoce/abc/tap.mon
 
-go 1.24.1
+go 1.25.0
 
 require github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8
 
-require golang.org/x/sys v0.41.0 // indirect
+require golang.org/x/sys v0.42.0 // indirect

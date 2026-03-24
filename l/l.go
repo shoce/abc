@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -41,13 +42,14 @@ const (
 
 var (
 	VERSION string
+	DEBUG   bool
 
 	TERM string
 
 	Recursive   bool
 	ShowSymlink bool
-	ShowTime    bool
 	ShowSize    bool
+	ShowTime    bool
 	ShowPerm    bool
 	ShowOwner   bool
 	ShowCid     bool
@@ -85,18 +87,6 @@ func printinfo(path string, info os.FileInfo) error {
 		s += TAB + fmt.Sprintf("symlink[%s]", linkpath)
 	}
 
-	if ShowPerm {
-		s += TAB + fmt.Sprintf("perm<%04o>", finfo.Mode().Perm())
-	}
-
-	if ShowOwner {
-		var fstatuid, fstatgid int64 = -1, -1
-		if fstat, ok := finfo.Sys().(*syscall.Stat_t); ok {
-			fstatuid, fstatgid = int64(fstat.Uid), int64(fstat.Gid)
-		}
-		s += TAB + fmt.Sprintf("uid<%d> gid<%d>", fstatuid, fstatgid)
-	}
-
 	if ShowSize && !finfo.Mode().IsDir() && (info.Mode()&os.ModeSymlink == 0) {
 		s += TAB + fmt.Sprintf("size<%s>", seps(int(finfo.Size()), 3))
 	}
@@ -109,6 +99,20 @@ func printinfo(path string, info os.FileInfo) error {
 
 	if ShowTime {
 		s += TAB + fmt.Sprintf("mtime<%s>", finfo.ModTime().UTC().Format("06:0102:150405"))
+	}
+
+	if ShowPerm {
+		s += TAB + fmt.Sprintf("perm<%04o>", finfo.Mode().Perm())
+	}
+
+	if ShowOwner {
+		var fstatuid, fstatgid string
+		if fstat, ok := finfo.Sys().(*syscall.Stat_t); ok {
+			fstatuid, fstatgid = strconv.FormatUint(uint64(fstat.Uid), 10), strconv.FormatUint(uint64(fstat.Gid), 10)
+		} else {
+			fstatuid, fstatgid = "?", "?"
+		}
+		s += TAB + fmt.Sprintf("uid<%s> gid<%s>", fstatuid, fstatgid)
 	}
 
 	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink == 0) {
@@ -172,10 +176,10 @@ func list(path string) error {
 			return err
 		}
 		if !linktargetstat.Mode().IsDir() && listdir {
-			return fmt.Errorf("%s symblink[%s] is not a dir", path, linktargetpath)
+			return fmt.Errorf("[%s] symlink[%s] is not a dir", path, linktargetpath)
 		}
 	} else if !pathstat.Mode().IsDir() && listdir {
-		return fmt.Errorf("%s is not a dir", path)
+		return fmt.Errorf("[%s] is not a dir", path)
 	}
 
 	if Recursive {
@@ -229,6 +233,10 @@ func init() {
 		os.Exit(0)
 	}
 
+	if v := os.Getenv("DEBUG"); v != "" {
+		DEBUG = true
+	}
+
 	if v := os.Getenv("TERM"); v != "" {
 		TERM = v
 	}
@@ -238,34 +246,34 @@ func main() {
 	var err error
 
 	cmdname := path.Base(os.Args[0])
-	//perr("DEBUG cmdname [%s]", cmdname)
+	perr("DEBUG cmd name [%s]", cmdname)
 	switch cmdname {
 	case "l":
 	case "ls":
-		ShowSize = true
 		ShowSymlink = true
+		ShowSize = true
 	case "lsr":
 		Recursive = true
-		ShowSize = true
 		ShowSymlink = true
+		ShowSize = true
 	case "lt":
 		ShowTime = true
 	case "lr":
 		Recursive = true
 	case "ll":
 		ShowSymlink = true
+		ShowSize = true
+		//ShowTime = true
 		ShowPerm = true
 		ShowOwner = true
-		//ShowTime = true
-		ShowSize = true
 		//ShowCid = true
 	case "llr":
 		Recursive = true
 		ShowSymlink = true
+		ShowSize = true
+		//ShowTime = true
 		ShowPerm = true
 		ShowOwner = true
-		//ShowTime = true
-		ShowSize = true
 		//ShowCid = true
 	default:
 		perr("ERROR invalid cmd name [%s]", cmdname)
@@ -273,7 +281,7 @@ func main() {
 	}
 
 	args := os.Args[1:]
-	//perr("DEBUG args %#v", args)
+	perr("DEBUG cmd args %#v", args)
 
 	n := 0
 	for _, a := range args {
@@ -283,7 +291,7 @@ func main() {
 		}
 	}
 	args = args[:n]
-	//perr("DEBUG n <%d> args %#v", n, args)
+	perr("DEBUG n <%d> args %#v", n, args)
 
 	n = 0
 	for _, a := range args {
@@ -295,38 +303,42 @@ func main() {
 			break
 		case "-r", "-recursive":
 			Recursive = true
-		case "-p", "-perm":
-			ShowPerm = true
-		case "-o", "-owner":
-			ShowOwner = true
 		case "-s", "-size":
 			ShowSize = true
 		case "-t", "-time":
 			ShowTime = true
+		case "-p", "-perm":
+			ShowPerm = true
+		case "-o", "-owner":
+			ShowOwner = true
+		case "-l", "-long":
+			ShowSize = true
+			ShowTime = true
+			ShowPerm = true
 		case "-c", "-cid":
 			ShowCid = true
-		case "-l", "-link":
+		case "-sl", "-symlink":
 			ShowSymlink = true
 		case "-1", "-pathonly":
-			ShowPerm = false
 			ShowSymlink = false
-			ShowTime = false
 			ShowSize = false
-			ShowCid = false
+			ShowTime = false
+			ShowPerm = false
 			ShowOwner = false
+			ShowCid = false
 		default:
 			perr("ERROR invalid option [%s]", a)
 			os.Exit(1)
 		}
 		n++
 	}
-	//perr("DEBUG n <%d> args %#v", n, args)
+	perr("DEBUG n <%d> args %#v", n, args)
 
 	var paths []string
 	if n <= len(args) {
 		paths = args[n:]
 	}
-	//perr("DEBUG paths %#v", paths)
+	perr("DEBUG paths %#v", paths)
 	if len(paths) == 0 {
 		paths = append(paths, "./")
 	}
@@ -372,6 +384,9 @@ func seps(i, e int) string {
 }
 
 func perr(msg string, args ...interface{}) {
+	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
+		return
+	}
 	msgtext := msg
 	if len(args) > 0 {
 		msgtext = fmt.Sprintf(msg, args...)

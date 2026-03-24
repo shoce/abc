@@ -1,8 +1,6 @@
 module github.com/shoce/abc/drlatest
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.25.0
 
 require github.com/rusenask/docker-registry-client v0.0.0-20200210164146-049272422097
 
@@ -14,5 +12,5 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 )
