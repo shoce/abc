@@ -263,7 +263,7 @@ func main() {
 	case "ll":
 		ShowSymlink = true
 		ShowSize = true
-		//ShowTime = true
+		ShowTime = true
 		ShowPerm = true
 		ShowOwner = true
 		//ShowCid = true
@@ -271,7 +271,7 @@ func main() {
 		Recursive = true
 		ShowSymlink = true
 		ShowSize = true
-		//ShowTime = true
+		ShowTime = true
 		ShowPerm = true
 		ShowOwner = true
 		//ShowCid = true
@@ -315,6 +315,7 @@ func main() {
 			ShowSize = true
 			ShowTime = true
 			ShowPerm = true
+			ShowOwner = true
 		case "-c", "-cid":
 			ShowCid = true
 		case "-sl", "-symlink":
