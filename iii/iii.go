@@ -4,10 +4,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"os"
 	"strings"
+
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -59,6 +62,7 @@ func main() {
 		}
 	}
 
+	// https://pkg.go.dev/net#Interfaces
 	ii, err = net.Interfaces()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR net.Interfaces() %v"+NL, err)
@@ -102,11 +106,19 @@ func main() {
 			continue
 		}
 
+		// https://pkg.go.dev/net#Interface.Addrs
 		aa, err = i.Addrs()
 		if err != nil {
 			ni.Error = fmt.Sprintf("%s", err)
 			continue
 		}
+		// https://pkg.go.dev/slices#SortFunc
+		slices.SortFunc(aa, func(a, b net.Addr) int {
+			// https://pkg.go.dev/net#ParseCIDR
+			ipa, _, _ := net.ParseCIDR(a.String())
+			ipb, _, _ := net.ParseCIDR(b.String())
+			return bytes.Compare(ipa, ipb)
+		})
 		for _, a = range aa {
 			ni.Addr = append(ni.Addr, fmt.Sprintf("<%s>", a))
 		}
