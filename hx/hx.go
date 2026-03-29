@@ -37,7 +37,7 @@ hx get scheme://host:port/path/subpath head1:v1 head2:v2 arg1=val1 arg2=val2
 `
 	DEBUG bool
 
-	ShowHeaders bool
+	HxHeaders bool
 
 	// TODO basic auth
 	HxUser string
@@ -55,7 +55,7 @@ func init() {
 	}
 
 	if os.Getenv("HxHeaders") != "" {
-		ShowHeaders = true
+		HxHeaders = true
 	}
 
 	if os.Getenv("HxInsecure") != "" {
@@ -99,7 +99,7 @@ func main() {
 	switch strings.ToLower(args[0]) {
 	case "head":
 		hmethod = http.MethodHead
-		ShowHeaders = true
+		HxHeaders = true
 	case "get":
 		hmethod = http.MethodGet
 	case "post":
@@ -203,7 +203,7 @@ func main() {
 
 	defer hresp.Body.Close()
 
-	if ShowHeaders {
+	if HxHeaders {
 		pout(hresp.Status)
 		for hhk, hhvv := range hresp.Header {
 			for _, hhv := range hhvv {
