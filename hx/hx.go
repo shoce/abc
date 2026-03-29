@@ -120,6 +120,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// https://pkg.go.dev/net/http#Header
+	hheader := make(http.Header)
+
 	for _, a := range args[2:] {
 		// https://pkg.go.dev/strings#SplitN
 		iheader := strings.Index(a, ":")
@@ -131,8 +134,8 @@ func main() {
 			akv := strings.SplitN(a, "=", 2)
 			hquery.Add(akv[0], akv[1])
 		} else if aisheader {
-			perr("ERROR invalid arg [%s] header not supported", a)
-			os.Exit(1)
+			akv := strings.SplitN(a, ":", 2)
+			hheader.Add(akv[0], akv[1])
 		} else {
 			perr("ERROR invalid arg [%s]", a)
 			os.Exit(1)
@@ -141,12 +144,19 @@ func main() {
 
 	hurl.RawQuery = hquery.Encode()
 
-	perr("DEBUG hmethod [%s] hurl %#v", hmethod, hurl)
+	perr("DEBUG hmethod [%s] hheader (%v) hurl %#v", hmethod, hheader, hurl)
 
+	// https://pkg.go.dev/http#NewRequest
 	hreq, err := http.NewRequest(hmethod, hurl.String(), nil)
 	if err != nil {
 		perr("ERROR NewRequest %v", err)
 		os.Exit(1)
+	}
+
+	for hk, hvv := range hheader {
+		for _, hv := range hvv {
+			hreq.Header.Add(hk, hv)
+		}
 	}
 
 	hclient := &http.Client{}
