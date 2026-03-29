@@ -43,6 +43,9 @@ hx get scheme://host:port/path/subpath head1:v1 head2:v2 arg1=val1 arg2=val2
 	HxUser string
 	HxPass string
 
+	// TODO timeout
+	HxTimeout time.Duration
+
 	HxInsecure bool
 )
 
@@ -125,6 +128,10 @@ func main() {
 	}
 
 	perr("DEBUG hurl %#v", hurl)
+
+	if hurl.Scheme == "" {
+		hurl.Scheme = "http"
+	}
 
 	hquery := hurl.Query()
 	if err != nil {
