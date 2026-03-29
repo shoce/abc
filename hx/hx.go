@@ -9,6 +9,7 @@ history:
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"math"
@@ -37,6 +38,12 @@ hx get scheme://host:port/path/subpath head1:v1 head2:v2 arg1=val1 arg2=val2
 	DEBUG bool
 
 	ShowHeaders bool
+
+	// TODO basic auth
+	HxUser string
+	HxPass string
+
+	HxInsecure bool
 )
 
 func init() {
@@ -47,6 +54,11 @@ func init() {
 	if os.Getenv("HxHeaders") != "" {
 		ShowHeaders = true
 	}
+
+	if os.Getenv("HxInsecure") != "" {
+		HxInsecure = true
+	}
+
 }
 
 func main() {
@@ -160,6 +172,13 @@ func main() {
 	}
 
 	hclient := &http.Client{}
+	if HxInsecure {
+		hclient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
 	hresp, err := hclient.Do(hreq)
 	if err != nil {
 		perr("ERROR %v", err)
