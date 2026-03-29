@@ -213,7 +213,12 @@ func main() {
 		pout("")
 	}
 
-	io.Copy(os.Stdout, hresp.Body)
+	// https://pkg.go.dev/io#Copy
+	_, err := io.Copy(os.Stdout, hresp.Body)
+	if err != nil {
+		perr("ERROR %v", err)
+		os.Exit(1)
+	}
 
 	exitstatus := 0
 	if hresp.StatusCode >= 400 {
