@@ -15,6 +15,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -38,6 +40,8 @@ var (
 	DEBUG bool
 
 	Timeout time.Duration
+
+	IPFilter []string
 
 	expAllow1 *expvar.Int
 	expAllow2 *expvar.Int
@@ -119,6 +123,16 @@ func main() {
 	}
 	perr("Timeout <%s>", Timeout)
 
+	if v := os.Getenv("IPFilter"); v != "" {
+		IPFilter = strings.Fields(v)
+	}
+	ipfilteraton := "("
+	for _, i := range IPFilter {
+		ipfilteraton += "[" + i + "]"
+	}
+	ipfilteraton += ")"
+	perr("IPFilter %s", ipfilteraton)
+
 	args := os.Args[1:]
 
 	if len(args) != 4 {
@@ -158,9 +172,19 @@ func main() {
 		if conn1 == nil {
 			continue
 		}
-		perr("remote[%s] local[%s] ->", (*conn1).RemoteAddr(), (*conn1).LocalAddr())
+		localaddr := (*conn1).LocalAddr().String()
+		remoteaddr := (*conn1).RemoteAddr().String()
+		remoteip, _, err := net.SplitHostPort(remoteaddr)
+		if err != nil {
+			perr("WARNING SplitHostPort [%s] %v", remoteaddr, err)
+		}
+		if len(IPFilter) > 0 && !slices.Contains(IPFilter, remoteip) {
+			perr("remote[%s] local[%s] -> filtered", remoteaddr, localaddr)
+			continue
+		}
+		perr("remote[%s] local[%s] ->", remoteaddr, localaddr)
 		expOpen1.Add(1)
-		expAddr1.Add((*conn1).RemoteAddr().String(), 1)
+		expAddr1.Add(remoteaddr, 1)
 
 		go func(conn1 *net.Conn) {
 			defer func() {
