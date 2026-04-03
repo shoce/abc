@@ -1,12 +1,9 @@
 /*
 history:
 2016-0203 v1
-
-GoFmt
-GoBuildNull
-GoBuild
-GoRelease
 */
+
+// GoFmt GoBuildNull GoBuild
 
 package main
 
@@ -14,22 +11,32 @@ import (
 	"expvar"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
-func fatalUsage() {
-	log.Fatal(`
-	Creates tcp pipe for an ip address after a valid otp sent to the socket.
-	Usage: tcppipe accept/dial addr1 accept/dial addr2
-	Example: tcppipe dial 127.1:9022 dial 127.1:22
-	Example: tcppipe accept 127.1:8022 accept 127.1:9022
-	Env vars:
-		Timeout [30s]- timeout for tcp connections and between dials
-	`)
-}
+const (
+	USAGE = `tcppipe: creates pipe for a tcp address:port to another address:port
+usage: tcppipe accept/dial addr1 accept/dial addr2
+example: tcppipe accept 127.1:11465 dial 1.2.3.4:465
+example: tcppipe dial 127.1:9022 dial 127.1:22
+example: tcppipe accept 127.1:8022 accept 127.1:9022
+env vars:
+	Timeout [30s] - timeout for tcp connections and between dials
+`
+
+	SP  = " "
+	TAB = "\t"
+	NL  = "\n"
+
+	TimeoutStringDef = "30s"
+)
+
+var (
+	DEBUG bool
+)
 
 func allowAccept(addr string) (allow chan bool, connch chan *net.Conn, err error) {
 	l, err := net.Listen("tcp4", addr)
@@ -78,7 +85,7 @@ func allowConn(cmd string, addr string) (allow chan bool, connch chan *net.Conn,
 	case "dial":
 		allow, connch, err = allowDial(addr)
 	default:
-		err = fmt.Errorf("Cannon parse command `%s`: should be accept/dial", cmd)
+		err = fmt.Errorf("cannon parse command [%s] should be [accept]/[dial]", cmd)
 	}
 	return
 }
@@ -99,29 +106,42 @@ var (
 func main() {
 	var err error
 
-	if len(os.Args) != 5 {
-		fatalUsage()
+	if os.Getenv("DEBUG") != "" {
+		DEBUG = true
 	}
 
 	TimeoutString := os.Getenv("Timeout")
 	if TimeoutString == "" {
-		TimeoutString = "30s"
+		TimeoutString = TimeoutStringDef
 	}
 	Timeout, err = time.ParseDuration(TimeoutString)
 	if err != nil {
-		log.Fatal(err)
+		perr("ERROR ParseDuration Timeout [%s] %v", TimeoutString, err)
+		os.Exit(1)
 	}
+	perr("Timeout <%s>", Timeout)
 
-	cmd1, addr1 := os.Args[1], os.Args[2]
+	args := os.Args[1:]
+
+	if len(args) != 4 {
+		perr("ERROR invalid number of arguments")
+		perr("args (%s)", strings.Join(args, SP))
+		perr(NL + USAGE)
+		os.Exit(1)
+	}
+	cmd1, addr1 := args[0], args[1]
+	cmd2, addr2 := args[2], args[3]
+
 	al1, ch1, err := allowConn(cmd1, addr1)
 	if err != nil {
-		log.Fatal(err)
+		perr("ERROR allowConn ([%s] [%s]) %v", cmd1, addr1, err)
+		os.Exit(1)
 	}
 
-	cmd2, addr2 := os.Args[3], os.Args[4]
 	al2, ch2, err := allowConn(cmd2, addr2)
 	if err != nil {
-		log.Fatal(err)
+		perr("ERROR allowConn ([%s] [%s]) %v", cmd2, addr2, err)
+		os.Exit(1)
 	}
 
 	expAllow1 = expvar.NewInt("Allow1")
@@ -140,7 +160,7 @@ func main() {
 		if conn1 == nil {
 			continue
 		}
-		log.Printf("remote:%s local:%s ->", (*conn1).RemoteAddr(), (*conn1).LocalAddr())
+		perr("remote[%s] local[%s] ->", (*conn1).RemoteAddr(), (*conn1).LocalAddr())
 		expOpen1.Add(1)
 		expAddr1.Add((*conn1).RemoteAddr().String(), 1)
 
@@ -156,7 +176,7 @@ func main() {
 			if conn2 == nil {
 				return
 			}
-			log.Printf("remote:%s local:%s -> local:%s remote:%s", (*conn1).RemoteAddr(), (*conn1).LocalAddr(), (*conn2).LocalAddr(), (*conn2).RemoteAddr())
+			perr("remote[%s] local[%s] -> local[%s] remote[%s]", (*conn1).RemoteAddr(), (*conn1).LocalAddr(), (*conn2).LocalAddr(), (*conn2).RemoteAddr())
 			expOpen2.Add(1)
 			expAddr2.Add((*conn2).RemoteAddr().String(), 1)
 			defer func() {
@@ -184,4 +204,15 @@ func (c timeoutConn) Read(buf []byte) (int, error) {
 func (c timeoutConn) Write(buf []byte) (int, error) {
 	c.Conn.SetWriteDeadline(time.Now().Add(Timeout))
 	return c.Conn.Write(buf)
+}
+
+func perr(msg string, args ...interface{}) {
+	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
+		return
+	}
+	if len(args) == 0 {
+		fmt.Fprint(os.Stderr, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
+	}
 }

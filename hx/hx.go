@@ -216,7 +216,7 @@ func main() {
 	// https://pkg.go.dev/io#Copy
 	_, err = io.Copy(os.Stdout, hresp.Body)
 	if err != nil {
-		perr("ERROR %v", err)
+		perr("ERROR copy response body %v", err)
 		os.Exit(1)
 	}
 
