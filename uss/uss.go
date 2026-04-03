@@ -47,7 +47,7 @@ var (
 )
 
 func print() {
-	ts := tsnow()
+	ts := fmttime(time.Now().Local())
 
 	cpuInterval := PollInterval
 	if cpuInterval == 0 {
@@ -174,18 +174,18 @@ func print() {
 		perr("ERROR pshost.Uptime %v", err)
 		os.Exit(1)
 	}
-	uptimefmt := fmttime(uptime)
+	uptimefmt := fmtdursec(uptime)
 
 	fmt.Printf(
-		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb uptime<%s> read<%s> write<%s> nprocs<%d> listens(%s)"+NL,
+		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb uptime<%s> read<%s> write<%s> nprocs<%s> listens(%s)"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, seps(memsizemb, 3),
 		swapgauge, seps(swapsizemb, 3),
 		diskgauge, disksizegb,
 		uptimefmt,
-		fmttime(diskrdt/1000), fmttime(diskwrt/1000),
-		len(procs),
+		fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
+		seps(uint64(len(procs)), 3),
 		strings.Join(listens, N),
 	)
 }
@@ -259,19 +259,18 @@ func main() {
 	}
 }
 
-func tsnow() string {
-	t := time.Now().Local()
+func fmttime(t time.Time) string {
 	return fmt.Sprintf(
-		"%03d:%02d%02d:%02d%02d",
+		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
 }
 
-func fmttime(t uint64) string {
+func fmtdursec(t uint64) string {
 	tdays, tsecs := t/(24*3600), t%(24*3600)
-	ts := fmt.Sprintf("%ds", tsecs)
+	ts := seps(tsecs, 2) + "s"
 	if tdays > 0 {
-		ts = fmt.Sprintf("%dd"+SEP, tdays) + ts
+		ts = seps(tdays, 2) + "d" + SEP + ts
 	}
 	return ts
 }

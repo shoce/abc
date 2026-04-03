@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
@@ -98,7 +99,7 @@ func printinfo(path string, info os.FileInfo) error {
 	}
 
 	if ShowTime {
-		s += TAB + fmt.Sprintf("mtime<%s>", finfo.ModTime().UTC().Format("06:0102:150405"))
+		s += TAB + "mtime<" + fmttime(finfo.ModTime().UTC()) + ">"
 	}
 
 	if ShowPerm {
@@ -372,6 +373,13 @@ func TermUnderline(s string) string {
 		return "\033[4m" + s + "\033[24m"
 	}
 	return s
+}
+
+func fmttime(t time.Time) string {
+	return fmt.Sprintf(
+		"%d:%02d%02d:%02d%02d",
+		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
+	)
 }
 
 func seps(i, e int) string {
