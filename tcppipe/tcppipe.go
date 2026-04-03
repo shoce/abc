@@ -24,7 +24,7 @@ example: tcppipe accept 127.1:11465 dial 1.2.3.4:465
 example: tcppipe dial 127.1:9022 dial 127.1:22
 example: tcppipe accept 127.1:8022 accept 127.1:9022
 env vars:
-	Timeout [30s] - timeout for tcp connections and between dials
+	Timeout [` + TimeoutStringDef + `] - timeout for tcp connections and between dials
 `
 
 	SP  = " "
@@ -204,13 +204,21 @@ func (c timeoutConn) Write(buf []byte) (int, error) {
 	return c.Conn.Write(buf)
 }
 
+func tsnow() string {
+	t := time.Now().Local()
+	return fmt.Sprintf(
+		"%d:%02d%02d:%02d%02d",
+		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
+	)
+}
+
 func perr(msg string, args ...interface{}) {
 	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
 		return
 	}
 	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
+		fmt.Fprint(os.Stderr, "<"+tsnow()+">"+SP+msg+NL)
 	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
+		fmt.Fprintf(os.Stderr, "<"+tsnow()+">"+SP+msg+NL, args...)
 	}
 }
