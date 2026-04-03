@@ -36,6 +36,17 @@ env vars:
 
 var (
 	DEBUG bool
+
+	Timeout time.Duration
+
+	expAllow1 *expvar.Int
+	expAllow2 *expvar.Int
+	expOpen1  *expvar.Int
+	expOpen2  *expvar.Int
+	expClose1 *expvar.Int
+	expClose2 *expvar.Int
+	expAddr1  *expvar.Map
+	expAddr2  *expvar.Map
 )
 
 func allowAccept(addr string) (allow chan bool, connch chan *net.Conn, err error) {
@@ -89,19 +100,6 @@ func allowConn(cmd string, addr string) (allow chan bool, connch chan *net.Conn,
 	}
 	return
 }
-
-var (
-	Timeout time.Duration
-
-	expAllow1 *expvar.Int
-	expAllow2 *expvar.Int
-	expOpen1  *expvar.Int
-	expOpen2  *expvar.Int
-	expClose1 *expvar.Int
-	expClose2 *expvar.Int
-	expAddr1  *expvar.Map
-	expAddr2  *expvar.Map
-)
 
 func main() {
 	var err error
