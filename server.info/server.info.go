@@ -40,10 +40,10 @@ type Disk struct {
 	FSType     string
 	MountPoint string
 	Opts       []string
-	Total   uint64
-	Free    uint64
-	Used    uint64
-	Percent float64
+	Total      uint64
+	Free       uint64
+	Used       uint64
+	Percent    float64
 }
 
 func main() {

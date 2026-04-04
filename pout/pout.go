@@ -4,9 +4,9 @@ history:
 
 GoGet GoFmt GoBuild
 
-out ha ha
-out 'he he'
-err haa >/dev/null
+pout ha ha
+pout 'he he'
+perr haa >/dev/null
 */
 
 package main
@@ -17,16 +17,21 @@ import (
 	"path"
 )
 
+const (
+	NL = "\n"
+)
+
 func main() {
 	var err error
 	var stream *os.File
 	name := path.Base(os.Args[0])
 	switch name {
-	case "out":
+	case "pout":
 		stream = os.Stdout
-	case "err":
+	case "perr":
 		stream = os.Stderr
 	default:
+		fmt.Fprintf(os.Stderr, "ERROR invalid command name [%s]"+NL, os.Args[0])
 		os.Exit(1)
 	}
 	for _, s := range os.Args[1:] {

@@ -49,7 +49,7 @@ jobs:
           cd /tmp/${{ github.event.repository.name }}/
           for sl in ll ls lt lr llr lsr ; do ln -s -f l $sl ; done
           for sl in append ; do ln -s -f put $sl ; done
-          for sl in err ; do ln -s -f out $sl ; done
+          for sl in perr ; do ln -s -f pout $sl ; done
           for sl in srer ; do ln -s -f sre $sl ; done
           for sl in gr gv gvr ; do ln -s -f g $sl ; done
           for sl in Aa ; do ln -s -f aA $sl ; done
@@ -132,7 +132,7 @@ jobs:
           cd /tmp/${{ github.event.repository.name }}/
           for sl in ll ls lt lr llr lsr ; do ln -s -f l $sl ; done
           for sl in append ; do ln -s -f put $sl ; done
-          for sl in err ; do ln -s -f out $sl ; done
+          for sl in perr ; do ln -s -f pout $sl ; done
           for sl in srer ; do ln -s -f sre $sl ; done
           for sl in gr gv gvr ; do ln -s -f g $sl ; done
           for sl in Aa ; do ln -s -f aA $sl ; done
