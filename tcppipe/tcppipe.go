@@ -228,8 +228,7 @@ func (c timeoutConn) Write(buf []byte) (int, error) {
 	return c.Conn.Write(buf)
 }
 
-func tsnow() string {
-	t := time.Now().Local()
+func fmttime(t time.Time) string {
 	return fmt.Sprintf(
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
@@ -240,9 +239,10 @@ func perr(msg string, args ...interface{}) {
 	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
 		return
 	}
+	tnow := time.Now().Local()
 	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, "<"+tsnow()+">"+SP+msg+NL)
+		fmt.Fprint(os.Stderr, "<"+fmttime(tnow)+">"+SP+msg+NL)
 	} else {
-		fmt.Fprintf(os.Stderr, "<"+tsnow()+">"+SP+msg+NL, args...)
+		fmt.Fprintf(os.Stderr, "<"+fmttime(tnow)+">"+SP+msg+NL, args...)
 	}
 }
