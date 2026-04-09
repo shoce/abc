@@ -176,14 +176,23 @@ func print() {
 	}
 	uptimefmt := fmtdursec(uptime)
 
+	bootid := ""
+	boot_id_path := "/proc/sys/kernel/random/boot_id"
+	bootidbb, err := os.ReadFile(boot_id_path)
+	if err == nil {
+		bootid = strings.Split(string(bootidbb), "-")[0]
+	} else {
+		//perr("WARNING ReadAll [%s] %v", boot_id_path, err)
+	}
+
 	fmt.Printf(
-		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb uptime<%s> read<%s> write<%s> nprocs<%s> listens(%s)"+NL,
+		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb uptime<%s> bootid[%s] read<%s> write<%s> nprocs<%s> listens(%s)"+NL,
 		ts, Hostname,
 		cpugauge, cpunumber,
 		memgauge, seps(memsizemb, 3),
 		swapgauge, seps(swapsizemb, 3),
 		diskgauge, disksizegb,
-		uptimefmt,
+		uptimefmt, bootid,
 		fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
 		seps(uint64(len(procs)), 3),
 		strings.Join(listens, N),
@@ -275,14 +284,6 @@ func fmtdursec(t uint64) string {
 	return ts
 }
 
-func perr(msg string, args ...interface{}) {
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
-	}
-}
-
 func seps(i uint64, e uint64) string {
 	ee := uint64(math.Pow(10, float64(e)))
 	if i < ee {
@@ -290,5 +291,13 @@ func seps(i uint64, e uint64) string {
 	} else {
 		f := fmt.Sprintf("0%dd", e)
 		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+	}
+}
+
+func perr(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		fmt.Fprint(os.Stderr, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
 	}
 }
