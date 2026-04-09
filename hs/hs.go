@@ -97,6 +97,7 @@ var (
 
 	Hostname string
 	BootTime int64
+	BootId   string
 	Host     string // host network address to run commands on: empty or localhost to run with exec() and hostname[:port] to use ssh transport
 
 	SshKeepAliveInterval time.Duration = 12 * time.Second
@@ -422,30 +423,52 @@ func perr(msg string, args ...interface{}) {
 	if strings.HasPrefix(msg, "VERBOSE ") && !VERBOSE {
 		return
 	}
-	var t time.Time = time.Now().Local()
-	var ts string
+	tnow := time.Now().Local()
+	ts := ""
 	if LogBeatTime {
 		const BEAT = time.Duration(24) * time.Hour / 1000
-		t = t.In(TzBiel)
-		ty := t.Sub(time.Date(t.Year(), 1, 1, 0, 0, 0, 0, TzBiel))
-		td := t.Sub(time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, TzBiel))
+		tnow = tnow.In(TzBiel)
+		ty := tnow.Sub(time.Date(tnow.Year(), 1, 1, 0, 0, 0, 0, TzBiel))
+		td := tnow.Sub(time.Date(tnow.Year(), tnow.Month(), tnow.Day(), 0, 0, 0, 0, TzBiel))
 		ts = fmt.Sprintf(
 			"<%03d:%d:%d>",
-			t.Year()%1000,
+			tnow.Year()%1000,
 			int(ty/(time.Duration(24)*time.Hour))+1,
 			int(td/BEAT),
 		)
 	} else {
-		ts = fmt.Sprintf(
-			"<%03d:%02d%02d:%02d%02d+>",
-			t.Year()%1000, t.Month(), t.Day(),
-			t.Hour(), t.Minute(),
-		)
+		ts = "<" + fmttime(tnow) + "+>"
 	}
 	if len(args) > 0 {
 		fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
 	} else {
 		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
+	}
+}
+
+func fmttime(t time.Time) string {
+	return fmt.Sprintf(
+		"%d:%02d%02d:%02d%02d",
+		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
+	)
+}
+
+func fmtdursec(t uint64) string {
+	tdays, tsecs := t/(24*3600), t%(24*3600)
+	ts := seps(tsecs, 2) + "s"
+	if tdays > 0 {
+		ts = seps(tdays, 2) + "d" + SEP + ts
+	}
+	return ts
+}
+
+func seps(i uint64, e uint64) string {
+	ee := uint64(math.Pow(10, float64(e)))
+	if i < ee {
+		return fmt.Sprintf("%d", i%ee)
+	} else {
+		f := fmt.Sprintf("0%dd", e)
+		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
 
@@ -457,28 +480,15 @@ func logstatus() {
 	}
 	uptime := "nil"
 	if BootTime > 0 {
-		uptimesecs := time.Now().Unix() - BootTime
-		uptime = fmt.Sprintf("%ds", uptimesecs%86400)
-		if uptimesecs/86400 > 0 {
-			uptime = fmt.Sprintf("%dd", uptimesecs/86400) + SEP + uptime
-		}
+		uptimesecs := uint64(time.Now().Unix() - BootTime)
+		uptime = fmtdursec(uptimesecs)
 	}
 	s += fmt.Sprintf(
-		" Uptime<%s> Hostname[%s] Host=%s User=%s hs -- ",
-		uptime, Hostname, Host, User,
+		" Uptime<%s> BootId[%s] Hostname[%s] Host=%s User=%s hs -- ",
+		uptime, BootId, Hostname, Host, User,
 	)
 	s = TermUnderline(s)
 	perr(s)
-}
-
-func seps(i int, e int) string {
-	ee := int(math.Pow(10, float64(e)))
-	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
-	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s.%"+f, seps(i/ee, e), i%ee)
-	}
 }
 
 func copynotify(dst io.Writer, src io.Reader, notify chan error) {
@@ -530,6 +540,18 @@ func connectssh() (err error) {
 			perr("WARNING procstat btime ParseInt %v", err)
 		}
 	}
+	session.Close()
+
+	session, err = SshClient.NewSession()
+	if err != nil {
+		perr("ERROR boot_id NewSession %v", err)
+		return err
+	}
+	bootidbb, err := session.Output("cat /proc/sys/kernel/random/boot_id")
+	if err != nil {
+		perr("WARNING boot_id Output %v", err)
+	}
+	BootId = strings.Split(string(bootidbb), "-")[0]
 	session.Close()
 
 	return nil
