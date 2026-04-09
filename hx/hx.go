@@ -9,11 +9,13 @@ history:
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"os"
 	"strings"
@@ -165,19 +167,6 @@ func main() {
 
 	perr("DEBUG hmethod [%s] hheader (%v) hurl %#v", hmethod, hheader, hurl)
 
-	// https://pkg.go.dev/http#NewRequest
-	hreq, err := http.NewRequest(hmethod, hurl.String(), nil)
-	if err != nil {
-		perr("ERROR NewRequest %v", err)
-		os.Exit(1)
-	}
-
-	for hk, hvv := range hheader {
-		for _, hv := range hvv {
-			hreq.Header.Add(hk, hv)
-		}
-	}
-
 	hclient := &http.Client{}
 	if HxInsecure {
 		hclient.Transport = &http.Transport{
@@ -186,6 +175,45 @@ func main() {
 			},
 		}
 	}
+
+	htrace := &httptrace.ClientTrace{
+		DNSStart:     func(info httptrace.DNSStartInfo) {},
+		DNSDone:      func(info httptrace.DNSDoneInfo) {},
+		ConnectStart: func(network, addr string) {},
+		GotConn:      func(info httptrace.GotConnInfo) {},
+		TLSHandshakeStart: func() {
+		},
+		TLSHandshakeDone: func(htlsconnstate tls.ConnectionState, err error) {
+			perr("DEBUG tls connection state %#v", htlsconnstate)
+			for _, pc := range htlsconnstate.PeerCertificates {
+				perr(
+					"DEBUG tls connection peer certificate Issuer [%v] Subject [%v] NotBefore <%s> NotAfter <%s> KeyUsage [%v]",
+					pc.Issuer, pc.Subject, fmttime(pc.NotBefore), fmttime(pc.NotAfter), pc.KeyUsage,
+				)
+				perr(
+					"DEBUG tls connection peer certificate PermittedDNSDomains (%v) PermittedIPRanges (%v) PermittedEmailAddresses (%v) PermittedURIDomains (%v)",
+					pc.PermittedDNSDomains, pc.PermittedIPRanges, pc.PermittedEmailAddresses, pc.PermittedURIDomains,
+				)
+			}
+		},
+		GotFirstResponseByte: func() {},
+	}
+
+	// https://pkg.go.dev/http#NewRequest
+	hreq, err := http.NewRequest(hmethod, hurl.String(), nil)
+	if err != nil {
+		perr("ERROR NewRequest %v", err)
+		os.Exit(1)
+	}
+
+	hreq = hreq.WithContext(httptrace.WithClientTrace(context.Background(), htrace))
+
+	for hk, hvv := range hheader {
+		for _, hv := range hvv {
+			hreq.Header.Add(hk, hv)
+		}
+	}
+
 	hresp, err := hclient.Do(hreq)
 	if err != nil {
 		perr("ERROR %v", err)
@@ -228,10 +256,9 @@ func main() {
 	os.Exit(exitstatus)
 }
 
-func tsnow() string {
-	t := time.Now().Local()
+func fmttime(t time.Time) string {
 	return fmt.Sprintf(
-		"%03d:%02d%02d:%02d%02d",
+		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
 }
