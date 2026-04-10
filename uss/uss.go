@@ -179,10 +179,12 @@ func print() {
 	bootid := ""
 	boot_id_path := "/proc/sys/kernel/random/boot_id"
 	bootidbb, err := os.ReadFile(boot_id_path)
-	if err == nil {
-		bootid = strings.Split(string(bootidbb), "-")[0]
-	} else {
+	if err != nil {
 		//perr("WARNING ReadAll [%s] %v", boot_id_path, err)
+	}
+	bootid = string(bootidbb)
+	if len(bootid) > 4 {
+		bootid = bootid[:4]
 	}
 
 	fmt.Printf(
