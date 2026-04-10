@@ -551,7 +551,10 @@ func connectssh() (err error) {
 	if err != nil {
 		perr("WARNING boot_id Output %v", err)
 	}
-	BootId = strings.Split(string(bootidbb), "-")[0]
+	BootId = string(bootidbb)
+	if len(BootId) > 4 {
+		BootId = BootId[:4]
+	}
 	session.Close()
 
 	return nil
