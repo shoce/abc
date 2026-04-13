@@ -72,12 +72,12 @@ func print() {
 	if err != nil {
 		//perr("WARNING ReadFile [%s] %v", cpufreq_path, err)
 	}
+	cpufreq := strings.TrimSpace(string(cpufreqbb))
 	// https://pkg.go.dev/strconv#ParseUint
-	cpufreqhz, err := strconv.ParseUint(string(cpufreqbb), 10, 64)
+	cpufreqhz, err := strconv.ParseUint(cpufreq, 10, 64)
 	if err != nil {
-		//perr("WARNING ParseUint [%s] %v", string(cpufreqbb), err)
+		//perr("WARNING ParseUint [%s] %v", cpufreqs, err)
 	}
-	cpufreq := ""
 	if cpufreqhz > 0 {
 		cpufreq = fmt.Sprintf("%d", cpufreqhz/1000) + "mhz"
 	}
