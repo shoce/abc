@@ -67,13 +67,17 @@ func print() {
 		os.Exit(1)
 	}
 
-	cpuinfos, err := pscpu.Info()
+	cpufreq_path := "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq"
+	cpufreqbb, err := os.ReadFile(cpufreq_path)
 	if err != nil {
-		perr("ERROR pscpu.Info %v", err)
-		os.Exit(1)
+		//perr("WARNING ReadFile [%s] %v", cpufreq_path, err)
 	}
-	for _, cpuinfo := range cpuinfos {
-		perr("cpu<%d> %v", cpuinfo.CPU, cpuinfo)
+	cpufreq := string(cpufreqbb)
+	if len(cpufreq) > 3 {
+		cpufreq = cpufreq[:len(cpufreq)-3] + "mhz"
+	}
+	if cpufreq != "" {
+		cpufreq = "<" + cpufreq + ">"
 	}
 
 	mem, err := psmem.VirtualMemory()
@@ -185,21 +189,20 @@ func print() {
 	}
 	uptimefmt := fmtdursec(uptime)
 
-	bootid := ""
 	boot_id_path := "/proc/sys/kernel/random/boot_id"
 	bootidbb, err := os.ReadFile(boot_id_path)
 	if err != nil {
-		//perr("WARNING ReadAll [%s] %v", boot_id_path, err)
+		//perr("WARNING ReadFile [%s] %v", boot_id_path, err)
 	}
-	bootid = string(bootidbb)
+	bootid := string(bootidbb)
 	if len(bootid) > 4 {
 		bootid = bootid[:4]
 	}
 
 	fmt.Printf(
-		"<%s> [%s] cpu%s%d mem%s%smb swap%s%smb disk%s%dgb uptime<%s> bootid[%s] read<%s> write<%s> nprocs<%s> listens(%s)"+NL,
+		"<%s> [%s] cpu%s%d%s mem%s%smb swap%s%smb disk%s%dgb uptime<%s> bootid[%s] read<%s> write<%s> nprocs<%s> listens(%s)"+NL,
 		ts, Hostname,
-		cpugauge, cpunumber,
+		cpugauge, cpunumber, cpufreq,
 		memgauge, seps(memsizemb, 3),
 		swapgauge, seps(swapsizemb, 3),
 		diskgauge, disksizegb,
