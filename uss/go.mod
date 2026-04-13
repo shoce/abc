@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/shirou/gopsutil/v4 v4.26.3
-	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
 )
 
 require (

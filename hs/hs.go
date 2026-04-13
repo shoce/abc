@@ -474,7 +474,7 @@ func seps(i uint64, e uint64) string {
 
 func logstatus() {
 	fmt.Fprintf(os.Stderr, NL)
-	s := fmt.Sprintf("Status[%s]", Status)
+	s := fmt.Sprintf("status[%s]", Status)
 	if Status != "" {
 		s = TermInverse(s)
 	}
@@ -484,7 +484,7 @@ func logstatus() {
 		uptime = fmtdursec(uptimesecs)
 	}
 	s += fmt.Sprintf(
-		" Uptime<%s> BootId[%s] Hostname[%s] Host=%s User=%s hs -- ",
+		" uptime<%s> bootid[%s] hostname[%s] host=%s user=%s hs -- ",
 		uptime, BootId, Hostname, Host, User,
 	)
 	s = TermUnderline(s)
@@ -664,7 +664,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		return "", fmt.Errorf("stderr pipe for session %v", err)
 	}
 
-	perr("Host=%s User=%s hs -- %s : ", Host, User, cmds)
+	perr("host=%s user=%s hs -- %s", Host, User, cmds)
 
 	copyoutnotify := make(chan error)
 	go copynotify(os.Stdout, stdoutpipe, copyoutnotify)

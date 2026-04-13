@@ -5,8 +5,7 @@ history:
 23/0827 github.com/shirou/gopsutil/v3
 */
 
-// GoGet GoFmt GoBuildNull
-// GoBuild GoRun
+// GoGet GoFmt GoBuildNull GoBuild GoRun
 
 package main
 
@@ -18,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	// https://pkg.go.dev/github.com/shirou/gopsutil/v4/
 	pscpu "github.com/shirou/gopsutil/v4/cpu"
 	psdisk "github.com/shirou/gopsutil/v4/disk"
 	pshost "github.com/shirou/gopsutil/v4/host"
@@ -65,6 +65,15 @@ func print() {
 	if err != nil {
 		perr("ERROR pscpu.Counts %v", err)
 		os.Exit(1)
+	}
+
+	cpuinfos, err := pscpu.Info()
+	if err != nil {
+		perr("ERROR pscpu.Info %v", err)
+		os.Exit(1)
+	}
+	for _, cpuinfo := range cpuinfos {
+		perr("cpu<%d> %v", cpuinfo.CPU, cpuinfo)
 	}
 
 	mem, err := psmem.VirtualMemory()
