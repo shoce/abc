@@ -204,8 +204,8 @@ func print() {
 		bootid = bootid[:4]
 	}
 
-	fmt.Printf(
-		"<%s> [%s] cpu%s%d%s mem%s%smb swap%s%smb disk%s%dgb uptime<%s> bootid[%s] read<%s> write<%s> nprocs<%s> listens(%s)"+NL,
+	pout(
+		"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> bootid[%s] read<%s> write<%s> nprocs<%s> listens(%s)",
 		ts, Hostname,
 		cpugauge, cpunumber, cpufreq,
 		memgauge, seps(memsizemb, 3),
@@ -318,5 +318,13 @@ func perr(msg string, args ...interface{}) {
 		fmt.Fprint(os.Stderr, msg+NL)
 	} else {
 		fmt.Fprintf(os.Stderr, msg+NL, args...)
+	}
+}
+
+func pout(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		fmt.Fprint(os.Stdout, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stdout, msg+NL, args...)
 	}
 }
