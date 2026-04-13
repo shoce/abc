@@ -107,7 +107,7 @@ func print() {
 		swapgauge = (strings.Repeat("=", swappercent/VisualRatio) +
 			strings.Repeat("-", 100/VisualRatio-swappercent/VisualRatio))
 	} else {
-		swapgauge = strings.Repeat(" ", 100/VisualRatio)
+		swapgauge = strings.Repeat("_", 100/VisualRatio)
 	}
 
 	disk, err := psdisk.Usage("/")
