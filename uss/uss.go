@@ -10,6 +10,7 @@ history:
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"os"
@@ -147,6 +148,7 @@ func print() {
 	}
 
 	var listens []string
+	// https://pkg.go.dev/github.com/shirou/gopsutil/v4/net#Connections
 	inet4conns, err := psnet.Connections("inet4")
 	if err != nil {
 		perr("ERROR psnet.Connections inet4 %v", err)
@@ -159,7 +161,13 @@ func print() {
 		os.Exit(1)
 	}
 	//perr("inet6conns<%d>", len(inet6conns))
-	for _, c := range append(inet4conns, inet6conns...) {
+	// https://pkg.go.dev/slices#SortFunc
+	// https://pkg.go.dev/cmp#Compare
+	inetconns := append(inet4conns, inet6conns...)
+	slices.SortFunc(inetconns, func(a, b psnet.ConnectionStat) int {
+		return cmp.Compare(a.Laddr.Port, b.Laddr.Port)
+	})
+	for _, c := range inetconns {
 		if c.Status != "LISTEN" {
 			continue
 		}
