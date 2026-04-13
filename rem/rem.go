@@ -17,6 +17,16 @@ const (
 	NL = "\n"
 )
 
+var (
+	TRASH = "/trash/"
+)
+
+func init() {
+	if v := os.Getenv("TRASH"); v != "" {
+		TRASH = v
+	}
+}
+
 func main() {
 	name := path.Base(os.Args[0])
 	switch name {
@@ -43,18 +53,18 @@ func rem() {
 		if !path.IsAbs(apath) {
 			apath = path.Join(wd, apath)
 		}
-		fmt.Printf(`mkdir -p "/trash/%s"`+NL, path.Dir(apath))
-		fmt.Printf(`mv -v "%s" "/trash/%s"`+NL, apath, apath)
+		fmt.Printf(`mkdir -p "%s/%s"`+NL, TRASH, path.Dir(apath))
+		fmt.Printf(`mv -v "%s" "%s/%s"`+NL, apath, TRASH, apath)
 	}
 	os.Exit(0)
 }
 
 func remls() {
-	fmt.Printf("lsr /trash/" + NL)
+	fmt.Printf("lsr %s/"+NL, TRASH)
 	os.Exit(0)
 }
 
 func remrem() {
-	fmt.Printf("rm -r -v /trash/*" + NL)
+	fmt.Printf("rm -r -v %s/*"+NL, TRASH)
 	os.Exit(0)
 }
