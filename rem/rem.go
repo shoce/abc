@@ -60,12 +60,12 @@ func rem() {
 			perr("ERROR %v", err)
 		}
 		trashapath := path.Join(TRASH, apath)
-		pout(apath)
+		perr(apath)
 		err = os.Rename(apath, trashapath)
 		if err != nil {
 			perr("ERROR %v", err)
 		} else {
-			pout(TAB + trashapath)
+			perr(TAB + trashapath)
 		}
 	}
 	os.Exit(0)
