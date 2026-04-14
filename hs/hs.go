@@ -437,7 +437,7 @@ func perr(msg string, args ...interface{}) {
 			int(td/BEAT),
 		)
 	} else {
-		ts = "<" + fmttime(tnow) + "+>"
+		ts = "<" + fmttime(tnow) + ">"
 	}
 	if len(args) > 0 {
 		fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)

@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	NL = "\n"
+	TAB = "\t"
+	NL  = "\n"
 )
 
 var (
@@ -37,7 +38,7 @@ func main() {
 	case "remrem":
 		remrem()
 	default:
-		fmt.Fprintf(os.Stderr, "ERROR invalid command name [%s]"+NL, os.Args[0])
+		perr("ERROR invalid command name [%s]", os.Args[0])
 		os.Exit(1)
 	}
 }
@@ -45,7 +46,7 @@ func main() {
 func rem() {
 	wd, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR Getwd %v", err)
+		perr("ERROR Getwd %v", err)
 		os.Exit(1)
 	}
 	for _, a := range os.Args[1:] {
@@ -53,18 +54,45 @@ func rem() {
 		if !path.IsAbs(apath) {
 			apath = path.Join(wd, apath)
 		}
-		fmt.Printf(`mkdir -p "%s/%s"`+NL, TRASH, path.Dir(apath))
-		fmt.Printf(`mv -v "%s" "%s/%s"`+NL, apath, TRASH, apath)
+		trashapathdir := path.Join(TRASH, path.Dir(apath))
+		err = os.MkdirAll(trashapathdir, 0700)
+		if err != nil {
+			perr("ERROR %v", err)
+		}
+		trashapath := path.Join(TRASH, apath)
+		pout(apath)
+		err = os.Rename(apath, trashapath)
+		if err != nil {
+			perr("ERROR %v", err)
+		} else {
+			pout(TAB + trashapath)
+		}
 	}
 	os.Exit(0)
 }
 
 func remls() {
-	fmt.Printf("lsr %s/"+NL, TRASH)
+	pout("lsr %s/", TRASH)
 	os.Exit(0)
 }
 
 func remrem() {
-	fmt.Printf("rm -r -v %s/*"+NL, TRASH)
+	pout("rm -r -v %s/*", TRASH)
 	os.Exit(0)
+}
+
+func perr(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		fmt.Fprint(os.Stderr, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stderr, msg+NL, args...)
+	}
+}
+
+func pout(msg string, args ...interface{}) {
+	if len(args) == 0 {
+		fmt.Fprint(os.Stdout, msg+NL)
+	} else {
+		fmt.Fprintf(os.Stdout, msg+NL, args...)
+	}
 }
