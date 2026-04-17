@@ -344,7 +344,7 @@ func fmttime(t time.Time) string {
 	if _, tzoffset := t.Zone(); tzoffset == 0 {
 		ts += "+"
 	} else {
-		ts += "@"
+		ts += "-"
 	}
 	return ts
 }
