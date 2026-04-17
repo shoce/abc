@@ -380,7 +380,8 @@ func main() {
 
 		cmds = strings.TrimSuffix(cmds, NL)
 		perr("DEBUG cmds [%s]", cmds)
-		if len(cmds) > 0 && strings.HasSuffix(cmds, TAB) {
+		if strings.HasSuffix(cmds, TAB) {
+			perr(strings.ReplaceAll(cmds, TAB, "<TAB>"))
 			// https://pkg.go.dev/strings#TrimPrefix
 			cmds = strings.TrimSuffix(cmds, TAB)
 			cmdsff := strings.Fields(cmds)
@@ -394,7 +395,7 @@ func main() {
 				}
 				for _, c := range AllPathCmds {
 					if strings.HasPrefix(c, cmd) || strings.HasPrefix(path.Base(c), cmd) {
-						perr(c)
+						pout(c)
 					}
 				}
 			} else if len(cmdsff) > 1 {
@@ -412,7 +413,7 @@ func main() {
 				}
 				for _, f := range AllFiles {
 					if strings.HasPrefix(f, fpath) || strings.HasPrefix(f, path.Join(Pwd, fpath)) {
-						perr(f)
+						pout(f)
 					}
 				}
 			}
@@ -501,6 +502,15 @@ func perr(msg string, args ...interface{}) {
 	} else {
 		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
 	}
+}
+
+func pout(msg string, args ...interface{}) {
+	msgtext := msg
+	if len(args) > 0 {
+		msgtext = F(msg, args...)
+	}
+	fmt.Fprint(os.Stdout, msgtext+NL)
+
 }
 
 func fmttime(t time.Time) string {
