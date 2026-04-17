@@ -10,6 +10,7 @@ history:
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	psnet "github.com/shirou/gopsutil/v4/net"
 	psproc "github.com/shirou/gopsutil/v4/process"
 	"golang.org/x/exp/slices"
 )
@@ -50,6 +52,7 @@ func main() {
 	}
 
 	listens := make(map[string][]string)
+	listensstats := make(map[string]psnet.ConnectionStat)
 
 	for _, p := range procs {
 		pname, err := p.Name()
@@ -116,6 +119,7 @@ func main() {
 			}
 			if add {
 				plistens = append(plistens, l)
+				listensstats[l] = c
 				listens[l] = append(listens[l], F(
 					"<%d><%s>[%s]",
 					p.Pid, fmtdur(puptime), pname,
@@ -159,7 +163,24 @@ func main() {
 		listenskk = append(listenskk, l)
 	}
 	// https://pkg.go.dev/slices#Sort
-	slices.Sort(listenskk)
+	slices.SortFunc(listenskk, func(a, b string) int {
+		ca := listensstats[a]
+		cb := listensstats[b]
+		cmplip := cmp.Compare(ca.Laddr.IP, cb.Laddr.IP)
+		cmplport := cmp.Compare(ca.Laddr.Port, cb.Laddr.Port)
+		cmprip := cmp.Compare(ca.Raddr.IP, cb.Raddr.IP)
+		cmprport := cmp.Compare(ca.Raddr.Port, cb.Raddr.Port)
+		if cmplip != 0 {
+			return cmplip
+		}
+		if cmplport != 0 {
+			return cmplport
+		}
+		if cmprip != 0 {
+			return cmprip
+		}
+		return cmprport
+	})
 
 	for _, l := range listenskk {
 		pout(
