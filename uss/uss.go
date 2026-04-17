@@ -68,6 +68,7 @@ func print() {
 		os.Exit(1)
 	}
 
+	var cpufreqkhz uint64
 	cpufreq_path := "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq"
 	cpufreqbb, err := os.ReadFile(cpufreq_path)
 	if err != nil {
@@ -75,12 +76,38 @@ func print() {
 	}
 	cpufreq := strings.TrimSpace(string(cpufreqbb))
 	// https://pkg.go.dev/strconv#ParseUint
-	cpufreqhz, err := strconv.ParseUint(cpufreq, 10, 64)
+	cpufreqkhz, err = strconv.ParseUint(cpufreq, 10, 64)
 	if err != nil {
-		//perr("WARNING ParseUint [%s] %v", cpufreqs, err)
+		//perr("WARNING ParseUint [%s] %v", cpufreq, err)
 	}
+
+	var cpufreqmhz float64
+	cpuinfo_path := "/proc/cpuinfo"
+	cpuinfobb, err := os.ReadFile(cpuinfo_path)
+	if err != nil {
+		//perr("WARNING ReadFile [%s] %v", cpuinfo_path, err)
+	}
+	cpuinfo := strings.TrimSpace(string(cpuinfobb))
+	for l := range strings.Lines(cpuinfo) {
+		if strings.HasPrefix(l, "cpu MHz"+TAB) {
+			lff := strings.Fields(l)
+			// https://pkg.go.dev/strconv#ParseUint
+			cpufreqmhz, err = strconv.ParseFloat(lff[len(lff)-1], 64)
+			if err != nil {
+				//perr("WARNING ParseFloat [%s] %v", cpuinfomhz, err)
+			}
+		}
+	}
+
+	var cpufreqhz uint64
+	if cpufreqkhz > 0 {
+		cpufreqhz = uint64(cpufreqkhz * 1_000)
+	} else if cpufreqmhz > 0 {
+		cpufreqhz = uint64(cpufreqmhz * 1_000_000)
+	}
+
 	if cpufreqhz > 0 {
-		cpufreq = fmt.Sprintf("%d", cpufreqhz/1000) + "mhz"
+		cpufreq = fmt.Sprintf("%d", cpufreqhz/1_000_000) + "mhz"
 	}
 	if cpufreq != "" {
 		cpufreq = "<" + cpufreq + ">"
