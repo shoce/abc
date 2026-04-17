@@ -85,8 +85,7 @@ const (
 	CmdBootId   = `cat /proc/sys/kernel/random/boot_id`
 	CmdPwd      = `pwd`
 
-	//CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; find $ddd -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print ;`
-	CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | sort ; done ;`
+	CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | sort ; done ;`
 	CmdAllFiles    = `find "%s" -maxdepth 1 -print | sort`
 )
 
