@@ -18,6 +18,7 @@ import (
 	"time"
 
 	psproc "github.com/shirou/gopsutil/v4/process"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -153,10 +154,17 @@ func main() {
 	// https://pkg.go.dev/slices#SortFunc
 	//slices.SortFunc(listens, cmp.Compare)
 
-	for l, pp := range listens {
+	var listenskk []string
+	for l, _ := range listens {
+		listenskk = append(listenskk, l)
+	}
+	// https://pkg.go.dev/slices#Sort
+	slices.Sort(listenskk)
+
+	for _, l := range listenskk {
 		pout(
 			"%s ( %s )",
-			l, strings.Join(pp, SP),
+			l, strings.Join(listens[l], SP),
 		)
 	}
 
