@@ -86,22 +86,22 @@ func main() {
 			if c.Status != "LISTEN" {
 				continue
 			}
-			claddr := c.Laddr.IP
 			/*
-				if strings.HasPrefix(claddr, "127.0.0.") || claddr == "::1" {
+				if strings.HasPrefix(c.Laddr.IP, "127.0.0.") || c.Laddr.IP == "::1" {
 					continue
 				}
 			*/
-			if claddr == "0.0.0.0" || claddr == "::" || claddr == "*" {
-				claddr = ""
+			if c.Laddr.IP == "0.0.0.0" || c.Laddr.IP == "::" || c.Laddr.IP == "*" {
+				c.Laddr.IP = ""
 			}
+			claddr := c.Laddr.IP
 			if c.Laddr.Port != 0 {
 				claddr = F("%s:%d", claddr, c.Laddr.Port)
 			}
-			craddr := c.Raddr.IP
-			if craddr == "0.0.0.0" || craddr == "::" || craddr == "*" {
-				craddr = ""
+			if c.Raddr.IP == "0.0.0.0" || c.Raddr.IP == "::" || c.Raddr.IP == "*" {
+				c.Raddr.IP = ""
 			}
+			craddr := c.Raddr.IP
 			if c.Raddr.Port != 0 {
 				craddr = F("%s:%d", craddr, c.Raddr.Port)
 			}
