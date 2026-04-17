@@ -336,10 +336,17 @@ func main() {
 }
 
 func fmttime(t time.Time) string {
-	return fmt.Sprintf(
+	ts := fmt.Sprintf(
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
+	// https://pkg.go.dev/time#Time
+	if _, tzoffset := t.Zone(); tzoffset == 0 {
+		ts += "+"
+	} else {
+		ts += "@"
+	}
+	return ts
 }
 
 func fmtdursec(t uint64) string {
