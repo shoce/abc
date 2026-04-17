@@ -159,14 +159,26 @@ func print() {
 		diskwrt += dss.WriteTime
 	}
 
-	/*
-		users, err := pshost.Users()
-		if err != nil {
-			perr("ERROR pshost.Users %v", err)
-			//os.Exit(1)
+	// https://pkg.go.dev/github.com/shirou/gopsutil/v4/host#Users
+	userstats, err := pshost.Users()
+	if err != nil {
+		perr("ERROR pshost.Users %v", err)
+		//os.Exit(1)
+	}
+	//perr("DEBUG userstats %+v", userstats)
+	//F := fmt.Sprintf
+	var users []string
+	for _, u := range userstats {
+		//udur := time.Since(time.Unix(int64(u.Started), 0)).Truncate(time.Second))
+		ufmt := u.User
+		if u.Host != "" {
+			ufmt += "@" + u.Host
 		}
-		//perr("DEBUG users %+v", users)
-	*/
+		ufmt = "[" + ufmt + "]"
+		if !slices.Contains(users, ufmt) {
+			users = append(users, ufmt)
+		}
+	}
 
 	procs, err := psproc.Processes()
 	if err != nil {
@@ -240,7 +252,7 @@ func print() {
 	}
 
 	pout(
-		"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> bootid[%s] read<%s> write<%s> nprocs<%s> listens(%s)",
+		"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> bootid[%s] read<%s> write<%s> users(%s) nprocs<%s> listens(%s)",
 		ts, Hostname,
 		cpugauge, cpunumber, cpufreq,
 		memgauge, seps(memsizemb, 3),
@@ -248,6 +260,7 @@ func print() {
 		diskgauge, disksizegb,
 		uptimefmt, bootid,
 		fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
+		strings.Join(users, N),
 		seps(uint64(len(procs)), 3),
 		strings.Join(listens, N),
 	)

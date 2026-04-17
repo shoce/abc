@@ -318,7 +318,7 @@ func main() {
 		}
 
 		pout(TAB+"{ pid<%d> name[%s] uptime<%s> cpu<%.0f%%> mem<%.0f%%> files<%d> conns<%d> listens(%s) }"+NL,
-			p.Pid, pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), strings.Join(plistens, " "),
+			p.Pid, pname, fmtdur(puptime), pcpu, pmem, len(pfiles), len(pconns), strings.Join(plistens, ""),
 		)
 	}
 	pout(")" + NL)
