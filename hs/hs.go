@@ -59,6 +59,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -71,12 +72,22 @@ import (
 
 const (
 	SP  = " "
+	TAB = "\t"
 	NL  = "\n"
 	SEP = ","
 
 	PortDefault = "22"
 
 	InReaderBufferSize = 100 * 1000
+
+	CmdHostname = `hostname -f`
+	CmdBootTime = `cat /proc/stat`
+	CmdBootId   = `cat /proc/sys/kernel/random/boot_id`
+	CmdPwd      = `pwd`
+
+	//CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; find $ddd -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print ;`
+	CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | sort ; done ;`
+	CmdAllFiles    = `find "%s" -maxdepth 1 -print | sort`
 )
 
 var (
@@ -94,10 +105,15 @@ var (
 	ProxyDialer proxy.Dialer
 	ProxyConn   net.Conn
 
+	Host string // host network address to run commands on: empty or localhost to run with exec() and hostname[:port] to use ssh transport
+
 	Hostname string
 	BootTime int64
 	BootId   string
-	Host     string // host network address to run commands on: empty or localhost to run with exec() and hostname[:port] to use ssh transport
+	Pwd      string
+
+	AllPathCmds []string
+	AllFiles    []string
 
 	SshKeepAliveInterval time.Duration = 12 * time.Second
 
@@ -118,6 +134,8 @@ var (
 	InterruptChan chan bool
 
 	TzBiel *time.Location = time.FixedZone("Biel", 60*60)
+
+	F = fmt.Sprintf
 )
 
 func init() {
@@ -342,7 +360,7 @@ func main() {
 			os.Exit(1)
 		}
 		if Status != "" {
-			perr("%s: %s", cmds, TermInverse(fmt.Sprintf("status %s", Status)))
+			perr("%s: %s", cmds, TermInverse(F("status %s", Status)))
 		}
 		os.Exit(0)
 	}
@@ -361,7 +379,48 @@ func main() {
 			continue
 		}
 
-		cmds = strings.TrimSpace(cmds)
+		cmds = strings.TrimSuffix(cmds, NL)
+		perr("DEBUG cmds [%s]", cmds)
+		if len(cmds) > 0 && strings.HasSuffix(cmds, TAB) {
+			// https://pkg.go.dev/strings#TrimPrefix
+			cmds = strings.TrimSuffix(cmds, TAB)
+			cmdsff := strings.Fields(cmds)
+			if len(cmdsff) == 1 {
+				cmd := cmdsff[0]
+				if len(AllPathCmds) == 0 {
+					err := GetAllPathCmds()
+					if err != nil {
+						//perr("ERROR AllPathCmdsGet %v", err)
+					}
+				}
+				for _, c := range AllPathCmds {
+					if strings.HasPrefix(c, cmd) || strings.HasPrefix(path.Base(c), cmd) {
+						perr(c)
+					}
+				}
+			} else if len(cmdsff) > 1 {
+				fpath := cmdsff[len(cmdsff)-1]
+				fpathdir := path.Dir(fpath)
+				if fpathdir == "." {
+					fpathdir = Pwd
+				}
+				if !strings.HasSuffix(fpathdir, "/") {
+					fpathdir += "/"
+				}
+				err := GetAllFiles(fpathdir)
+				if err != nil {
+					//perr("ERROR AllFilesGet %v", err)
+				}
+				for _, f := range AllFiles {
+					if strings.HasPrefix(f, fpath) || strings.HasPrefix(f, path.Join(Pwd, fpath)) {
+						perr(f)
+					}
+				}
+			}
+			continue
+		}
+
+		//cmds = strings.TrimSpace(cmds)
 		if cmds == "" {
 			continue
 		}
@@ -429,7 +488,7 @@ func perr(msg string, args ...interface{}) {
 		tnow = tnow.In(TzBiel)
 		ty := tnow.Sub(time.Date(tnow.Year(), 1, 1, 0, 0, 0, 0, TzBiel))
 		td := tnow.Sub(time.Date(tnow.Year(), tnow.Month(), tnow.Day(), 0, 0, 0, 0, TzBiel))
-		ts = fmt.Sprintf(
+		ts = F(
 			"<%03d:%d:%d>",
 			tnow.Year()%1000,
 			int(ty/(time.Duration(24)*time.Hour))+1,
@@ -446,7 +505,7 @@ func perr(msg string, args ...interface{}) {
 }
 
 func fmttime(t time.Time) string {
-	ts := fmt.Sprintf(
+	ts := F(
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
@@ -471,16 +530,16 @@ func fmtdursec(t uint64) string {
 func seps(i uint64, e uint64) string {
 	ee := uint64(math.Pow(10, float64(e)))
 	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
+		return F("%d", i%ee)
 	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+		f := F("0%dd", e)
+		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
 
 func logstatus() {
 	fmt.Fprintf(os.Stderr, NL)
-	s := fmt.Sprintf("status[%s]", Status)
+	s := F("status[%s]", Status)
 	if Status != "" {
 		s = TermInverse(s)
 	}
@@ -489,7 +548,7 @@ func logstatus() {
 		uptimesecs := uint64(time.Now().Unix() - BootTime)
 		uptime = fmtdursec(uptimesecs)
 	}
-	s += fmt.Sprintf(
+	s += F(
 		" uptime<%s> bootid[%s] hostname[%s] host=%s user=%s hs -- ",
 		uptime, BootId, Hostname, Host, User,
 	)
@@ -517,45 +576,49 @@ func connectssh() (err error) {
 		return err
 	}
 
+	// https://pkg.go.dev/golang.org/x/crypto/ssh#NewClient
 	SshClient = ssh.NewClient(SshConn, SshNewChannelCh, SshRequestCh)
 
+	perr(CmdHostname)
 	session, err := SshClient.NewSession()
 	if err != nil {
-		perr("ERROR hostname NewSession %v", err)
+		perr("ERROR CmdHostname NewSession %v", err)
 		return err
 	}
-	hostnamebb, err := session.Output("hostname -f")
+	hostnamebb, err := session.Output(CmdHostname)
 	if err != nil {
-		perr("WARNING hostname Output %v", err)
+		perr("WARNING CmdHostname Output %v", err)
 	}
 	Hostname = strings.TrimSpace(string(hostnamebb))
 	session.Close()
 
+	perr(CmdBootTime)
 	session, err = SshClient.NewSession()
 	if err != nil {
-		perr("ERROR procstat NewSession %v", err)
+		perr("ERROR CmdBootTime NewSession %v", err)
 		return err
 	}
-	procstatbb, err := session.Output("cat /proc/stat")
+	procstatbb, err := session.Output(CmdBootTime)
 	if err != nil {
-		perr("WARNING procstat Output %v", err)
+		perr("WARNING CmdBootTime Output %v", err)
 	}
 	if boottimem := regexp.MustCompile(`(?m)^btime ([0-9]+)$`).FindStringSubmatch(string(procstatbb)); boottimem != nil {
 		BootTime, err = strconv.ParseInt(boottimem[1], 10, 64)
 		if err != nil {
-			perr("WARNING procstat btime ParseInt %v", err)
+			perr("WARNING CmdBootTime btime ParseInt %v", err)
 		}
 	}
 	session.Close()
 
+	perr(CmdBootId)
 	session, err = SshClient.NewSession()
 	if err != nil {
-		perr("ERROR boot_id NewSession %v", err)
+		perr("ERROR CmdBootId NewSession %v", err)
 		return err
 	}
-	bootidbb, err := session.Output("cat /proc/sys/kernel/random/boot_id")
+	bootidbb, err := session.Output(CmdBootId)
 	if err != nil {
-		perr("WARNING boot_id Output %v", err)
+		perr("WARNING CmdBootId Output %v", err)
 	}
 	BootId = string(bootidbb)
 	if len(BootId) > 4 {
@@ -563,6 +626,57 @@ func connectssh() (err error) {
 	}
 	session.Close()
 
+	perr(CmdPwd)
+	session, err = SshClient.NewSession()
+	if err != nil {
+		perr("ERROR CmdPwd NewSession %v", err)
+		return err
+	}
+	pwdbb, err := session.Output(CmdPwd)
+	if err != nil {
+		perr("WARNING CmdPwd Output %v", err)
+	}
+	Pwd = strings.TrimSpace(string(pwdbb))
+	session.Close()
+
+	return nil
+}
+
+func GetAllPathCmds() error {
+	perr(CmdAllPathCmds)
+	session, err := SshClient.NewSession()
+	if err != nil {
+		perr("ERROR CmdAllPathCmds NewSession %v", err)
+		return err
+	}
+	pathcmdsbb, err := session.Output(CmdAllPathCmds)
+	if err != nil {
+		perr("WARNING CmdAllPathCmds Output %v", err)
+		perr(string(pathcmdsbb))
+		return err
+	}
+	AllPathCmds = strings.Split(string(pathcmdsbb), NL)
+	perr("DEBUG AllPathCmds <%d>", len(AllPathCmds))
+	session.Close()
+	return nil
+}
+
+func GetAllFiles(fpathdir string) error {
+	perr(CmdAllFiles, fpathdir)
+	session, err := SshClient.NewSession()
+	if err != nil {
+		perr("ERROR CmdAllFiles NewSession %v", err)
+		return err
+	}
+	allfilesbb, err := session.Output(F(CmdAllFiles, fpathdir))
+	if err != nil {
+		perr("WARNING CmdAllFiles Output %v", err)
+		perr(string(allfilesbb))
+		return err
+	}
+	AllFiles = strings.Split(string(allfilesbb), NL)
+	perr("DEBUG AllFiles <%d>", len(AllFiles))
+	session.Close()
 	return nil
 }
 
@@ -604,6 +718,9 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 			return "", err
 		}
 	}
+
+	//perr("host=%s user=%s hs -- %s", Host, User, cmds)
+	perr(cmds)
 
 	session, err := SshClient.NewSession()
 	if err != nil {
@@ -670,8 +787,6 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		return "", fmt.Errorf("stderr pipe for session %v", err)
 	}
 
-	perr("host=%s user=%s hs -- %s", Host, User, cmds)
-
 	copyoutnotify := make(chan error)
 	go copynotify(os.Stdout, stdoutpipe, copyoutnotify)
 	copyerrnotify := make(chan error)
@@ -717,7 +832,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 			status = "missing"
 		case *ssh.ExitError:
 			exiterr := err.(*ssh.ExitError)
-			status = fmt.Sprintf("%d", exiterr.ExitStatus())
+			status = F("%d", exiterr.ExitStatus())
 			if sig := exiterr.Signal(); sig != "" {
 				status += "-" + sig
 			}
@@ -797,7 +912,7 @@ func runlocal(cmds string, cmd []string, stdin io.Reader) (status string, err er
 		switch err.(type) {
 		case *exec.ExitError:
 			exiterr := err.(*exec.ExitError)
-			status = fmt.Sprintf("%d", exiterr.ExitCode())
+			status = F("%d", exiterr.ExitCode())
 		default:
 			return "", fmt.Errorf("Wait: %v", err)
 		}
