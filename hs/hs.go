@@ -15,14 +15,13 @@ Oct 28 21:37:28 ci sshd[3685911]: error: session_signal_req: session signalling 
 023/0827 keepalive
 025/0108 sighup
 025/0823 Status TermInverse
+*/
 
-GoGet
-GoFmt
-GoBuildNull
-GoBuild
+// GoGet GoFmt GoBuildNull GoBuild
+// GoRun -- put a '<' <readme.text
+// Kill GoRun
 
-GoRun -- put a '<' <readme.text
-Kill GoRun
+/*
 
 Variables:
 Host variable checked before every command execution: if it is empty then run locally; otherwise run via ssh.
@@ -447,10 +446,17 @@ func perr(msg string, args ...interface{}) {
 }
 
 func fmttime(t time.Time) string {
-	return fmt.Sprintf(
+	ts := fmt.Sprintf(
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
+	// https://pkg.go.dev/time#Time.Zone
+	if _, tzoffset := t.Zone(); tzoffset == 0 {
+		ts += "+"
+	} else {
+		ts += "@"
+	}
+	return ts
 }
 
 func fmtdursec(t uint64) string {
