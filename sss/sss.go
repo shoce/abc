@@ -1,4 +1,6 @@
 /*
+Sockets Sockets Sockets
+
 history:
 20/1123 v1
 */
@@ -9,6 +11,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -26,16 +29,6 @@ const (
 var (
 	VERSION string
 )
-
-func fmtdur(d time.Duration) (s string) {
-	days := d / (time.Hour * 24)
-	secs := d % (time.Hour * 24) / time.Second
-	s = fmt.Sprintf("%ds", secs)
-	if days > 0 {
-		s = fmt.Sprintf("%dd", days) + SEP + s
-	}
-	return s
-}
 
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "-version" {
@@ -143,6 +136,26 @@ func main() {
 			p.Pid, fmtdur(puptime), pname, strings.Join(plistens, SP),
 		)
 	}
+}
+
+func seps(i uint64, e uint64) string {
+	ee := uint64(math.Pow(10, float64(e)))
+	if i < ee {
+		return fmt.Sprintf("%d", i%ee)
+	} else {
+		f := fmt.Sprintf("0%dd", e)
+		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+	}
+}
+
+func fmtdur(d time.Duration) (s string) {
+	days := d / (time.Hour * 24)
+	secs := d % (time.Hour * 24) / time.Second
+	s = seps(uint64(secs), 2) + "s"
+	if days > 0 {
+		s = seps(uint64(days), 2) + "d" + SEP + s
+	}
+	return s
 }
 
 func perr(msg string, args ...interface{}) {
