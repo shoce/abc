@@ -165,16 +165,22 @@ func print() {
 		perr("ERROR pshost.Users %v", err)
 		//os.Exit(1)
 	}
+	// https://pkg.go.dev/slices#SortFunc
+	slices.SortFunc(userstats, func(a, b pshost.UserStat) int {
+		// https://pkg.go.dev/cmp#Compare
+		return cmp.Compare(a.Started, b.Started) * -1
+	})
 	//perr("DEBUG userstats %+v", userstats)
 	//F := fmt.Sprintf
 	var users []string
 	for _, u := range userstats {
-		//udur := time.Since(time.Unix(int64(u.Started), 0)).Truncate(time.Second))
-		ufmt := u.User
+		ufmt := "[" + u.User + "]"
 		if u.Host != "" {
-			ufmt += "@" + u.Host
+			ufmt += "<" + u.Host + ">"
 		}
-		ufmt = "[" + ufmt + "]"
+		udur := time.Since(time.Unix(int64(u.Started), 0)).Truncate(time.Second)
+		ufmt += "<" + fmtdursec(uint64(udur.Seconds())) + ">"
+		ufmt = "(" + ufmt + ")"
 		if !slices.Contains(users, ufmt) {
 			users = append(users, ufmt)
 		}

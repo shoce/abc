@@ -38,11 +38,20 @@ func init() {
 }
 
 func main() {
+
+	// https://pkg.go.dev/github.com/shirou/gopsutil/v4/process#Processes
 	procs, err := psproc.Processes()
 	if err != nil {
 		perr("ERROR psproc.Processes %v", err)
 		os.Exit(1)
 	}
+
+	/*
+		// https://pkg.go.dev/slices#SortFunc
+		slices.SortFunc(procs, func(a, b int) int {
+			return 0
+		})
+	*/
 
 	for _, p := range procs {
 		pname, err := p.Name()
@@ -136,6 +145,7 @@ func main() {
 			p.Pid, fmtdur(puptime), pname, strings.Join(plistens, SP),
 		)
 	}
+
 }
 
 func seps(i uint64, e uint64) string {
