@@ -91,15 +91,25 @@ func main() {
 					continue
 				}
 			*/
-			if c.Laddr.IP == "0.0.0.0" || c.Laddr.IP == "::" || c.Laddr.IP == "*" {
-				c.Laddr.IP = ""
+			switch c.Laddr.IP {
+			case "0.0.0.0":
+				c.Laddr.IP = "0"
+			case "::":
+				//c.Laddr.IP = ""
+			case "*":
+				//c.Laddr.IP = ""
 			}
 			claddr := c.Laddr.IP
 			if c.Laddr.Port != 0 {
 				claddr = F("%s:%d", claddr, c.Laddr.Port)
 			}
-			if c.Raddr.IP == "0.0.0.0" || c.Raddr.IP == "::" || c.Raddr.IP == "*" {
-				c.Raddr.IP = ""
+			switch c.Raddr.IP {
+			case "0.0.0.0":
+				c.Raddr.IP = "0"
+			case "::":
+				//c.Laddr.IP = ""
+			case "*":
+				//c.Laddr.IP = ""
 			}
 			craddr := c.Raddr.IP
 			if c.Raddr.Port != 0 {
