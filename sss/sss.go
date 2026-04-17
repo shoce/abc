@@ -28,11 +28,13 @@ const (
 
 var (
 	VERSION string
+
+	F = fmt.Sprintf
 )
 
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "-version" {
-		fmt.Print(VERSION + NL)
+		pout(VERSION)
 		os.Exit(0)
 	}
 }
@@ -46,12 +48,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	/*
-		// https://pkg.go.dev/slices#SortFunc
-		slices.SortFunc(procs, func(a, b int) int {
-			return 0
-		})
-	*/
+	listens := make(map[string][]string)
 
 	for _, p := range procs {
 		pname, err := p.Name()
@@ -66,6 +63,7 @@ func main() {
 		}
 		puptime := time.Since(time.Unix(pcreatetime/1000, 0))
 
+		// https://pkg.go.dev/github.com/shirou/gopsutil/v4/process#Process.Connections
 		pconns, err := p.Connections()
 		if err != nil {
 			perr("ERROR p.Connections %v", err)
@@ -94,29 +92,32 @@ func main() {
 				claddr = ""
 			}
 			if c.Laddr.Port != 0 {
-				claddr = fmt.Sprintf("%s:%d", claddr, c.Laddr.Port)
+				claddr = F("%s:%d", claddr, c.Laddr.Port)
 			}
 			craddr := c.Raddr.IP
 			if craddr == "0.0.0.0" || craddr == "::" || craddr == "*" {
 				craddr = ""
 			}
 			if c.Raddr.Port != 0 {
-				craddr = fmt.Sprintf("%s:%d", craddr, c.Raddr.Port)
+				craddr = F("%s:%d", craddr, c.Raddr.Port)
 			}
 			l := claddr
 			if craddr != "" {
 				l += "/" + craddr
 			}
 			l = "[" + l + "]"
+
 			add := true
 			for _, p := range plistens {
-				if l == p {
+				if p == l {
 					add = false
 				}
 			}
 			if add {
 				plistens = append(plistens, l)
+				listens[l] = append(listens[l], F("<%d>[%s]<%s>", p.Pid, pname, fmtdur(puptime)))
 			}
+
 		}
 
 		if len(plistens) == 0 {
@@ -138,11 +139,21 @@ func main() {
 			if !print {
 				continue
 			}
+			pout(
+				"<%d> up<%s> [%s] listens( %v )",
+				p.Pid, fmtdur(puptime), pname, strings.Join(plistens, SP),
+			)
 		}
 
-		fmt.Printf(
-			"<%d> up<%s> [%s] listens( %v )"+NL,
-			p.Pid, fmtdur(puptime), pname, strings.Join(plistens, SP),
+	}
+
+	// https://pkg.go.dev/slices#SortFunc
+	//slices.SortFunc(listens, cmp.Compare)
+
+	for l, pp := range listens {
+		pout(
+			"%s ( %s )",
+			l, strings.Join(pp, SP),
 		)
 	}
 
@@ -151,10 +162,10 @@ func main() {
 func seps(i uint64, e uint64) string {
 	ee := uint64(math.Pow(10, float64(e)))
 	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
+		return F("%d", i%ee)
 	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+		f := F("0%dd", e)
+		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
 
@@ -171,7 +182,15 @@ func fmtdur(d time.Duration) (s string) {
 func perr(msg string, args ...interface{}) {
 	msgtext := msg
 	if len(args) > 0 {
-		msgtext = fmt.Sprintf(msg, args...)
+		msgtext = F(msg, args...)
 	}
 	fmt.Fprint(os.Stderr, msgtext+NL)
+}
+
+func pout(msg string, args ...interface{}) {
+	msgtext := msg
+	if len(args) > 0 {
+		msgtext = F(msg, args...)
+	}
+	fmt.Fprint(os.Stdout, msgtext+NL)
 }
