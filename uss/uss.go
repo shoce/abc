@@ -107,7 +107,7 @@ func print() {
 	}
 
 	if cpufreqhz > 0 {
-		cpufreq = fmt.Sprintf("%d", cpufreqhz/1_000_000) + "mhz"
+		cpufreq = seps(cpufreqhz/1_000_000, 3) + "mhz"
 	}
 	if cpufreq != "" {
 		cpufreq = "<" + cpufreq + ">"
