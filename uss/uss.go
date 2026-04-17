@@ -340,7 +340,7 @@ func fmttime(t time.Time) string {
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
-	// https://pkg.go.dev/time#Time
+	// https://pkg.go.dev/time#Time.Zone
 	if _, tzoffset := t.Zone(); tzoffset == 0 {
 		ts += "+"
 	} else {
