@@ -105,11 +105,11 @@ func main() {
 			}
 			switch c.Raddr.IP {
 			case "0.0.0.0":
-				c.Raddr.IP = "0"
+				c.Raddr.IP = ""
 			case "::":
-				//c.Laddr.IP = ""
+				c.Raddr.IP = ""
 			case "*":
-				//c.Laddr.IP = ""
+				c.Raddr.IP = ""
 			}
 			craddr := c.Raddr.IP
 			if c.Raddr.Port != 0 {
