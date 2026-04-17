@@ -117,8 +117,8 @@ func main() {
 			if add {
 				plistens = append(plistens, l)
 				listens[l] = append(listens[l], F(
-					"[%s]<%d><%s>",
-					pname, p.Pid, fmtdur(puptime),
+					"<%d><%s>[%s]",
+					p.Pid, fmtdur(puptime), pname,
 				))
 			}
 
