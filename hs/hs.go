@@ -85,8 +85,8 @@ const (
 	CmdBootId   = `cat /proc/sys/kernel/random/boot_id`
 	CmdPwd      = `pwd`
 
-	CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | sort ; done ;`
-	CmdAllFiles    = `find "%s" -maxdepth 1 -print | sort`
+	CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | LC_ALL=C sort ; done ;`
+	CmdAllFiles    = `find "%s" -maxdepth 1 -print | LC_ALL=C sort`
 )
 
 var (
@@ -384,7 +384,7 @@ func main() {
 			perr(strings.ReplaceAll(cmds, TAB, "<TAB>"))
 			// https://pkg.go.dev/strings#TrimPrefix
 			cmds = strings.TrimSuffix(cmds, TAB)
-			cmdsff := strings.Fields(cmds)
+			cmdsff := strings.Split(cmds, SP)
 			if len(cmdsff) == 1 {
 				cmd := cmdsff[0]
 				if len(AllPathCmds) == 0 {
@@ -588,18 +588,8 @@ func connectssh() (err error) {
 	// https://pkg.go.dev/golang.org/x/crypto/ssh#NewClient
 	SshClient = ssh.NewClient(SshConn, SshNewChannelCh, SshRequestCh)
 
-	perr(CmdHostname)
-	session, err := SshClient.NewSession()
-	if err != nil {
-		perr("ERROR CmdHostname NewSession %v", err)
-		return err
-	}
-	hostnamebb, err := session.Output(CmdHostname)
-	if err != nil {
-		perr("WARNING CmdHostname Output %v", err)
-	}
-	Hostname = strings.TrimSpace(string(hostnamebb))
-	session.Close()
+	// https://pkg.go.dev/golang.org/x/crypto/ssh#Client.NewSession
+	var session *ssh.Session
 
 	perr(CmdBootTime)
 	session, err = SshClient.NewSession()
@@ -633,6 +623,19 @@ func connectssh() (err error) {
 	if len(BootId) > 4 {
 		BootId = BootId[:4]
 	}
+	session.Close()
+
+	perr(CmdHostname)
+	session, err = SshClient.NewSession()
+	if err != nil {
+		perr("ERROR CmdHostname NewSession %v", err)
+		return err
+	}
+	hostnamebb, err := session.Output(CmdHostname)
+	if err != nil {
+		perr("WARNING CmdHostname Output %v", err)
+	}
+	Hostname = strings.TrimSpace(string(hostnamebb))
 	session.Close()
 
 	perr(CmdPwd)

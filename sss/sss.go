@@ -119,7 +119,7 @@ func main() {
 			if craddr != "" {
 				l += "/" + craddr
 			}
-			l = "[" + l + "]"
+			l = "<" + l + ">"
 
 			add := true
 			for _, p := range plistens {
@@ -131,8 +131,8 @@ func main() {
 				plistens = append(plistens, l)
 				listensstats[l] = c
 				listens[l] = append(listens[l], F(
-					"<%d><%s>[%s]",
-					p.Pid, fmtdur(puptime), pname,
+					"<%d>[%s]",
+					p.Pid, pname,
 				))
 			}
 
