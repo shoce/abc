@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           # https://go.dev/dl/
-          go-version: "1.26.1"
+          go-version: "1.26"
 
       - name: go build
         run: |
@@ -47,13 +47,21 @@ jobs:
           done
           echo
           cd /tmp/${{ github.event.repository.name }}/
-          for sl in ll ls lt lr llr lsr ; do ln -s -f l $sl ; done
-          for sl in append ; do ln -s -f put $sl ; done
-          for sl in perr ; do ln -s -f pout $sl ; done
-          for sl in remls remrem ; do ln -s -f rem $sl ; done
-          for sl in srer ; do ln -s -f sre $sl ; done
-          for sl in gr gv gvr ; do ln -s -f g $sl ; done
-          for sl in Aa ; do ln -s -f aA $sl ; done
+          ln l ls
+          ln l lt
+          ln l ll
+          ln l lr
+          ln l lsr
+          ln l llr
+          ln put append
+          ln pout perr
+          ln rem remls
+          ln rem remrem
+          ln sre srer
+          ln g gr
+          ln g gv
+          ln g gvr
+          ln aA Aa
           tar -c --numeric-owner --group=:0 --owner=:0 -z -f ${{ github.event.repository.name }}.tar.gz *
           echo '/tmp/${{ github.event.repository.name }}/:'
           ls -l -a
@@ -118,7 +126,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           # https://go.dev/dl/
-          go-version: "1.26.1"
+          go-version: "1.26"
 
       - name: go build
         run: |
@@ -131,13 +139,21 @@ jobs:
           done
           echo
           cd /tmp/${{ github.event.repository.name }}/
-          for sl in ll ls lt lr llr lsr ; do ln -s -f l $sl ; done
-          for sl in append ; do ln -s -f put $sl ; done
-          for sl in perr ; do ln -s -f pout $sl ; done
-          for sl in remls remrem ; do ln -s -f rem $sl ; done
-          for sl in srer ; do ln -s -f sre $sl ; done
-          for sl in gr gv gvr ; do ln -s -f g $sl ; done
-          for sl in Aa ; do ln -s -f aA $sl ; done
+          ln l ls
+          ln l lt
+          ln l ll
+          ln l lr
+          ln l lsr
+          ln l llr
+          ln put append
+          ln pout perr
+          ln rem remls
+          ln rem remrem
+          ln sre srer
+          ln g gr
+          ln g gv
+          ln g gvr
+          ln aA Aa
           tar -c --numeric-owner --group=:0 --owner=:0 -z -f ${{ github.event.repository.name }}.tar.gz *
           echo '/tmp/${{ github.event.repository.name }}/:'
           ls -l -a
