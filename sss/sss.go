@@ -149,7 +149,7 @@ func main() {
 					print = true
 				}
 				for _, l := range plistens {
-					if strings.HasSuffix(l, ":"+a) {
+					if strings.HasSuffix(l, ":"+a+">") {
 						print = true
 					}
 				}
@@ -163,6 +163,10 @@ func main() {
 			)
 		}
 
+	}
+
+	if len(os.Args) > 1 {
+		os.Exit(1)
 	}
 
 	// https://pkg.go.dev/slices#SortFunc

@@ -49,21 +49,32 @@ func rem() {
 		perr("ERROR Getwd %v", err)
 		os.Exit(1)
 	}
+	var args []string
 	for _, a := range os.Args[1:] {
+		if a == "" {
+			continue
+		}
+		args = append(args, a)
+	}
+	if len(args) == 0 {
+		perr("USAGE %s path...", os.Args[0])
+		os.Exit(1)
+	}
+	for _, a := range args {
 		apath := a
 		if !path.IsAbs(apath) {
 			apath = path.Join(wd, apath)
 		}
+		perr(apath)
 		trashapathdir := path.Join(TRASH, path.Dir(apath))
 		err = os.MkdirAll(trashapathdir, 0700)
 		if err != nil {
-			perr("ERROR %v", err)
+			perr(TAB+"ERROR %v", err)
 		}
 		trashapath := path.Join(TRASH, apath)
-		perr(apath)
 		err = os.Rename(apath, trashapath)
 		if err != nil {
-			perr("ERROR %v", err)
+			perr(TAB+"ERROR %v", err)
 		} else {
 			perr(TAB + trashapath)
 		}
