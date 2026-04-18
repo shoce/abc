@@ -23,8 +23,13 @@ var (
 )
 
 func init() {
+	if v := os.Getenv("HOME"); v != "" {
+		TRASH = path.Join(v, TRASH)
+		perr("DEBUG TRASH [%s]", TRASH)
+	}
 	if v := os.Getenv("TRASH"); v != "" {
 		TRASH = v
+		perr("DEBUG TRASH [%s]", TRASH)
 	}
 }
 
