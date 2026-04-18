@@ -54,6 +54,8 @@ var (
 	ShowPerm    bool
 	ShowOwner   bool
 	ShowCid     bool
+
+	F = fmt.Sprintf
 )
 
 func printinfo(path string, info os.FileInfo) error {
@@ -99,7 +101,7 @@ func printinfo(path string, info os.FileInfo) error {
 	}
 
 	if ShowTime {
-		s += TAB + "mtime<" + fmttime(finfo.ModTime().UTC()) + ">"
+		s += TAB + "mtime<" + fmttime(finfo.ModTime()) + ">"
 	}
 
 	if ShowPerm {
@@ -376,10 +378,17 @@ func TermUnderline(s string) string {
 }
 
 func fmttime(t time.Time) string {
-	return fmt.Sprintf(
+	ts := F(
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
+	// https://pkg.go.dev/time#Time.Zone
+	if _, tzoffset := t.Zone(); tzoffset == 0 {
+		ts += "+"
+	} else {
+		ts += "-"
+	}
+	return ts
 }
 
 func seps(i, e int) string {

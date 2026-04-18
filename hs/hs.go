@@ -356,10 +356,11 @@ func main() {
 
 		Status, err = run(cmds, cmd, inreader)
 		if err != nil {
+			perr("host[%s] user[%s] [%s] ERROR %v", Host, User, cmds, err)
 			os.Exit(1)
 		}
 		if Status != "" {
-			perr("%s: %s", cmds, TermInverse(F("status %s", Status)))
+			perr("host[%s] user[%s] [%s] %s", Host, User, cmds, TermInverse(F("status[%s]", Status)))
 		}
 		os.Exit(0)
 	}
@@ -431,7 +432,7 @@ func main() {
 		if cmd[len(cmd)-1] == "<" {
 			cmd = cmd[:len(cmd)-1]
 			cmds = cmds[:len(cmds)-1]
-			perr("%s stdin: ", cmds)
+			perr("[%s] stdin:", cmds)
 			stdinbb, err = ioutil.ReadAll(os.Stdin)
 			if err != nil {
 				perr("ERROR stdin read %v", err)
@@ -441,6 +442,7 @@ func main() {
 
 		Status, err = run(cmds, cmd, bytes.NewBuffer(stdinbb))
 		if err != nil {
+			perr("host[%s] user[%s] [%s] ERROR %v", Host, User, cmds, err)
 			continue
 		}
 	}
@@ -591,7 +593,7 @@ func connectssh() (err error) {
 	// https://pkg.go.dev/golang.org/x/crypto/ssh#Client.NewSession
 	var session *ssh.Session
 
-	perr(CmdBootTime)
+	perr("host[%s] user[%s] [%s]", Host, User, CmdBootTime)
 	session, err = SshClient.NewSession()
 	if err != nil {
 		perr("ERROR CmdBootTime NewSession %v", err)
@@ -609,7 +611,7 @@ func connectssh() (err error) {
 	}
 	session.Close()
 
-	perr(CmdBootId)
+	perr("host[%s] user[%s] [%s]", Host, User, CmdBootId)
 	session, err = SshClient.NewSession()
 	if err != nil {
 		perr("ERROR CmdBootId NewSession %v", err)
@@ -625,7 +627,7 @@ func connectssh() (err error) {
 	}
 	session.Close()
 
-	perr(CmdHostname)
+	perr("host[%s] user[%s] [%s]", Host, User, CmdHostname)
 	session, err = SshClient.NewSession()
 	if err != nil {
 		perr("ERROR CmdHostname NewSession %v", err)
@@ -638,7 +640,7 @@ func connectssh() (err error) {
 	Hostname = strings.TrimSpace(string(hostnamebb))
 	session.Close()
 
-	perr(CmdPwd)
+	perr("host[%s] user[%s] [%s]", Host, User, CmdPwd)
 	session, err = SshClient.NewSession()
 	if err != nil {
 		perr("ERROR CmdPwd NewSession %v", err)
@@ -655,7 +657,7 @@ func connectssh() (err error) {
 }
 
 func GetAllPathCmds() error {
-	perr(CmdAllPathCmds)
+	perr("host[%s] user[%s] [%s]", Host, User, CmdAllPathCmds)
 	session, err := SshClient.NewSession()
 	if err != nil {
 		perr("ERROR CmdAllPathCmds NewSession %v", err)
@@ -674,7 +676,7 @@ func GetAllPathCmds() error {
 }
 
 func GetAllFiles(fpathdir string) error {
-	perr(CmdAllFiles, fpathdir)
+	perr("host[%s] user[%s] [%s]", Host, User, F(CmdAllFiles, fpathdir))
 	session, err := SshClient.NewSession()
 	if err != nil {
 		perr("ERROR CmdAllFiles NewSession %v", err)
@@ -730,9 +732,6 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 			return "", err
 		}
 	}
-
-	//perr("host=%s user=%s hs -- %s", Host, User, cmds)
-	perr(cmds)
 
 	session, err := SshClient.NewSession()
 	if err != nil {
@@ -937,6 +936,9 @@ func run(cmds string, cmd []string, stdin io.Reader) (status string, err error) 
 	if cmds == "" && len(cmd) == 0 {
 		return "", errors.New("empty cmd")
 	}
+
+	perr("host[%s] user[%s] [%s]", Host, User, cmds)
+
 	if Host == "" {
 		return runlocal(cmds, cmd, stdin)
 	} else {
