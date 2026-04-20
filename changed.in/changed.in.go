@@ -1,10 +1,10 @@
 /*
 history:
 2020/03/20 v1
-
-GoFmt GoBuildNull GoBuild GoRelease
-GoRun 10m .
 */
+
+// GoFmt GoBuildNull GoBuild GoRelease
+// GoRun 10m .
 
 package main
 
@@ -15,8 +15,12 @@ import (
 	"time"
 )
 
+const (
+	NL = "\n"
+)
+
 var (
-	dur time.Duration
+	Dur time.Duration
 )
 
 func changedIn(path string, info os.FileInfo, err error) error {
@@ -24,8 +28,8 @@ func changedIn(path string, info os.FileInfo, err error) error {
 		return err
 	}
 
-	if time.Since(info.ModTime()) < dur {
-		fmt.Println(path)
+	if time.Since(info.ModTime()) < Dur {
+		fmt.Print(path + NL)
 	}
 
 	return nil
@@ -36,13 +40,13 @@ func main() {
 	var paths []string
 
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: changed.in N[s|m|h] [path]")
+		fmt.Fprint(os.Stderr, "USAGE changed.in N[s|m|h] [path]"+NL)
 		os.Exit(1)
 	}
 
-	dur, err = time.ParseDuration(os.Args[1])
+	Dur, err = time.ParseDuration(os.Args[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not parse first argument as time duration: %s\n", err)
+		fmt.Fprintf(os.Stderr, "could not parse first argument [%s] as time duration %v"+NL, os.Args[1], err)
 		os.Exit(1)
 	}
 
@@ -55,7 +59,7 @@ func main() {
 	for _, path := range paths {
 		path, err = filepath.Abs(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "filepath.Abs: %s\n", err)
+			fmt.Fprintf(os.Stderr, "ERROR filepath.Abs %v"+NL, err)
 			os.Exit(1)
 		}
 
@@ -63,7 +67,7 @@ func main() {
 
 		err = filepath.Walk(path, changedIn)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "filepath.Walk: %s\n", err)
+			fmt.Fprintf(os.Stderr, "ERROR filepath.Walk %v"+NL, err)
 			os.Exit(1)
 		}
 	}

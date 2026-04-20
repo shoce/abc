@@ -419,6 +419,7 @@ func main() {
 					//perr("ERROR AllFilesGet %v", err)
 				}
 				for _, f := range AllFiles {
+					// path.Join is intentional because filepath.Join would produce wrong result on Windows connecting to Unix machine
 					if strings.HasPrefix(f, fpath) || strings.HasPrefix(f, path.Join(Pwd, fpath)) {
 						pout(f)
 					}

@@ -1,17 +1,16 @@
 /*
-history:
+HISTORY
 015/0608 v1
+*/
 
-GoGet
-GoFmt
-GoBuildNull
-GoBuild
-GoRelease
-
-example:
+/*
+USAGE
 subst s1 s2 path
 subst /usr/local/plan9port /usr/local/plan9 /usr/local/plan9/
 */
+
+// GoGet GoFmt GoBuildNull GoBuild
+// GoRelease
 
 package main
 
@@ -20,7 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 func subst(fp, s1, s2 string) error {
@@ -39,7 +38,7 @@ func subst(fp, s1, s2 string) error {
 		}
 		var i os.FileInfo
 		for _, i = range ff {
-			err = subst(path.Join(fp, i.Name()), s1, s2)
+			err = subst(filepath.Join(fp, i.Name()), s1, s2)
 			if err != nil {
 				return err
 			}
@@ -94,7 +93,7 @@ func main() {
 	}
 
 	for _, p := range os.Args[3:] {
-		err = subst(path.Clean(p), os.Args[1], os.Args[2])
+		err = subst(filepath.Clean(p), os.Args[1], os.Args[2])
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)

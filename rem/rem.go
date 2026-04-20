@@ -10,7 +10,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const (
@@ -24,7 +24,7 @@ var (
 
 func init() {
 	if v := os.Getenv("HOME"); v != "" {
-		TRASH = path.Join(v, TRASH)
+		TRASH = filepath.Join(v, TRASH)
 		perr("DEBUG TRASH [%s]", TRASH)
 	}
 	if v := os.Getenv("TRASH"); v != "" {
@@ -34,7 +34,7 @@ func init() {
 }
 
 func main() {
-	name := path.Base(os.Args[0])
+	name := filepath.Base(os.Args[0])
 	switch name {
 	case "rem":
 		rem()
@@ -67,16 +67,16 @@ func rem() {
 	}
 	for _, a := range args {
 		apath := a
-		if !path.IsAbs(apath) {
-			apath = path.Join(wd, apath)
+		if !filepath.IsAbs(apath) {
+			apath = filepath.Join(wd, apath)
 		}
 		perr(apath)
-		trashapathdir := path.Join(TRASH, path.Dir(apath))
+		trashapathdir := filepath.Join(TRASH, filepath.Dir(apath))
 		err = os.MkdirAll(trashapathdir, 0700)
 		if err != nil {
 			perr(TAB+"ERROR %v", err)
 		}
-		trashapath := path.Join(TRASH, apath)
+		trashapath := filepath.Join(TRASH, apath)
 		err = os.Rename(apath, trashapath)
 		if err != nil {
 			perr(TAB+"ERROR %v", err)

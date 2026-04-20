@@ -1,17 +1,23 @@
 /*
-history:
+HISTORY
 016/0608 v1
 020/1106 print only file name by default, add options -r, -s, -t, -m, -l
 021/0329 add cid printing
 021/1026 add -1 option
 */
 
-// GoGet GoFmt GoBuildNull
-// GoBuild GoRun
-
 /*
- && ln -sf l /bin/ls && ln -sf l /bin/lsr && ln -sf l /bin/lt && ln -sf l /bin/ll && ln -sf l /bin/lr && ln -sf l /bin/llr
+INSTALL
+ln l ls
+ln l lt
+ln l ll
+ln l lr
+ln l lsr
+ln l llr
 */
+
+// GoGet GoFmt GoBuildNull GoBuild
+// GoRun
 
 package main
 
@@ -21,7 +27,6 @@ import (
 	"io/fs"
 	"math"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -248,7 +253,7 @@ func init() {
 func main() {
 	var err error
 
-	cmdname := path.Base(os.Args[0])
+	cmdname := filepath.Base(os.Args[0])
 	perr("DEBUG cmd name [%s]", cmdname)
 	switch cmdname {
 	case "l":

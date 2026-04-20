@@ -1,20 +1,23 @@
 /*
-history:
+HISTORY
 2020/1227 v1
+*/
 
-GoGet GoFmt GoBuild
-
+/*
+USAGE
 pout ha ha
 pout 'he he'
 perr haa >/dev/null
 */
+
+// GoGet GoFmt GoBuild
 
 package main
 
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const (
@@ -24,7 +27,7 @@ const (
 func main() {
 	var err error
 	var stream *os.File
-	name := path.Base(os.Args[0])
+	name := filepath.Base(os.Args[0])
 	switch name {
 	case "pout":
 		stream = os.Stdout

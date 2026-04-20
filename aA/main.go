@@ -1,12 +1,14 @@
 /*
-history:
+HISTORY
 025/0521 v1
+*/
 
-GoFmt
-GoBuild
-
+/*
+INSTALL
 ln -s aA Aa
 */
+
+// GoFmt GoBuild
 
 package main
 

@@ -1,6 +1,11 @@
 /*
-GoGet GoFmt GoBuildNull GoBuild
+INSTALL
+ln -s g gv
+ln -s g gr
+ln -s g gvr
 */
+
+// GoGet GoFmt GoBuildNull GoBuild
 
 package main
 
@@ -8,7 +13,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -32,7 +37,7 @@ var (
 )
 
 func main() {
-	PNAME = path.Base(os.Args[0])
+	PNAME = filepath.Base(os.Args[0])
 
 	if len(os.Args) < 2 {
 		switch PNAME {

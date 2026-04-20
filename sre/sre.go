@@ -1,6 +1,14 @@
 /*
-GoGet GoFmt GoBuildNull GoBuild
+USAGE
+sre abc def <readme.text
+srer '[0-9]' '#' <readme.text
 */
+/*
+INSTALL
+ln -s sre srer
+*/
+
+// GoGet GoFmt GoBuildNull GoBuild
 
 package main
 
@@ -8,7 +16,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -42,7 +50,7 @@ func main() {
 		S2 = os.Args[2]
 	}
 
-	if path.Base(os.Args[0]) == "srer" {
+	if filepath.Base(os.Args[0]) == "srer" {
 		var err error
 		if R1, err = regexp.Compile(S1); err != nil {
 			fmt.Fprintf(os.Stderr, "provided regular expression compile error:"+NL+"%v"+NL, err)

@@ -1,16 +1,12 @@
 /*
-history:
+HISTORY
 2020/04/17 v1
-
-https://pkg.go.dev/text/template
-
-go get -u -v
-go mod tidy
-
-GoFmt
-GoBuildNull
-GoBuild
 */
+
+// https://pkg.go.dev/text/template
+
+// go mod tidy
+// GoGet GoFmt GoBuildNull GoBuild
 
 package main
 
@@ -19,10 +15,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
-	"time"
+)
+
+const (
+	NL = "\n"
 )
 
 var (
@@ -74,13 +73,13 @@ func main() {
 	if inpath != "" {
 		inbb, err = ioutil.ReadFile(inpath)
 		if err != nil {
-			log("read %s: %s", inpath, err)
+			perr("ERROR read [%s] %v", inpath, err)
 			os.Exit(1)
 		}
 	} else {
 		inbb, err = ioutil.ReadAll(os.Stdin)
 		if err != nil {
-			log("read stdin: %s", err)
+			perr("ERROR read stdin %v", err)
 			os.Exit(1)
 		}
 	}
@@ -88,7 +87,7 @@ func main() {
 
 	te, err = te.Parse(in)
 	if err != nil {
-		log("parse: %s", err)
+		perr("ERROR parse %v", err)
 		os.Exit(1)
 	}
 
@@ -96,36 +95,35 @@ func main() {
 		bb := bytes.NewBuffer(nil)
 		err = te.Execute(bb, nil)
 		if err != nil {
-			log("execute: %s", err)
+			perr("ERROR execute %v", err)
 			os.Exit(1)
 		}
 
 		outbb, err = ioutil.ReadFile(outpath)
 		if err == nil {
 			if bytes.Equal(bb.Bytes(), outbb) {
-				//log("same output as %s, not writing", outpath)
+				//perr("same output as [%s] contents, not writing", outpath)
 				os.Exit(0)
 			}
 		}
 
 		err = ioutil.WriteFile(outpath, bb.Bytes(), 0644)
 		if err != nil {
-			log("write %s: %s", outpath, err)
+			perr("ERROR write [%s] %v", outpath, err)
 			os.Exit(1)
 		}
-		log("wrote %d bytes to %s", len(bb.Bytes()), outpath)
+		perr("wrote <%d> bytes to [%s]", len(bb.Bytes()), outpath)
 	} else {
 		err = te.Execute(os.Stdout, nil)
 		if err != nil {
-			log("execute: %s", err)
+			perr("ERROR execute %v", err)
 			os.Exit(1)
 		}
 	}
 }
 
-func log(msg string, args ...interface{}) {
-	ts := time.Now().Local().Format("Jan/02;15:04")
-	fmt.Fprintf(os.Stderr, ts+" "+msg+"\n", args...)
+func perr(msg string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, msg+NL, args...)
 }
 
 func Files(fp string) ([]string, error) {
@@ -219,7 +217,7 @@ func DirName() (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	return path.Base(wd), nil
+	return filepath.Base(wd), nil
 }
 
 func ReadFile(fp string) (string, error) {

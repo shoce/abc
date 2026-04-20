@@ -1,10 +1,11 @@
 /*
-history:
+HISTORY
 20.1114 v1
-
-GoFmt GoBuild GoRelease
-GoRun '^Request starting ' '^Request finished in [^ ]+ 500 ' logger*.txt
 */
+
+// GoFmt GoBuild
+// GoRelease
+// GoRun '^Request starting ' '^Request finished in [^ ]+ 500 ' logger*.txt
 
 package main
 
@@ -14,7 +15,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -106,9 +106,9 @@ func main() {
 				ll = append(ll, l)
 				if finishRe.MatchString(l) {
 					mi++
-					reportpath := path.Join(
+					reportpath := filepath.Join(
 						LogmatchDir,
-						fmt.Sprintf("%s.logmatch.%d.text", path.Base(logpath), mi))
+						fmt.Sprintf("%s.logmatch.%d.text", filepath.Base(logpath), mi))
 					err = ioutil.WriteFile(
 						reportpath,
 						[]byte(strings.Join(ll, "")),
