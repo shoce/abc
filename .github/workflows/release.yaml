@@ -58,6 +58,7 @@ jobs:
           ln rem remls
           ln rem remrem
           ln sre srer
+          ln uss usss
           ln g gr
           ln g gv
           ln g gvr
@@ -150,6 +151,7 @@ jobs:
           ln rem remls
           ln rem remrem
           ln sre srer
+          ln uss usss
           ln g gr
           ln g gv
           ln g gvr

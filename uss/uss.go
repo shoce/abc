@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -45,10 +46,12 @@ var (
 	Hostname     string
 	PollInterval time.Duration
 	TimeLimit    time.Duration
+
+	PrintShort bool
 )
 
 func print() {
-	ts := fmttime(time.Now().Local())
+	tsnow := fmttime(time.Now().Local())
 
 	cpuInterval := PollInterval
 	if cpuInterval == 0 {
@@ -148,6 +151,36 @@ func print() {
 	diskgauge := (strings.Repeat("=", diskpercent/VisualRatio) +
 		strings.Repeat("-", 100/VisualRatio-diskpercent/VisualRatio))
 
+	uptime, err := pshost.Uptime()
+	if err != nil {
+		perr("ERROR pshost.Uptime %v", err)
+		os.Exit(1)
+	}
+	uptimefmt := fmtdursec(uptime)
+
+	boot_id_path := "/proc/sys/kernel/random/boot_id"
+	bootidbb, err := os.ReadFile(boot_id_path)
+	if err != nil {
+		//perr("WARNING ReadFile [%s] %v", boot_id_path, err)
+	}
+	bootid := string(bootidbb)
+	if len(bootid) > 4 {
+		bootid = bootid[:4]
+	}
+
+	if PrintShort {
+		pout(
+			"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> bootid[%s]",
+			tsnow, Hostname,
+			cpugauge, cpunumber, cpufreq,
+			memgauge, seps(memsizemb, 3),
+			swapgauge, seps(swapsizemb, 3),
+			diskgauge, disksizegb,
+			uptimefmt, bootid,
+		)
+		return
+	}
+
 	var diskrdt, diskwrt uint64
 	diskstats, err := psdisk.IOCounters()
 	if err != nil {
@@ -240,26 +273,9 @@ func print() {
 		}
 	}
 
-	uptime, err := pshost.Uptime()
-	if err != nil {
-		perr("ERROR pshost.Uptime %v", err)
-		os.Exit(1)
-	}
-	uptimefmt := fmtdursec(uptime)
-
-	boot_id_path := "/proc/sys/kernel/random/boot_id"
-	bootidbb, err := os.ReadFile(boot_id_path)
-	if err != nil {
-		//perr("WARNING ReadFile [%s] %v", boot_id_path, err)
-	}
-	bootid := string(bootidbb)
-	if len(bootid) > 4 {
-		bootid = bootid[:4]
-	}
-
 	pout(
 		"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> bootid[%s] read<%s> write<%s> users(%s) nprocs<%s> listens(%s)",
-		ts, Hostname,
+		tsnow, Hostname,
 		cpugauge, cpunumber, cpufreq,
 		memgauge, seps(memsizemb, 3),
 		swapgauge, seps(swapsizemb, 3),
@@ -270,6 +286,7 @@ func print() {
 		seps(uint64(len(procs)), 3),
 		strings.Join(listens, N),
 	)
+	return
 }
 
 func init() {
@@ -277,6 +294,17 @@ func init() {
 
 func main() {
 	var err error
+
+	cmdname := filepath.Base(os.Args[0])
+	switch cmdname {
+	case "uss":
+		PrintShort = true
+	case "usss":
+		PrintShort = false
+	default:
+		perr("ERROR invalid command name [%s]", cmdname)
+		os.Exit(1)
+	}
 
 	args := os.Args[1:]
 	//perr("DEBUG args %#v", args)
