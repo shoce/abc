@@ -264,11 +264,7 @@ func main() {
 			procinfo += procstats + SP
 		}
 		procinfo += cmd
-		if len(cmdargs) > 0 {
-			procinfo += SP + "(" + strings.Join(cmdargs, SP) + ")"
-		} else {
-			procinfo += SP + "()"
-		}
+		procinfo += strings.Join(cmdargs, SP)
 		procinfo += NL
 		fmt.Print(procinfo)
 
