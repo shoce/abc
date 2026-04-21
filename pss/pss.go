@@ -264,7 +264,7 @@ func main() {
 			procinfo += procstats + SP
 		}
 		procinfo += cmd
-		procinfo += strings.Join(cmdargs, SP)
+		procinfo += strings.Join(cmdargs, N)
 		procinfo += NL
 		fmt.Print(procinfo)
 
