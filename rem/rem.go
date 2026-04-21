@@ -1,5 +1,5 @@
 /*
-history:
+HISTORY
 2026/0414 v1
 */
 
@@ -19,23 +19,22 @@ const (
 )
 
 var (
-	TRASH = "/trash/"
+	TRASH   = "/trash/"
+	CmdName string
 )
 
 func init() {
-	if v := os.Getenv("HOME"); v != "" {
-		TRASH = filepath.Join(v, TRASH)
-		perr("DEBUG TRASH [%s]", TRASH)
-	}
 	if v := os.Getenv("TRASH"); v != "" {
 		TRASH = v
-		perr("DEBUG TRASH [%s]", TRASH)
+	} else if v := os.Getenv("HOME"); v != "" {
+		TRASH = filepath.Join(v, TRASH) + "/"
 	}
+	perr("DEBUG TRASH [%s]", TRASH)
 }
 
 func main() {
-	name := filepath.Base(os.Args[0])
-	switch name {
+	CmdName = filepath.Base(os.Args[0])
+	switch CmdName {
 	case "rem":
 		rem()
 	case "remls":
@@ -43,7 +42,7 @@ func main() {
 	case "remrem":
 		remrem()
 	default:
-		perr("ERROR invalid command name [%s]", os.Args[0])
+		perr("ERROR invalid command name [%s]", CmdName)
 		os.Exit(1)
 	}
 }
@@ -62,7 +61,7 @@ func rem() {
 		args = append(args, a)
 	}
 	if len(args) == 0 {
-		perr("USAGE %s path...", os.Args[0])
+		perr("USAGE %s path...", CmdName)
 		os.Exit(1)
 	}
 	for _, a := range args {
