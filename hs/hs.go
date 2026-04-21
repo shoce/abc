@@ -567,7 +567,7 @@ func logstatus() {
 	}
 	s += F(
 		" hostname[%s] uptime<%s> bootid[%s] host=%s user=%s hs -- ",
-		uptime, BootId, Hostname, Host, User,
+		Hostname, uptime, BootId, Host, User,
 	)
 	s = TermUnderline(s)
 	perr(s)
