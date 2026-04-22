@@ -11,30 +11,38 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
+	SP  = " "
 	TAB = "\t"
 	NL  = "\n"
 )
 
 var (
-	TRASH   = "/trash/"
-	CmdName string
+	TRASH = "/trash/"
 )
 
 func init() {
+	var err error
 	if v := os.Getenv("TRASH"); v != "" {
 		TRASH = v
+		TRASH, err = filepath.Abs(TRASH)
+		if err != nil {
+			perr("ERROR filepath.Abs [%s] %v", TRASH, err)
+			os.Exit(1)
+		}
+		TRASH += string(filepath.Separator)
 	} else if v := os.Getenv("HOME"); v != "" {
-		TRASH = filepath.Join(v, TRASH) + "/"
+		TRASH = filepath.Join(v, TRASH) + string(filepath.Separator)
 	}
 	perr("DEBUG TRASH [%s]", TRASH)
 }
 
 func main() {
-	CmdName = filepath.Base(os.Args[0])
-	switch CmdName {
+	cmdname := filepath.Base(os.Args[0])
+	switch cmdname {
 	case "rem":
 		rem()
 	case "remls":
@@ -42,17 +50,13 @@ func main() {
 	case "remrem":
 		remrem()
 	default:
-		perr("ERROR invalid command name [%s]", CmdName)
+		perr("ERROR invalid command name [%s]", cmdname)
 		os.Exit(1)
 	}
 }
 
 func rem() {
-	wd, err := os.Getwd()
-	if err != nil {
-		perr("ERROR Getwd %v", err)
-		os.Exit(1)
-	}
+	var err error
 	var args []string
 	for _, a := range os.Args[1:] {
 		if a == "" {
@@ -61,15 +65,23 @@ func rem() {
 		args = append(args, a)
 	}
 	if len(args) == 0 {
-		perr("USAGE %s path...", CmdName)
+		perr("USAGE rem path...")
 		os.Exit(1)
 	}
 	for _, a := range args {
 		apath := a
 		if !filepath.IsAbs(apath) {
-			apath = filepath.Join(wd, apath)
+			apath, err = filepath.Abs(apath)
+			if err != nil {
+				perr("ERROR filepath.Abs [%s] %v", apath, err)
+				continue
+			}
 		}
-		perr(apath)
+		perr("rem" + TAB + apath)
+		if apath+string(filepath.Separator) == TRASH || strings.HasPrefix(apath, TRASH) {
+			perr(TAB + "ERROR TRASH IS TRASH")
+			continue
+		}
 		trashapathdir := filepath.Join(TRASH, filepath.Dir(apath))
 		err = os.MkdirAll(trashapathdir, 0700)
 		if err != nil {
@@ -87,12 +99,12 @@ func rem() {
 }
 
 func remls() {
-	pout("lsr %s/", TRASH)
+	pout("lsr" + SP + TRASH)
 	os.Exit(0)
 }
 
 func remrem() {
-	pout("rm -r -v %s/*", TRASH)
+	pout("rm -r -v" + SP + filepath.Join(TRASH, "*"))
 	os.Exit(0)
 }
 
