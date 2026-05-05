@@ -36,7 +36,7 @@ const (
 	NL  = "\n"
 	SEP = ","
 
-	VisualRatio    = 8
+	VisualRatio    = 12
 	HostnameMaxLen = 32
 )
 

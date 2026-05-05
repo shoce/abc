@@ -1,7 +1,7 @@
 /*
 USAGE
-sre abc def <readme.text
-srer '[0-9]' '#' <readme.text
+sre abc def <readme.text #>
+srer '[0-9]' '#' <readme.text #>
 */
 /*
 INSTALL
@@ -25,7 +25,7 @@ const (
 	NL   = "\n"
 	SPAC = "    "
 
-	ScannerBufferSize = 200 << 10
+	ScannerBufferSize = 900 << 10 //ae:>>
 )
 
 var (
@@ -38,9 +38,9 @@ var (
 func main() {
 	if len(os.Args) < 2 || len(os.Args) > 3 {
 		fmt.Fprintf(os.Stderr,
-			"usage: sre S1 [S2]"+NL+
+			"USAGE sre S1 [S2]"+NL+
 				SPAC+"S1 and S2 are literal strings"+NL+
-				"usage: srer R1 [S2]"+NL+
+				"USAGE srer R1 [S2]"+NL+
 				SPAC+"R1 is a regexp, S2 is a string with $n for submatches"+NL,
 		)
 		os.Exit(1)
@@ -53,14 +53,31 @@ func main() {
 	if filepath.Base(os.Args[0]) == "srer" {
 		var err error
 		if R1, err = regexp.Compile(S1); err != nil {
-			fmt.Fprintf(os.Stderr, "provided regular expression compile error:"+NL+"%v"+NL, err)
+			fmt.Fprintf(os.Stderr, "ERROR compile provided regular expression"+NL+"%v"+NL, err)
 			os.Exit(1)
 		}
 	}
 
+	// https://pkg.go.dev/bufio#Scanner
 	scanner := bufio.NewScanner(os.Stdin)
 	ScannerBuffer = make([]byte, ScannerBufferSize)
 	scanner.Buffer(ScannerBuffer, ScannerBufferSize)
+	//scanner.Split(scanner.Scan
+	/*
+		scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+			//return scanner.ScanLines(data, atEOF)
+			if atEOF && len(data) == 0 {
+				return 0, nil, nil
+			}
+			if i := bytes.IndexByte(data, '\n'); i >= 0 {
+				return i + 1, dropCR(data[0:i]), nil
+			}
+			if atEOF {
+				return len(data), dropCR(data), nil
+			}
+			return 0, nil, nil
+		})
+	*/
 
 	var line1, line2 string
 
@@ -81,7 +98,7 @@ func main() {
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "error reading input: %v"+NL, err)
+		fmt.Fprintf(os.Stderr, "ERROR reading input %v"+NL, err)
 		os.Exit(1)
 	}
 }

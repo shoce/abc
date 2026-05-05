@@ -1,5 +1,5 @@
 /*
-history:
+HISTORY
 26/0330@thailand v1
 */
 
@@ -34,10 +34,12 @@ const (
 
 var (
 	VERSION string
-	USAGE   string = `man hx:
-hx get scheme://host:port/path/subpath head1:v1 head2:v2 arg1=val1 arg2=val2
+	USAGE   string = `USAGE
+hx get scheme://host:port/path/subpath header1:v1 header2:v2 arg1=val1 arg2=val2
 `
 	DEBUG bool
+
+	USERAGENT = "hx/1.0"
 
 	HxHeaders bool
 
@@ -49,6 +51,8 @@ hx get scheme://host:port/path/subpath head1:v1 head2:v2 arg1=val1 arg2=val2
 	HxTimeout time.Duration
 
 	HxInsecure bool
+
+	F = fmt.Sprintf
 )
 
 func init() {
@@ -92,7 +96,8 @@ func main() {
 	}
 
 	if len(args) < 1 {
-		perr("ERROR not enough arguments, see hx help/usage")
+		perr("ERROR not enough arguments")
+		perr(USAGE + NL)
 		os.Exit(1)
 	}
 
@@ -165,8 +170,21 @@ func main() {
 
 	hurl.RawQuery = hquery.Encode()
 
-	perr("DEBUG hmethod [%s] hheader (%v) hurl %#v", hmethod, hheader, hurl)
+	perr("DEBUG hmethod [%s]", hmethod)
+	hheaderss := make([]string, 0)
+	// https://pkg.go.dev/http#Request.Header
+	for hk, hvv := range hheader {
+		for _, hv := range hvv {
+			hheaderss = append(hheaderss, F("%s[%s]", hk, hv))
+		}
+	}
+	slices.SortFunc(hheaderss, strings.Compare)
+	for _, h := range hheaderss {
+		perr("DEBUG hheader %s", h)
+	}
+	perr("DEBUG hurl %#v", hurl)
 
+	// https://pkg.go.dev/http#Client
 	hclient := &http.Client{}
 	if HxInsecure {
 		hclient.Transport = &http.Transport{
@@ -208,10 +226,24 @@ func main() {
 
 	hreq = hreq.WithContext(httptrace.WithClientTrace(context.Background(), htrace))
 
+	hreq.Header.Set("User-Agent", USERAGENT)
+
 	for hk, hvv := range hheader {
 		for _, hv := range hvv {
 			hreq.Header.Add(hk, hv)
 		}
+	}
+
+	hheaderss = make([]string, 0)
+	// https://pkg.go.dev/http#Request.Header
+	for hk, hvv := range hreq.Header {
+		for _, hv := range hvv {
+			hheaderss = append(hheaderss, F("%s[%s]", hk, hv))
+		}
+	}
+	slices.SortFunc(hheaderss, strings.Compare)
+	for _, h := range hheaderss {
+		perr("DEBUG hreq.Header %s", h)
 	}
 
 	hresp, err := hclient.Do(hreq)
@@ -257,7 +289,7 @@ func main() {
 }
 
 func fmttime(t time.Time) string {
-	return fmt.Sprintf(
+	return F(
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
@@ -265,9 +297,9 @@ func fmttime(t time.Time) string {
 
 func fmtdur(t uint64) string {
 	tdays, tsecs := t/(24*3600), t%(24*3600)
-	durs := fmt.Sprintf("%ds", tsecs)
+	durs := F("%ds", tsecs)
 	if tdays > 0 {
-		durs = fmt.Sprintf("%dd", tdays) + SEP + durs
+		durs = F("%dd", tdays) + SEP + durs
 	}
 	return durs
 }
@@ -294,9 +326,9 @@ func pout(msg string, args ...interface{}) {
 func seps(i uint64, e uint64) string {
 	ee := uint64(math.Pow(10, float64(e)))
 	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
+		return F("%d", i%ee)
 	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+		f := F("0%dd", e)
+		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }

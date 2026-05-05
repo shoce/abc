@@ -1,7 +1,7 @@
 /*
 Hs
 
-history:
+HISTORY
 020/0605 v1
 020/1016 repl
 020/302 2020/10/28 stdin reading support
@@ -15,18 +15,19 @@ Oct 28 21:37:28 ci sshd[3685911]: error: session_signal_req: session signalling 
 023/0827 keepalive
 025/0108 sighup
 025/0823 Status TermInverse
+026/04	cmd<TAB> and cmd arg<TAB> "autocompletion"
 */
 
 // GoGet GoFmt GoBuildNull GoBuild
-// GoRun -- put a '<' <readme.text
+// GoRun -- put a '<' <readme.text #ae:>>
 // Kill GoRun
 
 /*
 
-Variables:
-Host variable checked before every command execution: if it is empty then run locally; otherwise run via ssh.
-User variable stores user name if run via ssh.
-Status variable tells exit status of the last command executed.
+VARIABLES
+`Host` variable checked before every command execution: if it is empty then run locally; otherwise run via ssh.
+`User` variable stores user name if run via ssh.
+`Status` variable tells exit status of the last command executed.
 
 //
 notes for possible future scripting language:
@@ -60,7 +61,6 @@ import (
 	"os/signal"
 	"os/user"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -80,14 +80,19 @@ const (
 
 	InReaderBufferSize = 100 * 1000
 
-	CmdHostname = `hostname -f`
-	CmdBootTime = `cat /proc/stat`
-	CmdBootId   = `cat /proc/sys/kernel/random/boot_id`
+	CmdHostInfo = `cat /proc/sys/kernel/hostname /proc/sys/kernel/osrelease /proc/sys/kernel/arch /proc/sys/kernel/random/boot_id /proc/stat`
 	CmdPwd      = `pwd`
 
 	CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | LC_ALL=C sort ; done ;`
 	CmdAllFiles    = `find "%s" -maxdepth 1 -print | LC_ALL=C sort`
+
+	CmdHistoryMax = 1111
 )
+
+type CmdHistoryRecord struct {
+	Timestamp time.Time
+	Cmds      string
+}
 
 var (
 	VERSION string
@@ -112,6 +117,8 @@ var (
 	BootTime int64
 	BootId   string
 	Pwd      string
+	Kernel   string
+	Arch     string
 
 	AllPathCmds []string
 	AllFiles    []string
@@ -131,6 +138,8 @@ var (
 	UserAuthMethod ssh.AuthMethod
 
 	Status string // status of the last run command
+
+	CmdHistory []CmdHistoryRecord
 
 	InterruptChan chan bool
 
@@ -427,6 +436,27 @@ func main() {
 			}
 			continue
 		}
+		if cmds == ":q" {
+			os.Exit(0)
+		}
+		if cmds == ":p" {
+			tnow := time.Now()
+			for _, ic := range CmdHistory[max(len(CmdHistory)-22, 0):] {
+				pout("%s"+NL+TAB+"<%s> ago", ic.Cmds, fmtdur(tnow.Sub(ic.Timestamp)))
+			}
+			continue
+		}
+		if cmds == ":pp" {
+			tnow := time.Now()
+			for _, ic := range CmdHistory {
+				pout("%s"+NL+TAB+"<%s> ago", ic.Cmds, fmtdur(tnow.Sub(ic.Timestamp)))
+			}
+			continue
+		}
+		if cmds == ":pwd" {
+			pout(Pwd)
+			continue
+		}
 
 		//cmds = strings.TrimSpace(cmds)
 		if cmds == "" {
@@ -436,7 +466,7 @@ func main() {
 		cmd := strings.Split(cmds, " ")
 
 		stdinbb = nil
-		if cmd[len(cmd)-1] == "<" {
+		if len(cmd) > 0 && cmd[len(cmd)-1] == "<" {
 			cmd = cmd[:len(cmd)-1]
 			cmds = cmds[:len(cmds)-1]
 			perr("host=%s user=%s hs -- %s %s", Host, User, cmds, TermUnderline("stdin:"))
@@ -457,28 +487,28 @@ func main() {
 
 func TermItalic(s string) string {
 	if TERM != "" {
-		return "\033[3m" + s + "\033[23m"
+		return "\033[3m" + s + "\033[23m" //ae:]]
 	}
 	return s
 }
 
 func TermUnderline(s string) string {
 	if TERM != "" {
-		return "\033[4m" + s + "\033[24m"
+		return "\033[4m" + s + "\033[24m" //ae:]]
 	}
 	return s
 }
 
 func TermInverse(s string) string {
 	if TERM != "" {
-		return "\033[7m" + s + "\033[27m"
+		return "\033[7m" + s + "\033[27m" //ae:]]
 	}
 	return s
 }
 
 func TermUnderlineInverse(s string) string {
 	if TERM != "" {
-		return "\033[4;7m" + s + "\033[24;27m"
+		return "\033[4;7m" + s + "\033[24;27m" //ae:]]
 	}
 	return s
 }
@@ -535,6 +565,15 @@ func fmttime(t time.Time) string {
 	return ts
 }
 
+func fmtdur(td time.Duration) string {
+	tdays, tsecs := uint64(td.Seconds())/(24*3600), uint64(td.Seconds())%(24*3600)
+	ts := seps(tsecs, 2) + "s"
+	if tdays > 0 {
+		ts = seps(tdays, 2) + "d" + SEP + ts
+	}
+	return ts
+}
+
 func fmtdursec(t uint64) string {
 	tdays, tsecs := t/(24*3600), t%(24*3600)
 	ts := seps(tsecs, 2) + "s"
@@ -566,8 +605,8 @@ func logstatus() {
 		uptime = fmtdursec(uptimesecs)
 	}
 	s += F(
-		" hostname[%s] uptime<%s> bootid[%s] host=%s user=%s hs -- ",
-		Hostname, uptime, BootId, Host, User,
+		" hostname[%s] uptime<%s> bootid[%s] kernel[%s] arch[%s] host=%s user=%s hs -- ",
+		Hostname, uptime, BootId, Kernel, Arch, Host, User,
 	)
 	s = TermUnderline(s)
 	perr(s)
@@ -576,7 +615,7 @@ func logstatus() {
 func copynotify(dst io.Writer, src io.Reader, notify chan error) {
 	_, err := io.Copy(dst, src)
 	if notify != nil {
-		notify <- err
+		notify <- err //ae:>
 	}
 }
 
@@ -603,52 +642,43 @@ func connectssh() (err error) {
 	// https://pkg.go.dev/golang.org/x/crypto/ssh#Client.NewSession
 	var session *ssh.Session
 
-	perr("host=%s user=%s hs -- %s", Host, User, CmdBootTime)
+	perr("host=%s user=%s hs -- %s", Host, User, CmdHostInfo)
 	session, err = SshClient.NewSession()
 	if err != nil {
-		perr("ERROR CmdBootTime NewSession %v", err)
+		perr("ERROR CmdHostInfo NewSession %v", err)
 		return err
 	}
-	procstatbb, err := session.Output(CmdBootTime)
+	hostinfobb, err := session.Output(CmdHostInfo)
 	if err != nil {
-		perr("WARNING CmdBootTime Output %v", err)
+		perr("WARNING CmdHostInfo Output %v", err)
 	}
-	if boottimem := regexp.MustCompile(`(?m)^btime ([0-9]+)$`).FindStringSubmatch(string(procstatbb)); boottimem != nil {
-		BootTime, err = strconv.ParseInt(boottimem[1], 10, 64)
-		if err != nil {
-			perr("WARNING CmdBootTime btime ParseInt %v", err)
+	session.Close()
+	hostinfo := strings.Split(strings.TrimSpace(string(hostinfobb)), NL)
+	if len(hostinfo) > 0 {
+		Hostname = hostinfo[0]
+	}
+	if len(hostinfo) > 1 {
+		Kernel = hostinfo[1]
+	}
+	if len(hostinfo) > 2 {
+		Arch = hostinfo[2]
+	}
+	if len(hostinfo) > 3 {
+		BootId = hostinfo[3]
+		if len(BootId) > 4 {
+			BootId = BootId[:4]
 		}
 	}
-	session.Close()
-
-	perr("host=%s user=%s hs -- %s", Host, User, CmdBootId)
-	session, err = SshClient.NewSession()
-	if err != nil {
-		perr("ERROR CmdBootId NewSession %v", err)
-		return err
+	if len(hostinfo) > 5 {
+		for _, l := range hostinfo[5:] {
+			if ff := strings.Fields(l); len(ff) == 2 && ff[0] == "btime" {
+				BootTime, err = strconv.ParseInt(ff[1], 10, 64)
+				if err != nil {
+					perr("WARNING CmdHostInfo btime ParseInt %v", err)
+				}
+			}
+		}
 	}
-	bootidbb, err := session.Output(CmdBootId)
-	if err != nil {
-		perr("WARNING CmdBootId Output %v", err)
-	}
-	BootId = string(bootidbb)
-	if len(BootId) > 4 {
-		BootId = BootId[:4]
-	}
-	session.Close()
-
-	perr("host=%s user=%s hs -- %s", Host, User, CmdHostname)
-	session, err = SshClient.NewSession()
-	if err != nil {
-		perr("ERROR CmdHostname NewSession %v", err)
-		return err
-	}
-	hostnamebb, err := session.Output(CmdHostname)
-	if err != nil {
-		perr("WARNING CmdHostname Output %v", err)
-	}
-	Hostname = strings.TrimSpace(string(hostnamebb))
-	session.Close()
 
 	perr("host=%s user=%s hs -- %s", Host, User, CmdPwd)
 	session, err = SshClient.NewSession()
@@ -707,7 +737,7 @@ func GetAllFiles(fpathdir string) error {
 // https://github.com/golang/go/issues/21478
 // https://github.com/golang/go/issues/19338
 // https://pkg.go.dev/golang.org/x/crypto/ssh
-func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) {
+func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) { //ae:>
 	perr("VERBOSE keepalive start")
 	t := time.NewTicker(SshKeepAliveInterval)
 	defer t.Stop()
@@ -720,7 +750,7 @@ func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) {
 			}
 		*/
 		select {
-		case <-t.C:
+		case <-t.C: //ae:>
 			_, _, err = cl.SendRequest("keepalive@github.com/shoce/hs", true, nil)
 			if err != nil {
 				perr("VERBOSE keepalive failed to send request %v", err)
@@ -728,7 +758,7 @@ func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) {
 			} else {
 				perr("VERBOSE keepalive request sent and confirmed")
 			}
-		case <-done:
+		case <-done: //ae:>
 			perr("VERBOSE keepalive done")
 			return nil
 		}
@@ -764,6 +794,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 				continue
 			}
 			if err := session.Setenv(s, os.Getenv(s)); err != nil {
+				//ae:<<
 				// ( echo ; echo AcceptEnv Dir ) >>/etc/ssh/sshd_config && systemctl reload sshd
 				perr("ERROR Session.Setenv [%s] %v", s, err)
 				return "", err
@@ -773,6 +804,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 
 	/*
 		if err := session.Setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"); err != nil {
+			//ae:<<
 			// ( echo ; echo AcceptEnv PATH ) >>/etc/ssh/sshd_config && systemctl reload sshd
 			perr("ERROR Session.Setenv [PATH] %v", err)
 			return "", err
@@ -825,7 +857,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 
 	InterruptChan = make(chan bool)
 	go func() {
-		interrupt := <-InterruptChan
+		interrupt := <-InterruptChan //ae:>
 		if !interrupt {
 			return
 		}
@@ -840,7 +872,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 
 	err = session.Wait()
 
-	keepalivedonechan <- true
+	keepalivedonechan <- true //ae:>
 	close(keepalivedonechan)
 	keepalivedonechan = nil
 
@@ -947,6 +979,10 @@ func run(cmds string, cmd []string, stdin io.Reader) (status string, err error) 
 		return "", errors.New("empty cmd")
 	}
 
+	CmdHistory = append(CmdHistory, CmdHistoryRecord{time.Now(), cmds})
+	if len(CmdHistory) > CmdHistoryMax {
+		CmdHistory = CmdHistory[len(CmdHistory)-CmdHistoryMax:]
+	}
 	perr("host=%s user=%s hs -- %s", Host, User, cmds)
 
 	if Host == "" {
