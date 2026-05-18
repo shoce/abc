@@ -38,8 +38,8 @@ jobs:
 
       - name: "go build"
         run: |
-          terminv=$'\e[7m'
-          terminv0=$'\e[27m'
+          terminv=$'\e[7m' #ae:]
+          terminv0=$'\e[27m' #ae:]
           mkdir -p "/tmp/${{github.event.repository.name}}/"
           for cmd in * ; do
             test -d $cmd || continue
@@ -133,8 +133,8 @@ jobs:
 
       - name: "go build"
         run: |
-          terminv=$'\e[7m'
-          terminv0=$'\e[27m'
+          terminv=$'\e[7m' #ae:]
+          terminv0=$'\e[27m' #ae:]
           mkdir -p "/tmp/${{github.event.repository.name}}/"
           for cmd in * ; do
             test -d $cmd || continue
@@ -143,7 +143,7 @@ jobs:
             CGO_ENABLED=0 GOOS=linux GOARCH=$BUILD_ARCH go build -C $cmd -o "/tmp/${{github.event.repository.name}}/$cmd" -trimpath -ldflags ' -X main.VERSION=${{env.VERSION}}'
           done
           echo
-          cd /tmp/${{github.event.repository.name}}/"
+          cd "/tmp/${{github.event.repository.name}}/"
           ln l ls
           ln l lt
           ln l ll
