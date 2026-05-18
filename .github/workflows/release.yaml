@@ -40,11 +40,13 @@ jobs:
         run: |
           terminv=$'\e[7m' #ae:]
           terminv0=$'\e[27m' #ae:]
+          termund=$'\e[4m' #ae:]
+          termund0=$'\e[24m' #ae:]
           mkdir -p "/tmp/${{github.event.repository.name}}/"
           for cmd in * ; do
             test -d $cmd || continue
             echo
-            echo $terminv"$cmd"$terminv0
+            echo $termund"$cmd"$termund0
             CGO_ENABLED=0 GOOS=linux GOARCH=$BUILD_ARCH go build -C $cmd -o "/tmp/${{github.event.repository.name}}/$cmd" -trimpath -ldflags ' -X main.VERSION=${{env.VERSION}}'
           done
           echo
@@ -66,7 +68,7 @@ jobs:
           ln g gvr
           ln aA Aa
           tar -c --numeric-owner --group=:0 --owner=:0 -z -f "${{github.event.repository.name}}.tar.gz" *
-          echo $terminv"/tmp/${{github.event.repository.name}}/"$terminv0
+          echo $termund"/tmp/${{github.event.repository.name}}/"$termund0
           ls -l -a
 
       - name: "release notes"
@@ -135,11 +137,13 @@ jobs:
         run: |
           terminv=$'\e[7m' #ae:]
           terminv0=$'\e[27m' #ae:]
+          termund=$'\e[4m' #ae:]
+          termund0=$'\e[24m' #ae:]
           mkdir -p "/tmp/${{github.event.repository.name}}/"
           for cmd in * ; do
             test -d $cmd || continue
             echo
-            echo $terminv"$cmd"$terminv0
+            echo $termund"$cmd"$termund0
             CGO_ENABLED=0 GOOS=linux GOARCH=$BUILD_ARCH go build -C $cmd -o "/tmp/${{github.event.repository.name}}/$cmd" -trimpath -ldflags ' -X main.VERSION=${{env.VERSION}}'
           done
           echo
@@ -161,7 +165,7 @@ jobs:
           ln g gvr
           ln aA Aa
           tar -c --numeric-owner --group=:0 --owner=:0 -z -f "${{github.event.repository.name}}.tar.gz" *
-          echo $terminv"/tmp/${{github.event.repository.name}}/"$terminv0
+          echo $termund"/tmp/${{github.event.repository.name}}/"$termund0
           ls -l -a
 
       - name: "release notes"
