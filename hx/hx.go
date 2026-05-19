@@ -77,17 +77,21 @@ func argss() (args []string) {
 args = os.Args[1:]
 
 fd3 := os.NewFile(3, "fd3")
-if fd3 == nil { perr("ERROR NewFile <3>"); return; }
+if fd3 == nil { perr("ERROR argss NewFile <3>"); return; }
 defer fd3.Close()
-data, _ := io.ReadAll(fd3)
+// https://pkg.go.dev/io#ReadAll
+data, err := io.ReadAll(fd3)
+if err != nil { perr(F("DEBUG argss io.ReadAll fd3 %v", err)) }
 if len(data) == 0 { return; }
 if len(data)==1 && data[0]=='\n' { return; }
 
 // https://pkg.go.dev/strings#Split
-args = strings.Split(string(data), NL)
-if len(args)>0 && args[len(args)-1]=="" { 
-args = args[:len(args)-1] 
+fd3args := strings.Split(string(data), NL)
+if len(fd3args)>0 && fd3args[len(fd3args)-1]=="" {
+fd3args = fd3args[:len(args)-1] 
 }
+perr(F("DEBUG argss args(%v) fd3args(%v)", args, fd3args))
+//if len(fd3args)>0 { args = fd3args }
 return
 
 }
