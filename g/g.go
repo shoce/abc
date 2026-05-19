@@ -4,6 +4,10 @@ ln -s g gv
 ln -s g gr
 ln -s g gvr
 */
+/*
+HISTORY
+026/0519 func argss()
+*/
 
 // GoGet GoFmt GoBuildNull GoBuild
 
@@ -12,6 +16,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -22,7 +27,7 @@ const (
 	NL   = "\n"
 	SPAC = "    "
 
-	ScannerBufferSize = 200 << 10
+	ScannerBufferSize = 333 << 10
 )
 
 var (
@@ -33,30 +38,51 @@ var (
 	RegexpMatch = false
 	InvertMatch = false
 
-	ScannerBuffer []byte
+	F = fmt.Sprintf
+	pout = fmt.Print
 )
+
+func argss() (args []string) {
+args = os.Args[1:]
+
+fd3 := os.NewFile(3, "fd3")
+if fd3 == nil { perr("ERROR NewFile <3>"); return; }
+defer fd3.Close()
+data, _ := io.ReadAll(fd3)
+if len(data)==0 { return; }
+if len(data)==1 && data[0]=='\n' { return; }
+
+// https://pkg.go.dev/strings#Split
+args = strings.Split(string(data), NL)
+if len(args)>0 && args[len(args)-1]=="" { 
+args = args[:len(args)-1] 
+}
+return
+
+}
 
 func main() {
 	PNAME = filepath.Base(os.Args[0])
+	SS = argss()
+	perr(F("DEBUG SS ([%s])", strings.Join(SS, "][")))
 
-	if len(os.Args) < 2 {
+	if len(SS) < 1 {
 		switch PNAME {
 		case "g":
-			perr("usage: g S" + NL +
+			perr("USAGE g S" + NL +
 				SPAC + "S is a literal string")
 		case "gr":
-			perr("usage: gr R" + NL +
+			perr("USAGE gr R" + NL +
 				SPAC + "R is a regexp")
 		case "gv":
-			perr("usage: gv S" + NL +
+			perr("USAGE gv S" + NL +
 				SPAC + "S is a literal string")
 		case "gvr":
-			perr("usage: gvr R" + NL +
+			perr("USAGE gvr R" + NL +
 				SPAC + "R is a regexp")
 		}
 		os.Exit(1)
 	}
-	SS = os.Args[1:]
 
 	if PNAME == "gv" || PNAME == "gvr" {
 		InvertMatch = true
@@ -67,7 +93,7 @@ func main() {
 		for _, S := range SS {
 			R, err := regexp.Compile(S)
 			if err != nil {
-				perr("ERROR regular expression [%s] compile %v", S, err)
+				perr(F("ERROR regular expression [%s] compile %v", S, err))
 				os.Exit(1)
 			}
 			RR = append(RR, R)
@@ -75,8 +101,7 @@ func main() {
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
-	ScannerBuffer = make([]byte, ScannerBufferSize)
-	scanner.Buffer(ScannerBuffer, ScannerBufferSize)
+	scanner.Buffer(nil, ScannerBufferSize)
 
 	var line string
 
@@ -92,12 +117,12 @@ func main() {
 					}
 				}
 				if !match {
-					pout(line)
+					pout(line+NL)
 				}
 			} else {
 				for _, R := range RR {
 					if R.MatchString(line) {
-						pout(line)
+						pout(line+NL)
 						break
 					}
 				}
@@ -115,12 +140,12 @@ func main() {
 					}
 				}
 				if !match {
-					pout(line)
+					pout(line+NL)
 				}
 			} else {
 				for _, S := range SS {
 					if strings.Contains(line, S) {
-						pout(line)
+						pout(line+NL)
 						break
 					}
 				}
@@ -129,23 +154,10 @@ func main() {
 	}
 
 	if err := scanner.Err(); err != nil {
-		perr("ERROR reading input %v", err)
+		perr(F("ERROR reading input %v", err))
 		os.Exit(1)
 	}
 }
 
-func perr(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
-	} else {
-		fmt.Fprint(os.Stderr, msg+NL)
-	}
-}
+func perr(msgtext string) { fmt.Fprint(os.Stderr, msgtext+NL) }
 
-func pout(msg string, args ...interface{}) {
-	if len(args) > 0 {
-		fmt.Fprintf(os.Stdout, msg+NL, args...)
-	} else {
-		fmt.Fprint(os.Stdout, msg+NL)
-	}
-}
