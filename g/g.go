@@ -27,7 +27,7 @@ const (
 	NL   = "\n"
 	SPAC = "    "
 
-	ScannerBufferSize = 333 << 10 //ae:>>
+	ScannerBufferSize = 1 << 20 //ae:>>
 )
 
 var (
