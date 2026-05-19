@@ -1,6 +1,7 @@
 /*
 HISTORY
 26/0330@thailand v1
+026/0519 func args()
 */
 
 // GoGet GoFmt GoBuildNull
@@ -53,9 +54,11 @@ hx get scheme://host:port/path/subpath header1:v1 header2:v2 arg1=val1 arg2=val2
 	HxInsecure bool
 
 	F = fmt.Sprintf
+	pout = fmt.Print
 )
 
 func init() {
+
 	if os.Getenv("DEBUG") != "" {
 		DEBUG = true
 	}
@@ -70,11 +73,30 @@ func init() {
 
 }
 
+func argss() (args []string) {
+args = os.Args[1:]
+
+fd3 := os.NewFile(3, "fd3")
+if fd3 == nil { perr("ERROR NewFile <3>"); return; }
+defer fd3.Close()
+data, _ := io.ReadAll(fd3)
+if len(data) == 0 { return; }
+if len(data)==1 && data[0]=='\n' { return; }
+
+// https://pkg.go.dev/strings#Split
+args = strings.Split(string(data), NL)
+if len(args)>0 && args[len(args)-1]=="" { 
+args = args[:len(args)-1] 
+}
+return
+
+}
+
 func main() {
 	var err error
 
-	args := os.Args[1:]
-	//perr("DEBUG args %#v", args)
+	args := argss()
+	perr(F("DEBUG args %#v", args))
 	n := 0
 	for _, a := range args {
 		if a != "" {
@@ -83,10 +105,10 @@ func main() {
 		}
 	}
 	args = args[:n]
-	//perr("DEBUG n <%d> args %#v", n, args)
+	perr(F("DEBUG n <%d> args %#v", n, args))
 
 	if len(args) == 1 && args[0] == "version" {
-		fmt.Print(VERSION + NL)
+		pout(VERSION + NL)
 		os.Exit(0)
 	}
 
@@ -118,23 +140,24 @@ func main() {
 	case "del", "delete":
 		hmethod = http.MethodDelete
 	default:
-		perr("ERROR invalid method [%s]", args[0])
+		perr(F("ERROR invalid method [%s]", args[0]))
 		os.Exit(1)
 	}
 
 	if len(args) < 2 {
-		perr("ERROR not enough arguments, see hx help/usage")
+		perr("ERROR not enough arguments")
+		perr(USAGE + NL)
 		os.Exit(1)
 	}
 
 	// https://pkg.go.dev/net/url#URL
 	hurl, err := url.Parse(args[1])
 	if err != nil {
-		perr("ERROR invalid url [%s]", args[1])
+		perr(F("ERROR invalid url [%s]", args[1]))
 		os.Exit(1)
 	}
 
-	perr("DEBUG hurl %#v", hurl)
+	perr(F("DEBUG hurl %#v", hurl))
 
 	if hurl.Scheme == "" {
 		hurl.Scheme = "http"
@@ -142,7 +165,7 @@ func main() {
 
 	hquery := hurl.Query()
 	if err != nil {
-		perr("ERROR invalid url [%s] query part", hurl)
+		perr(F("ERROR invalid url [%s] query part", hurl))
 		os.Exit(1)
 	}
 
@@ -163,14 +186,14 @@ func main() {
 			akv := strings.SplitN(a, ":", 2)
 			hheader.Add(akv[0], akv[1])
 		} else {
-			perr("ERROR invalid arg [%s]", a)
+			perr(F("ERROR invalid arg [%s]", a))
 			os.Exit(1)
 		}
 	}
 
 	hurl.RawQuery = hquery.Encode()
 
-	perr("DEBUG hmethod [%s]", hmethod)
+	perr(F("DEBUG hmethod [%s]", hmethod))
 	hheaderss := make([]string, 0)
 	// https://pkg.go.dev/http#Request.Header
 	for hk, hvv := range hheader {
@@ -180,9 +203,9 @@ func main() {
 	}
 	slices.SortFunc(hheaderss, strings.Compare)
 	for _, h := range hheaderss {
-		perr("DEBUG hheader %s", h)
+		perr(F("DEBUG hheader %s", h))
 	}
-	perr("DEBUG hurl %#v", hurl)
+	perr(F("DEBUG hurl %#v", hurl))
 
 	// https://pkg.go.dev/http#Client
 	hclient := &http.Client{}
@@ -202,16 +225,16 @@ func main() {
 		TLSHandshakeStart: func() {
 		},
 		TLSHandshakeDone: func(htlsconnstate tls.ConnectionState, err error) {
-			perr("DEBUG tls connection state %#v", htlsconnstate)
+			perr(F("DEBUG tls connection state %#v", htlsconnstate))
 			for _, pc := range htlsconnstate.PeerCertificates {
-				perr(
+				perr(F(
 					"DEBUG tls connection peer certificate Issuer [%v] Subject [%v] NotBefore <%s> NotAfter <%s> KeyUsage [%v]",
 					pc.Issuer, pc.Subject, fmttime(pc.NotBefore), fmttime(pc.NotAfter), pc.KeyUsage,
-				)
-				perr(
+				))
+				perr(F(
 					"DEBUG tls connection peer certificate PermittedDNSDomains (%v) PermittedIPRanges (%v) PermittedEmailAddresses (%v) PermittedURIDomains (%v)",
 					pc.PermittedDNSDomains, pc.PermittedIPRanges, pc.PermittedEmailAddresses, pc.PermittedURIDomains,
-				)
+				))
 			}
 		},
 		GotFirstResponseByte: func() {},
@@ -220,7 +243,7 @@ func main() {
 	// https://pkg.go.dev/http#NewRequest
 	hreq, err := http.NewRequest(hmethod, hurl.String(), nil)
 	if err != nil {
-		perr("ERROR NewRequest %v", err)
+		perr(F("ERROR NewRequest %v", err))
 		os.Exit(1)
 	}
 
@@ -243,40 +266,40 @@ func main() {
 	}
 	slices.SortFunc(hheaderss, strings.Compare)
 	for _, h := range hheaderss {
-		perr("DEBUG hreq.Header %s", h)
+		perr(F("DEBUG hreq.Header %s", h))
 	}
 
 	hresp, err := hclient.Do(hreq)
 	if err != nil {
-		perr("ERROR %v", err)
+		perr(F("ERROR %v", err))
 		os.Exit(1)
 	}
 
-	perr("DEBUG hresp %v", hresp)
+	perr(F("DEBUG hresp %v", hresp))
 
-	perr("DEBUG %s", hresp.Status)
+	perr(F("DEBUG %s", hresp.Status))
 	for hhk, hhvv := range hresp.Header {
 		for _, hhv := range hhvv {
-			perr("DEBUG %s: %s", hhk, hhv)
+			perr(F("DEBUG %s: %s", hhk, hhv))
 		}
 	}
 
 	defer hresp.Body.Close()
 
 	if HxHeaders {
-		pout(hresp.Status)
+		pout(hresp.Status+NL)
 		for hhk, hhvv := range hresp.Header {
 			for _, hhv := range hhvv {
-				pout("%s: %s", hhk, hhv)
+				pout(F("%s [%s]", hhk, hhv)+NL)
 			}
 		}
-		pout("")
+		pout(NL)
 	}
 
 	// https://pkg.go.dev/io#Copy
 	_, err = io.Copy(os.Stdout, hresp.Body)
 	if err != nil {
-		perr("ERROR copy response body %v", err)
+		perr(F("ERROR copy response body %v", err))
 		os.Exit(1)
 	}
 
@@ -304,23 +327,11 @@ func fmtdur(t uint64) string {
 	return durs
 }
 
-func perr(msg string, args ...interface{}) {
-	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
+func perr(msgtext string) {
+	if strings.HasPrefix(msgtext, "DEBUG ") && !DEBUG {
 		return
 	}
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
-	}
-}
-
-func pout(msg string, args ...interface{}) {
-	if len(args) == 0 {
-		fmt.Fprint(os.Stdout, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stdout, msg+NL, args...)
-	}
+	fmt.Fprint(os.Stderr, msgtext+NL)
 }
 
 func seps(i uint64, e uint64) string {
