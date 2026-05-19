@@ -16,6 +16,7 @@ Oct 28 21:37:28 ci sshd[3685911]: error: session_signal_req: session signalling 
 025/0108 sighup
 025/0823 Status TermInverse
 026/04	cmd<TAB> and cmd arg<TAB> "autocompletion"
+026/0601	clip[]
 */
 
 // GoGet GoFmt GoBuildNull GoBuild
@@ -61,19 +62,22 @@ import (
 	"os/signal"
 	"os/user"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/net/proxy"
+	ssh "golang.org/x/crypto/ssh"
+	proxy "golang.org/x/net/proxy"
 )
 
 const (
+	N = ""
 	SP  = " "
 	TAB = "\t"
 	NL  = "\n"
+	CR = "\r"
 	SEP = ","
 
 	PortDefault = "22"
@@ -142,10 +146,13 @@ var (
 	CmdHistory []CmdHistoryRecord
 
 	InterruptChan chan bool
+	
+	ClipEnabled bool
 
 	TzBiel *time.Location = time.FixedZone("Biel", 60*60)
 
 	F = fmt.Sprintf
+	pout = fmt.Print
 )
 
 func init() {
@@ -168,22 +175,22 @@ func init() {
 	var err error
 
 	Proxy = os.Getenv("Proxy")
-	perr("VERBOSE Proxy [%s]", Proxy)
+	perr(F("VERBOSE Proxy [%s]", Proxy))
 	ProxyChain = strings.FieldsFunc(Proxy, func(c rune) bool { return c == ';' })
-	perr("VERBOSE ProxyChain <%d> %v", len(ProxyChain), ProxyChain)
+	perr(F("VERBOSE ProxyChain <%d> %v", len(ProxyChain), ProxyChain))
 	ProxyDialer = proxy.Direct
 
 	Host = os.Getenv("Host")
-	perr("VERBOSE Host [%s]", Host)
+	perr(F("VERBOSE Host [%s]", Host))
 	if Host == "" {
-		perr("ERROR Host env var empty")
+		perr(F("ERROR Host env var empty"))
 		os.Exit(1)
 	}
 
 	User = os.Getenv("User")
-	perr("VERBOSE User [%s]", User)
+	perr(F("VERBOSE User [%s]", User))
 	if User == "" {
-		perr("ERROR User env var empty")
+		perr(F("ERROR User env var empty"))
 		os.Exit(1)
 	}
 
@@ -191,12 +198,12 @@ func init() {
 	if UserPassword != "" {
 		UserAuthMethod = ssh.Password(UserPassword)
 	}
-	perr("VERBOSE UserPassword [%s]", UserPassword)
+	perr(F("VERBOSE UserPassword [%s]", UserPassword))
 
 	if os.Getenv("home") == "" {
 		err = os.Setenv("home", os.Getenv("HOME"))
 		if err != nil {
-			perr("WARNING Setenv home %v", err)
+			perr(F("WARNING Setenv home %v", err))
 		}
 	}
 
@@ -204,7 +211,7 @@ func init() {
 	if UserKeyFile != "" {
 		userkeybb, err := ioutil.ReadFile(UserKeyFile)
 		if err != nil {
-			perr("ERROR Read UserKeyFile %v", err)
+			perr(F("ERROR Read UserKeyFile %v", err))
 			os.Exit(1)
 		}
 		UserKey = string(userkeybb)
@@ -217,15 +224,15 @@ func init() {
 	if UserKey != "" {
 		UserSigner, err = ssh.ParsePrivateKey([]byte(UserKey))
 		if err != nil {
-			perr("ERROR ParsePrivateKey %v", err)
+			perr(F("ERROR ParsePrivateKey %v", err))
 			os.Exit(1)
 		}
 		UserAuthMethod = ssh.PublicKeys(UserSigner)
 	}
-	perr("VERBOSE UserKey [%s]", UserKey)
+	perr(F("VERBOSE UserKey [%s]", UserKey))
 
 	if UserAuthMethod == nil {
-		perr("ERROR no user auth method provided: no password and no user key")
+		perr("ERROR no user auth method provided; no password and no user key")
 		os.Exit(1)
 	}
 
@@ -236,19 +243,20 @@ func init() {
 		//ClientVersion: "hs", // NewClientConn: ssh: handshake failed: ssh: invalid packet length, packet too large
 		//HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			perr("VERBOSE SSH server public key: type:%s hex:%s", key.Type(), hex.EncodeToString(key.Marshal()))
+			perr(F("VERBOSE ssh server public key type[%s] hex[%s]", key.Type(), hex.EncodeToString(key.Marshal())))
 			return nil
 		},
 		BannerCallback: func(msg string) error {
 			msg = strings.TrimSpace(msg)
-			sep := SP
-			if strings.Contains(msg, "\n") {
+			sep := N
+			if strings.Contains(msg, NL) {
 				sep = NL
 			}
-			perr("SSH server banner %s%s", sep, msg)
+			perr(F("ssh server banner [%s%s]", sep, msg))
 			return nil
 		},
 	}
+
 }
 
 func main() {
@@ -261,7 +269,7 @@ func main() {
 			s := <-sigintchan
 			switch s {
 			case syscall.SIGINT:
-				perr(NL)
+				fmt.Fprint(os.Stderr, NL)
 				perr("interrupt signal")
 				if InterruptChan != nil {
 					InterruptChan <- true
@@ -277,7 +285,7 @@ func main() {
 			s := <-sighupchan
 			switch s {
 			case syscall.SIGHUP:
-				perr(NL)
+				fmt.Fprint(os.Stderr, NL)
 				perr("hangup signal")
 				os.Exit(2)
 			}
@@ -287,7 +295,7 @@ func main() {
 	args := os.Args[1:]
 
 	if len(args) > 0 && args[0] != "--" {
-		perr("ERROR the first argument should be `--`, example `hs -- id`")
+		perr("ERROR the first argument should be `--` e.g. `hs -- id`")
 		os.Exit(1)
 	}
 
@@ -299,15 +307,15 @@ func main() {
 
 		Hostname, err = os.Hostname()
 		if err != nil {
-			perr("ERROR Hostname %v", err)
+			perr(F("ERROR Hostname %v", err))
 			os.Exit(1)
 		}
 		Hostname = strings.TrimSuffix(Hostname, ".local")
-		//perr("Hostname [%s]", Hostname)
+		//perr(F("Hostname [%s]", Hostname))
 
 		u, err := user.Current()
 		if err != nil {
-			perr("WARNING user.Current %v", err)
+			perr(F("WARNING user.Current %v", err))
 		}
 		User = u.Username
 
@@ -317,12 +325,12 @@ func main() {
 			for _, p := range ProxyChain {
 				proxyurl, err := url.Parse(p)
 				if err != nil {
-					perr("ERROR proxy url [%s]` %v", p, err)
+					perr(F("ERROR proxy url [%s]` %v", p, err))
 					os.Exit(1)
 				}
 				pd, err := proxy.FromURL(proxyurl, ProxyDialer)
 				if err != nil {
-					perr("ERROR proxy from url [%s] %v", p, err)
+					perr(F("ERROR proxy from url [%s] %v", p, err))
 					os.Exit(1)
 				}
 				ProxyDialer = pd
@@ -336,21 +344,21 @@ func main() {
 					Host = Host[1 : len(Host)-1]
 				}
 				if ip := net.ParseIP(Host); ip != nil {
-					perr("DEBUG ip [%s]", ip.String())
+					perr(F("DEBUG ip [%s]", ip.String()))
 					Host = net.JoinHostPort(ip.String(), PortDefault)
 				} else {
 					Host = net.JoinHostPort(Host, PortDefault)
 				}
 			} else {
-				perr("ERROR SplitHostPort %v", err)
+				perr(F("ERROR SplitHostPort %v", err))
 				os.Exit(1)
 			}
 		}
 
-		perr("DEBUG Host [%s]", Host)
+		perr(F("DEBUG Host [%s]", Host))
 		err = connectssh()
 		if err != nil {
-			//perr("ERROR connect ssh %v", err)
+			//perr(F("ERROR connect ssh %v", err))
 		}
 		if SshClient != nil {
 			defer SshClient.Close()
@@ -366,16 +374,16 @@ func main() {
 		if cmd[len(cmd)-1] == "<" {
 			cmd = cmd[:len(cmd)-1]
 			cmds = strings.Join(cmd, " ")
-			perr("host=%s user=%s hs -- %s %s", Host, User, cmds, TermUnderline("stdin:"))
+			perr(F("host=%s user=%s hs -- %s %s", Host, User, cmds, TermUnderline("stdin:")))
 		}
 
 		Status, err = run(cmds, cmd, inreader)
 		if err != nil {
-			perr("host=%s user=%s hs -- %s %s %v", Host, User, cmds, TermInverse("ERROR"), err)
+			perr(F("host=%s user=%s hs -- %s %s %v", Host, User, cmds, TermInverse("ERROR"), err))
 			os.Exit(1)
 		}
 		if Status != "" {
-			perr("host=%s user=%s hs -- %s %s", Host, User, cmds, TermInverse(F("status[%s]", Status)))
+			perr(F("host=%s user=%s hs -- %s %s", Host, User, cmds, TermInverse(F("status[%s]", Status))))
 		}
 		os.Exit(0)
 	}
@@ -390,14 +398,15 @@ func main() {
 				perr("EOF")
 				break
 			}
-			perr("WARNING ReadString %v", err)
+			perr(F("WARNING ReadString %v", err))
 			continue
 		}
 
 		cmds = strings.TrimSuffix(cmds, NL)
-		perr("DEBUG cmds [%s]", cmds)
+		perr(F("DEBUG cmds [%s]", cmds))
+		
 		if strings.HasSuffix(cmds, TAB) {
-			perr(strings.ReplaceAll(cmds, TAB, "<TAB>"))
+			perr(strings.ReplaceAll(cmds, TAB, `\t`))
 			// https://pkg.go.dev/strings#TrimPrefix
 			cmds = strings.TrimSuffix(cmds, TAB)
 			cmdsff := strings.Split(cmds, SP)
@@ -406,12 +415,12 @@ func main() {
 				if len(AllPathCmds) == 0 {
 					err := GetAllPathCmds()
 					if err != nil {
-						//perr("ERROR AllPathCmdsGet %v", err)
+						//perr(F("ERROR AllPathCmdsGet %v", err))
 					}
 				}
 				for _, c := range AllPathCmds {
 					if strings.HasPrefix(c, cmd) || strings.HasPrefix(path.Base(c), cmd) {
-						pout(c)
+						pout(c+NL)
 					}
 				}
 			} else if len(cmdsff) > 1 {
@@ -425,42 +434,58 @@ func main() {
 				}
 				err := GetAllFiles(fpathdir)
 				if err != nil {
-					//perr("ERROR AllFilesGet %v", err)
+					//perr(F("ERROR AllFilesGet %v", err))
 				}
 				for _, f := range AllFiles {
 					// path.Join is intentional because filepath.Join would produce wrong result on Windows connecting to Unix machine
 					if strings.HasPrefix(f, fpath) || strings.HasPrefix(f, path.Join(Pwd, fpath)) {
-						pout(f)
+						pout(f+NL)
 					}
 				}
 			}
 			continue
 		}
-		if cmds == ":q" {
+		
+		switch cmds {
+		
+		case ":q":
 			os.Exit(0)
-		}
-		if cmds == ":p" {
+
+		case ":p":
 			tnow := time.Now()
-			for _, ic := range CmdHistory[max(len(CmdHistory)-22, 0):] {
+			for _, ic := range CmdHistory[max(len(CmdHistory)-11, 0):] {
 				pout("%s"+NL+TAB+"<%s> ago", ic.Cmds, fmtdur(tnow.Sub(ic.Timestamp)))
 			}
 			continue
-		}
-		if cmds == ":pp" {
+
+		case ":pp":
 			tnow := time.Now()
 			for _, ic := range CmdHistory {
 				pout("%s"+NL+TAB+"<%s> ago", ic.Cmds, fmtdur(tnow.Sub(ic.Timestamp)))
 			}
 			continue
-		}
-		if cmds == ":pwd" {
+
+		case ":pwd":
 			pout(Pwd)
 			continue
-		}
+			
+		case ":pb":
+			if clip, err := ClipGet(); err != nil {
+				perr(F("%v", err))
+			} else {
+				pout("["+clip+"]"+NL)
+			}
+			continue
+			
+		case ":clip":
+			ClipEnabled = !ClipEnabled
+			perr(F("ClibEnabled <%t>", ClipEnabled))
+			continue
 
 		//cmds = strings.TrimSpace(cmds)
-		if cmds == "" {
+		case "":
 			continue
+			
 		}
 
 		cmd := strings.Split(cmds, " ")
@@ -469,19 +494,32 @@ func main() {
 		if len(cmd) > 0 && cmd[len(cmd)-1] == "<" {
 			cmd = cmd[:len(cmd)-1]
 			cmds = cmds[:len(cmds)-1]
-			perr("host=%s user=%s hs -- %s %s", Host, User, cmds, TermUnderline("stdin:"))
+			perr(F("host=%s user=%s hs -- %s %s", Host, User, cmds, TermUnderline("stdin:")))
 			stdinbb, err = ioutil.ReadAll(os.Stdin)
 			if err != nil {
-				perr("ERROR stdin read %v", err)
+				perr(F("ERROR stdin read %v", err))
 				continue
 			}
 		}
 
 		Status, err = run(cmds, cmd, bytes.NewBuffer(stdinbb))
 		if err != nil {
-			perr("host=%s user=%s hs -- %s %s %v", Host, User, cmds, TermInverse("ERROR"), err)
+			perr(F("host=%s user=%s hs -- %s %s %v", Host, User, cmds, TermInverse("ERROR"), err))
 			continue
 		}
+	}
+}
+
+func ClipGet() (string, error) {
+	switch runtime.GOOS {
+	case "darwin":
+		if pbb, err := exec.Command("pbpaste").Output(); err != nil {
+			return "", fmt.Errorf("ERROR exec pbpaste %v", err)
+		} else {
+			return string(pbb), nil
+		}
+	default:
+		return "", fmt.Errorf("ERROR clipboard not supported")
 	}
 }
 
@@ -513,11 +551,11 @@ func TermUnderlineInverse(s string) string {
 	return s
 }
 
-func perr(msg string, args ...interface{}) {
-	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
+func perr(msgtext string) {
+	if strings.HasPrefix(msgtext, "DEBUG ") && !DEBUG {
 		return
 	}
-	if strings.HasPrefix(msg, "VERBOSE ") && !VERBOSE {
+	if strings.HasPrefix(msgtext, "VERBOSE ") && !VERBOSE {
 		return
 	}
 	tnow := time.Now().Local()
@@ -536,19 +574,8 @@ func perr(msg string, args ...interface{}) {
 	} else {
 		ts = "<" + fmttime(tnow) + ">"
 	}
-	if len(args) > 0 {
-		fmt.Fprintf(os.Stderr, ts+" "+msg+NL, args...)
-	} else {
-		fmt.Fprint(os.Stderr, ts+" "+msg+NL)
-	}
-}
+	fmt.Fprint(os.Stderr, ts+" "+msgtext+NL)
 
-func pout(msg string, args ...interface{}) {
-	msgtext := msg
-	if len(args) > 0 {
-		msgtext = F(msg, args...)
-	}
-	fmt.Fprint(os.Stdout, msgtext+NL)
 }
 
 func fmttime(t time.Time) string {
@@ -594,7 +621,18 @@ func seps(i uint64, e uint64) string {
 }
 
 func logstatus() {
-	fmt.Fprintf(os.Stderr, NL)
+	fmt.Fprint(os.Stderr, NL)
+	if ClipEnabled {
+	if clip, err := ClipGet(); err == nil {
+		if len(clip) > 123 {
+			clip = clip[:123]+"…"
+		}
+		clip = strings.ReplaceAll(clip, NL, `\n`)
+		clip = strings.ReplaceAll(clip, CR, `\r`)
+		clip = strings.ReplaceAll(clip, TAB, `\t`)
+		perr(TermUnderline("clip["+clip+"]"))
+	}
+	}
 	s := F("status[%s]", Status)
 	if Status != "" {
 		s = TermInverse(s)
@@ -622,13 +660,13 @@ func copynotify(dst io.Writer, src io.Reader, notify chan error) {
 func connectssh() (err error) {
 	ProxyConn, err = ProxyDialer.Dial("tcp", Host)
 	if err != nil {
-		perr("ERROR Dial %v", err)
+		perr(F("ERROR Dial %v", err))
 		return err
 	}
 
 	SshConn, SshNewChannelCh, SshRequestCh, err := ssh.NewClientConn(ProxyConn, Host, SshClientConfig)
 	if err != nil {
-		perr("ERROR NewClientConn %v", err)
+		perr(F("ERROR NewClientConn %v", err))
 		return err
 	}
 
@@ -642,15 +680,15 @@ func connectssh() (err error) {
 	// https://pkg.go.dev/golang.org/x/crypto/ssh#Client.NewSession
 	var session *ssh.Session
 
-	perr("host=%s user=%s hs -- %s", Host, User, CmdHostInfo)
+	perr(F("host=%s user=%s hs -- %s", Host, User, CmdHostInfo))
 	session, err = SshClient.NewSession()
 	if err != nil {
-		perr("ERROR CmdHostInfo NewSession %v", err)
+		perr(F("ERROR CmdHostInfo NewSession %v", err))
 		return err
 	}
 	hostinfobb, err := session.Output(CmdHostInfo)
 	if err != nil {
-		perr("WARNING CmdHostInfo Output %v", err)
+		perr(F("WARNING CmdHostInfo Output %v", err))
 	}
 	session.Close()
 	hostinfo := strings.Split(strings.TrimSpace(string(hostinfobb)), NL)
@@ -674,21 +712,21 @@ func connectssh() (err error) {
 			if ff := strings.Fields(l); len(ff) == 2 && ff[0] == "btime" {
 				BootTime, err = strconv.ParseInt(ff[1], 10, 64)
 				if err != nil {
-					perr("WARNING CmdHostInfo btime ParseInt %v", err)
+					perr(F("WARNING CmdHostInfo btime ParseInt %v", err))
 				}
 			}
 		}
 	}
 
-	perr("host=%s user=%s hs -- %s", Host, User, CmdPwd)
+	perr(F("host=%s user=%s hs -- %s", Host, User, CmdPwd))
 	session, err = SshClient.NewSession()
 	if err != nil {
-		perr("ERROR CmdPwd NewSession %v", err)
+		perr(F("ERROR CmdPwd NewSession %v", err))
 		return err
 	}
 	pwdbb, err := session.Output(CmdPwd)
 	if err != nil {
-		perr("WARNING CmdPwd Output %v", err)
+		perr(F("WARNING CmdPwd Output %v", err))
 	}
 	Pwd = strings.TrimSpace(string(pwdbb))
 	session.Close()
@@ -697,39 +735,39 @@ func connectssh() (err error) {
 }
 
 func GetAllPathCmds() error {
-	perr("host=%s user=%s hs -- %s", Host, User, CmdAllPathCmds)
+	perr(F("host=%s user=%s hs -- %s", Host, User, CmdAllPathCmds))
 	session, err := SshClient.NewSession()
 	if err != nil {
-		perr("ERROR CmdAllPathCmds NewSession %v", err)
+		perr(F("ERROR CmdAllPathCmds NewSession %v", err))
 		return err
 	}
 	pathcmdsbb, err := session.Output(CmdAllPathCmds)
 	if err != nil {
-		perr("WARNING CmdAllPathCmds Output %v", err)
+		perr(F("WARNING CmdAllPathCmds Output %v", err))
 		perr(string(pathcmdsbb))
 		return err
 	}
 	AllPathCmds = strings.Split(string(pathcmdsbb), NL)
-	perr("DEBUG AllPathCmds <%d>", len(AllPathCmds))
+	perr(F("DEBUG AllPathCmds <%d>", len(AllPathCmds)))
 	session.Close()
 	return nil
 }
 
 func GetAllFiles(fpathdir string) error {
-	perr("host=%s user=%s hs -- %s", Host, User, F(CmdAllFiles, fpathdir))
+	perr(F("host=%s user=%s hs -- %s", Host, User, F(CmdAllFiles, fpathdir)))
 	session, err := SshClient.NewSession()
 	if err != nil {
-		perr("ERROR CmdAllFiles NewSession %v", err)
+		perr(F("ERROR CmdAllFiles NewSession %v", err))
 		return err
 	}
 	allfilesbb, err := session.Output(F(CmdAllFiles, fpathdir))
 	if err != nil {
-		perr("WARNING CmdAllFiles Output %v", err)
+		perr(F("WARNING CmdAllFiles Output %v", err))
 		perr(string(allfilesbb))
 		return err
 	}
 	AllFiles = strings.Split(string(allfilesbb), NL)
-	perr("DEBUG AllFiles <%d>", len(AllFiles))
+	perr(F("DEBUG AllFiles <%d>", len(AllFiles)))
 	session.Close()
 	return nil
 }
@@ -745,7 +783,7 @@ func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) { //
 		/*
 			err = conn.SetDeadline(time.Now().Add(2 * SshKeepAliveInterval))
 			if err != nil {
-				perr("VERBOSE keepalive failed to set deadline %v", err)
+				perr(F("VERBOSE keepalive failed to set deadline %v", err))
 				return fmt.Errorf("failed to set deadline %w", err)
 			}
 		*/
@@ -753,7 +791,7 @@ func keepalive(cl *ssh.Client, conn net.Conn, done <-chan bool) (err error) { //
 		case <-t.C: //ae:>
 			_, _, err = cl.SendRequest("keepalive@github.com/shoce/hs", true, nil)
 			if err != nil {
-				perr("VERBOSE keepalive failed to send request %v", err)
+				perr(F("VERBOSE keepalive failed to send request %v", err))
 				return fmt.Errorf("keepalive failed to send request %w", err)
 			} else {
 				perr("VERBOSE keepalive request sent and confirmed")
@@ -775,7 +813,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 
 	session, err := SshClient.NewSession()
 	if err != nil {
-		perr("ERROR NewSession %v", err)
+		perr(F("ERROR NewSession %v", err))
 		perr("reconnecting...")
 		err = connectssh()
 		if err != nil {
@@ -784,7 +822,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		session, err = SshClient.NewSession()
 	}
 	if err != nil {
-		perr("ERROR NewSession %v", err)
+		perr(F("ERROR NewSession %v", err))
 		return "", err
 	}
 
@@ -796,7 +834,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 			if err := session.Setenv(s, os.Getenv(s)); err != nil {
 				//ae:<<
 				// ( echo ; echo AcceptEnv Dir ) >>/etc/ssh/sshd_config && systemctl reload sshd
-				perr("ERROR Session.Setenv [%s] %v", s, err)
+				perr(F("ERROR Session.Setenv [%s] %v", s, err))
 				return "", err
 			}
 		}
@@ -806,7 +844,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		if err := session.Setenv("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"); err != nil {
 			//ae:<<
 			// ( echo ; echo AcceptEnv PATH ) >>/etc/ssh/sshd_config && systemctl reload sshd
-			perr("ERROR Session.Setenv [PATH] %v", err)
+			perr(F("ERROR Session.Setenv [PATH] %v", err))
 			return "", err
 		}
 	*/
@@ -820,12 +858,12 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		go func() {
 			_, err := io.Copy(stdinpipe, stdin)
 			if err != nil {
-				perr("ERROR stdin pipe Copy %v", err)
+				perr(F("ERROR stdin pipe Copy %v", err))
 			}
 
 			err = stdinpipe.Close()
 			if err != nil {
-				perr("ERROR stdin pipe Close %v", err)
+				perr(F("ERROR stdin pipe Close %v", err))
 			}
 		}()
 	}
@@ -848,7 +886,7 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	err = session.Start(cmds)
 
 	if err != nil {
-		perr("ERROR Start %v", err)
+		perr(F("ERROR Start %v", err))
 		return "", err
 	}
 
@@ -864,9 +902,9 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		// https://pkg.go.dev/golang.org/x/crypto/ssh
 		err := session.Signal(ssh.SIGINT)
 		if err != nil && err == io.EOF {
-			perr("ERROR session Signal [SIGINT] EOF")
+			perr(F("ERROR session Signal [SIGINT] EOF"))
 		} else if err != nil {
-			perr("ERROR session Signal [SIGINT] %v", err)
+			perr(F("ERROR session Signal [SIGINT] %v", err))
 		}
 	}()
 
@@ -890,19 +928,19 @@ func runssh(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 				status += "-" + sig
 			}
 		default:
-			perr("ERROR Wait %v", err)
+			perr(F("ERROR Wait %v", err))
 			return "", err
 		}
 	}
 
 	err = <-copyoutnotify
 	if err != nil {
-		perr("(%s) ERROR out copy %v", cmds, err)
+		perr(F("(%s) ERROR out copy %v", cmds, err))
 	}
 
 	err = <-copyerrnotify
 	if err != nil {
-		perr("(%s) ERROR err copy %v", cmds, err)
+		perr(F("(%s) ERROR err copy %v", cmds, err))
 	}
 
 	return status, nil
@@ -928,12 +966,12 @@ func runlocal(cmds string, cmd []string, stdin io.Reader) (status string, err er
 		go func() {
 			_, err := io.Copy(stdinpipe, stdin)
 			if err != nil {
-				perr("ERROR stdin pipe Copy %v", err)
+				perr(F("ERROR stdin pipe Copy %v", err))
 			}
 
 			err = stdinpipe.Close()
 			if err != nil {
-				perr("ERROR stdin pipe Close %v", err)
+				perr(F("ERROR stdin pipe Close %v", err))
 			}
 		}()
 	}
@@ -952,7 +990,7 @@ func runlocal(cmds string, cmd []string, stdin io.Reader) (status string, err er
 	copyerrnotify := make(chan error)
 	go copynotify(os.Stderr, stderrpipe, copyerrnotify)
 
-	perr("%s: ", cmds)
+	perr(F("%s: ", cmds))
 
 	err = command.Start()
 	if err != nil {
@@ -983,7 +1021,8 @@ func run(cmds string, cmd []string, stdin io.Reader) (status string, err error) 
 	if len(CmdHistory) > CmdHistoryMax {
 		CmdHistory = CmdHistory[len(CmdHistory)-CmdHistoryMax:]
 	}
-	perr("host=%s user=%s hs -- %s", Host, User, cmds)
+	//fmt.Fprint(os.Stderr, NL)
+	perr(TermUnderline(F("host=%s user=%s hs -- %s", Host, User, cmds)))
 
 	if Host == "" {
 		return runlocal(cmds, cmd, stdin)
