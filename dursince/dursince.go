@@ -1,13 +1,11 @@
 /*
-history:
+HISTORY
 024/0624 v1
-
-GoFmt
-GoBuildNull
-GoBuild
-GoRun 2022-01-31T16:47:55Z
-
 */
+
+// GoFmt GoBuildNull GoBuild
+// GoRun 2022-01-31T16:47:55Z
+
 
 package main
 
@@ -21,25 +19,31 @@ const (
 	NL = "\n"
 )
 
+var (
+	TimeSince time.Time
+	DurationSince time.Duration
+
+	F = fmt.Sprintf
+	pout = fmt.Print
+)
+
 func main() {
 
 	var err error
 
-	var TimeSince time.Time
-	var DurationSince time.Duration
-
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: dursince iso-8601-timestamp"+NL)
+	args := os.Args[1:]
+	if len(args) != 1 {
+		fmt.Fprint(os.Stderr, "USAGE dursince iso-8601-timestamp"+NL)
 		os.Exit(1)
 	}
 
-	TimeSince, err = time.Parse("2006-01-02T15:04:05Z", os.Args[1])
+	TimeSince, err = time.Parse("2006-01-02T15:04:05Z", args[0])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "time.ParseDuration %s: %v"+NL, os.Args[1], err)
+		fmt.Fprint(os.Stderr, F("ERROR time.ParseDuration [%s] %v"+NL, args[0], err))
 		os.Exit(1)
 	}
 
 	DurationSince = time.Now().Sub(TimeSince).Round(time.Second)
-	fmt.Printf("%v"+NL, DurationSince)
+	pout(F("%v"+NL, DurationSince))
 
 }
