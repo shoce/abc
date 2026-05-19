@@ -77,7 +77,9 @@ jobs:
           echo 'install:'
           echo '```'
           echo 'curl -s -S -L https://github.com/shoce/${{github.event.repository.name}}/releases/download/${{env.VERSION}}/${{github.event.repository.name}}.tar.gz | tar -v -z -C /usr/local/bin/ -x '
+          echo '```'
           echo 'or'
+          echo '```'
           echo 'wget -q -O- https://github.com/shoce/${{github.event.repository.name}}/releases/download/${{env.VERSION}}/${{github.event.repository.name}}.tar.gz | tar -v -z -C /usr/local/bin/ -x '
           echo '```'
           echo
@@ -176,7 +178,9 @@ jobs:
           echo 'install:'
           echo '```'
           echo 'curl -s -S -L https://github.com/shoce/${{github.event.repository.name}}/releases/download/${{env.VERSION}}/${{github.event.repository.name}}.tar.gz | tar -v -z -C /usr/local/bin/ -x '
+          echo '```'
           echo 'or'
+          echo '```'
           echo 'wget -q -O- https://github.com/shoce/${{github.event.repository.name}}/releases/download/${{env.VERSION}}/${{github.event.repository.name}}.tar.gz | tar -v -z -C /usr/local/bin/ -x '
           echo '```'
           echo
