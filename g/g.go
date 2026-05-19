@@ -27,7 +27,7 @@ const (
 	NL   = "\n"
 	SPAC = "    "
 
-	ScannerBufferSize = 333 << 10
+	ScannerBufferSize = 333 << 10 //ae:>>
 )
 
 var (
@@ -54,6 +54,7 @@ if len(data)==1 && data[0]=='\n' { return; }
 
 // https://pkg.go.dev/strings#Split
 args = strings.Split(string(data), NL)
+// ae:<
 if len(args)>0 && args[len(args)-1]=="" { 
 args = args[:len(args)-1] 
 }
