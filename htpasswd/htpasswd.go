@@ -15,21 +15,36 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	NL = "\n"
+)
+
+var (
+	F = fmt.Sprintf
+	pout = fmt.Print
+)
+
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Println("usage: htpasswd username password")
+	args := os.Args[1:]
+	if len(args) != 2 {
+		perr("USAGE htpasswd username password")
 		os.Exit(1)
 	}
-	username, password := os.Args[1], os.Args[2]
+	username, password := args[0], args[1]
 
-	sum, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	passsum, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		fmt.Printf("error: %v", err)
+		perr(F("ERROR %v", err))
 		os.Exit(1)
 	}
-	passwordHashed := string(sum)
+	passhash := string(passsum)
 
-	htpasswd := fmt.Sprintf("%s:%s", username, passwordHashed)
-	fmt.Println(htpasswd)
-	fmt.Println(base64.StdEncoding.EncodeToString([]byte(htpasswd)))
+	htpasswd := F("%s:%s", username, passhash)
+	pout(htpasswd+NL)
+	pout(base64.StdEncoding.EncodeToString([]byte(htpasswd))+NL)
 }
+
+func perr(msg string) (int, error) {
+	return fmt.Fprint(os.Stderr, msg+NL)
+}
+

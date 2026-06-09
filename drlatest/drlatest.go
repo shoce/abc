@@ -1,10 +1,8 @@
 /*
-
 GoGet
 GoFmt
 GoBuildNull
 GoBuild
-
 */
 
 package main
@@ -21,34 +19,31 @@ import (
 	"github.com/rusenask/docker-registry-client/registry"
 )
 
-const NL = "\n"
-
-func log(msg string, args ...interface{}) {
-	const NL = "\n"
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
-	}
-}
+const (
+	TAB = "\t"
+	NL = "\n"
+)
 
 var (
-	RegistryUsername   string
-	RegistryPassword   string
+	RegistryUser   string
+	RegistryPass   string
 	RegistryUrl        string
 	RegistryHost       string
-	RegistryRepository string
+	RegistryRepo string
+	
+	F = fmt.Sprintf
+	pout = fmt.Print
 )
 
 func init() {
-	RegistryUsername = os.Getenv("RegistryUsername")
-	RegistryPassword = os.Getenv("RegistryPassword")
+	RegistryUser = os.Getenv("RegistryUser")
+	RegistryPass = os.Getenv("RegistryPass")
 	/*
 		if RegistryUsername == "" {
-			log("WARNING RegistryUsername env var empty")
+			perr("WARNING RegistryUser env var empty")
 		}
 		if RegistryPassword == "" {
-			log("WARNING RegistryPassword env var empty")
+			perr("WARNING RegistryPass env var empty")
 		}
 	*/
 }
@@ -86,46 +81,50 @@ func (vv Versions) Swap(i, j int) {
 
 func main() {
 	all := flag.Bool("all", false, "to print all tags, otherwise only the last tag is printed")
-	full := flag.Bool("full", false, "to show full image address like registry/path:tag, otherwise only tag is printed")
 	flag.Parse()
 
 	var args []string
-	for _, a := range flag.Args() {
+	for _, a := range os.Args[1:] {
 		if a != "" {
 			args = append(args, a)
 		}
 	}
 
 	if len(args) < 1 {
-		log("usage: drlatest docker.registry.repository.url ...")
+		perr(
+			"USAGE drlatest docker.registry.repository.url ..."+
+			NL+
+			"ENV"+
+			NL+
+			TAB+"RegistryUser"+
+			NL+
+			TAB+"RegistryPass"+
+			NL,
+		)
 		os.Exit(1)
-	}
-
-	if len(args) > 1 {
-		*full = true
 	}
 
 	for _, a := range args {
 
 		if u, err := url.Parse(a); err != nil {
-			log("ERROR `%s` url parse: %v", a, err)
+			perr(F("ERROR [%s] url parse %v", a, err))
 			os.Exit(1)
 		} else {
 			if u.Scheme == "oci" {
 				u.Scheme = "https"
 			}
-			RegistryUrl = fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+			RegistryUrl = F("%s://%s", u.Scheme, u.Host)
 			RegistryHost = u.Host
-			RegistryRepository = u.Path
+			RegistryRepo = u.Path
 		}
-		//log("DEBUG registry:%s repository:%s", RegistryUrl, RegistryRepository)
+		//perr("DEBUG registry [%s] repo [%s]", RegistryUrl, RegistryRepo)
 
-		r := registry.NewInsecure(RegistryUrl, RegistryUsername, RegistryPassword)
+		r := registry.NewInsecure(RegistryUrl, RegistryUser, RegistryPass)
 		r.Logf = registry.Quiet
 
-		tags, err := r.Tags(RegistryRepository)
+		tags, err := r.Tags(RegistryRepo)
 		if err != nil {
-			log("ERROR list tags: %v", err)
+			perr(F("ERROR list tags %v", err))
 			os.Exit(1)
 		}
 
@@ -133,19 +132,16 @@ func main() {
 
 		if *all {
 			for _, tag := range tags {
-				if *full {
-					fmt.Printf("%s%s:%s"+NL, RegistryHost, RegistryRepository, tag)
-				} else {
-					fmt.Printf("%s"+NL, tag)
-				}
+					pout(F("%s%s:%s", RegistryHost, RegistryRepo, tag)+NL)
 			}
 		} else if len(tags) > 0 {
-			if *full {
-				fmt.Printf("%s%s:%s"+NL, RegistryHost, RegistryRepository, tags[len(tags)-1])
-			} else {
-				fmt.Printf("%s"+NL, tags[len(tags)-1])
-			}
+				pout(F("%s%s:%s", RegistryHost, RegistryRepo, tags[len(tags)-1]))
 		}
 
 	}
 }
+
+func perr(msg string) (int, error) {
+	return fmt.Fprint(os.Stderr, msg)
+}
+
