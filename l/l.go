@@ -16,8 +16,13 @@ ln l lsr
 ln l llr
 */
 
-// GoGet GoFmt GoBuildNull GoBuild
-// GoRun
+/*
+GoGet
+GoFmt
+GoBuildNull
+GoBuild
+GoRun
+*/
 
 package main
 
@@ -61,6 +66,8 @@ var (
 	ShowCid     bool
 
 	F = fmt.Sprintf
+	EF = fmt.Errorf
+	pout = fmt.Print
 )
 
 func printinfo(path string, info os.FileInfo) error {
@@ -77,8 +84,8 @@ func printinfo(path string, info os.FileInfo) error {
 	}
 
 	if fperm := finfo.Mode().Perm(); fperm&0111 != 0 {
-		//s = TermBold(s)
-		s = TermItalic(s)
+		s = TermBold(s)
+		//s = TermItalic(s)
 		//s = TermUnderline(s)
 	}
 
@@ -92,11 +99,11 @@ func printinfo(path string, info os.FileInfo) error {
 		if err != nil {
 			return err
 		}
-		s += TAB + fmt.Sprintf("symlink[%s]", linkpath)
+		s += TAB + F("symlink[%s]", linkpath)
 	}
 
 	if ShowSize && !finfo.Mode().IsDir() && (info.Mode()&os.ModeSymlink == 0) {
-		s += TAB + fmt.Sprintf("size<%s>", seps(int(finfo.Size()), 3))
+		s += TAB + F("size<%s>", seps(int(finfo.Size()), 3))
 	}
 	if ShowSize && finfo.Mode().IsDir() {
 		s += TAB + "size<dir>"
@@ -110,7 +117,7 @@ func printinfo(path string, info os.FileInfo) error {
 	}
 
 	if ShowPerm {
-		s += TAB + fmt.Sprintf("perm<%04o>", finfo.Mode().Perm())
+		s += TAB + F("perm<%04o>", finfo.Mode().Perm())
 	}
 
 	if ShowOwner {
@@ -120,36 +127,36 @@ func printinfo(path string, info os.FileInfo) error {
 		} else {
 			fstatuid, fstatgid = "?", "?"
 		}
-		s += TAB + fmt.Sprintf("uid<%s> gid<%s>", fstatuid, fstatgid)
+		s += TAB + F("uid<%s> gid<%s>", fstatuid, fstatgid)
 	}
 
 	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink == 0) {
 		f, err := os.Open(path)
 		if err != nil {
-			perr("ERROR %v", err)
+			perr(F("ERROR %v", err))
 			return err
 		}
 		defer f.Close()
 		fmh, err := mh.SumStream(f, mh.SHA2_256, -1)
 		if err != nil {
-			perr("ERROR %v", err)
+			perr(F("ERROR %v", err))
 			return err
 		}
 		c := cid.NewCidV1(cid.Raw, fmh)
-		s += TAB + fmt.Sprintf("cid[%s]", c)
+		s += TAB + F("cid[%s]", c)
 	}
 
-	fmt.Println(s)
+	pout(s+NL)
 	return nil
 }
 
 func fls(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		perr("ERROR %v", err)
+		perr(F("ERROR %v", err))
 		return err
 	}
 	if err2 := printinfo(path, info); err2 != nil {
-		perr("ERROR %v", err2)
+		perr(F("ERROR %v", err2))
 		return err2
 	}
 	return nil
@@ -184,10 +191,10 @@ func list(path string) error {
 			return err
 		}
 		if !linktargetstat.Mode().IsDir() && listdir {
-			return fmt.Errorf("[%s] symlink[%s] is not a dir", path, linktargetpath)
+			return EF("[%s] symlink[%s] is not a dir", path, linktargetpath)
 		}
 	} else if !pathstat.Mode().IsDir() && listdir {
-		return fmt.Errorf("[%s] is not a dir", path)
+		return EF("[%s] is not a dir", path)
 	}
 
 	if Recursive {
@@ -237,7 +244,7 @@ func list(path string) error {
 
 func init() {
 	if len(os.Args) == 2 && os.Args[1] == "-version" {
-		fmt.Print(VERSION + NL)
+		pout(VERSION + NL)
 		os.Exit(0)
 	}
 
@@ -254,7 +261,7 @@ func main() {
 	var err error
 
 	cmdname := filepath.Base(os.Args[0])
-	perr("DEBUG cmd name [%s]", cmdname)
+	perr(F("DEBUG cmd name [%s]", cmdname))
 	switch cmdname {
 	case "l":
 	case "ls":
@@ -284,12 +291,12 @@ func main() {
 		ShowOwner = true
 		//ShowCid = true
 	default:
-		perr("ERROR invalid cmd name [%s]", cmdname)
+		perr(F("ERROR invalid cmd name [%s]", cmdname))
 		os.Exit(1)
 	}
 
 	args := os.Args[1:]
-	perr("DEBUG cmd args %#v", args)
+	perr(F("DEBUG args %#v", args))
 
 	n := 0
 	for _, a := range args {
@@ -299,7 +306,7 @@ func main() {
 		}
 	}
 	args = args[:n]
-	perr("DEBUG n <%d> args %#v", n, args)
+	perr(F("DEBUG n <%d> args %#v", n, args))
 
 	n = 0
 	for _, a := range args {
@@ -336,18 +343,18 @@ func main() {
 			ShowOwner = false
 			ShowCid = false
 		default:
-			perr("ERROR invalid option [%s]", a)
+			perr(F("ERROR invalid option [%s]", a))
 			os.Exit(1)
 		}
 		n++
 	}
-	perr("DEBUG n <%d> args %#v", n, args)
+	perr(F("DEBUG n <%d> args %#v", n, args))
 
 	var paths []string
 	if n <= len(args) {
 		paths = args[n:]
 	}
-	perr("DEBUG paths %#v", paths)
+	perr(F("DEBUG paths %#v", paths))
 	if len(paths) == 0 {
 		paths = append(paths, "./")
 	}
@@ -355,7 +362,7 @@ func main() {
 	for _, p := range paths {
 		err = list(p)
 		if err != nil {
-			perr("ERROR %v", err)
+			perr(F("ERROR %v", err))
 			os.Exit(1)
 		}
 	}
@@ -399,20 +406,16 @@ func fmttime(t time.Time) string {
 func seps(i, e int) string {
 	ee := int(math.Pow(10, float64(e)))
 	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
+		return F("%d", i%ee)
 	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+		f := F("0%dd", e)
+		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
 
-func perr(msg string, args ...interface{}) {
+func perr(msg string) {
 	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
 		return
 	}
-	msgtext := msg
-	if len(args) > 0 {
-		msgtext = fmt.Sprintf(msg, args...)
-	}
-	fmt.Fprint(os.Stderr, msgtext+NL)
+	fmt.Fprint(os.Stderr, msg+NL)
 }

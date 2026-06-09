@@ -48,6 +48,10 @@ var (
 	TimeLimit    time.Duration
 
 	PrintShort bool
+	
+	F = fmt.Sprintf
+	EF = fmt.Errorf
+	pout = fmt.Print
 )
 
 func print() {
@@ -59,7 +63,7 @@ func print() {
 	}
 	cpupercents, err := pscpu.Percent(cpuInterval, false)
 	if err != nil {
-		perr("ERROR pscpu.Percent %v", err)
+		perr(F("ERROR pscpu.Percent %v", err))
 		os.Exit(1)
 	}
 	cpupercent := int(cpupercents[0])
@@ -67,7 +71,7 @@ func print() {
 		strings.Repeat("-", 100/VisualRatio-cpupercent/VisualRatio))
 	cpunumber, err := pscpu.Counts(false)
 	if err != nil {
-		perr("ERROR pscpu.Counts %v", err)
+		perr(F("ERROR pscpu.Counts %v", err))
 		os.Exit(1)
 	}
 
@@ -75,20 +79,20 @@ func print() {
 	cpufreq_path := "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq"
 	cpufreqbb, err := os.ReadFile(cpufreq_path)
 	if err != nil {
-		//perr("WARNING ReadFile [%s] %v", cpufreq_path, err)
+		//perr(F("WARNING ReadFile [%s] %v", cpufreq_path, err))
 	}
 	cpufreq := strings.TrimSpace(string(cpufreqbb))
 	// https://pkg.go.dev/strconv#ParseUint
 	cpufreqkhz, err = strconv.ParseUint(cpufreq, 10, 64)
 	if err != nil {
-		//perr("WARNING ParseUint [%s] %v", cpufreq, err)
+		//perr(F("WARNING ParseUint [%s] %v", cpufreq, err))
 	}
 
 	var cpufreqmhz float64
 	cpuinfo_path := "/proc/cpuinfo"
 	cpuinfobb, err := os.ReadFile(cpuinfo_path)
 	if err != nil {
-		//perr("WARNING ReadFile [%s] %v", cpuinfo_path, err)
+		//perr(F("WARNING ReadFile [%s] %v", cpuinfo_path, err))
 	}
 	cpuinfo := strings.TrimSpace(string(cpuinfobb))
 	for l := range strings.Lines(cpuinfo) {
@@ -97,7 +101,7 @@ func print() {
 			// https://pkg.go.dev/strconv#ParseUint
 			cpufreqmhz, err = strconv.ParseFloat(lff[len(lff)-1], 64)
 			if err != nil {
-				//perr("WARNING ParseFloat [%s] %v", cpuinfomhz, err)
+				//perr(F("WARNING ParseFloat [%s] %v", cpuinfomhz, err))
 			}
 		}
 	}
@@ -118,7 +122,7 @@ func print() {
 
 	mem, err := psmem.VirtualMemory()
 	if err != nil {
-		perr("ERROR psmem.VirtualMemory %v", err)
+		perr(F("ERROR psmem.VirtualMemory %v", err))
 		os.Exit(1)
 	}
 	memsizemb := mem.Total / (1 << 20)
@@ -128,7 +132,7 @@ func print() {
 
 	swap, err := psmem.SwapMemory()
 	if err != nil {
-		perr("ERROR psmem.SwapMemory %v", err)
+		perr(F("ERROR psmem.SwapMemory %v", err))
 		os.Exit(1)
 	}
 	swapsizemb := swap.Total / (1 << 20)
@@ -143,7 +147,7 @@ func print() {
 
 	disk, err := psdisk.Usage("/")
 	if err != nil {
-		perr("ERROR psdisk.Usage %v", err)
+		perr(F("ERROR psdisk.Usage %v", err))
 		os.Exit(1)
 	}
 	disksizegb := int(disk.Total / (1 << 30))
@@ -153,7 +157,7 @@ func print() {
 
 	uptime, err := pshost.Uptime()
 	if err != nil {
-		perr("ERROR pshost.Uptime %v", err)
+		perr(F("ERROR pshost.Uptime %v", err))
 		os.Exit(1)
 	}
 	uptimefmt := fmtdursec(uptime)
@@ -161,30 +165,17 @@ func print() {
 	boot_id_path := "/proc/sys/kernel/random/boot_id"
 	bootidbb, err := os.ReadFile(boot_id_path)
 	if err != nil {
-		//perr("WARNING ReadFile [%s] %v", boot_id_path, err)
+		//perr(F("WARNING ReadFile [%s] %v", boot_id_path, err))
 	}
 	bootid := string(bootidbb)
 	if len(bootid) > 4 {
 		bootid = bootid[:4]
 	}
 
-	if PrintShort {
-		pout(
-			"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> bootid[%s]",
-			tsnow, Hostname,
-			cpugauge, cpunumber, cpufreq,
-			memgauge, seps(memsizemb, 3),
-			swapgauge, seps(swapsizemb, 3),
-			diskgauge, disksizegb,
-			uptimefmt, bootid,
-		)
-		return
-	}
-
 	var diskrdt, diskwrt uint64
 	diskstats, err := psdisk.IOCounters()
 	if err != nil {
-		perr("ERROR psdisk.IOCounters %v", err)
+		perr(F("ERROR psdisk.IOCounters %v", err))
 		os.Exit(1)
 	}
 	for _, dss := range diskstats {
@@ -192,10 +183,25 @@ func print() {
 		diskwrt += dss.WriteTime
 	}
 
+	if PrintShort {
+		pout(F(
+			"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> read<%s> write<%s> bootid[%s]",
+			tsnow, Hostname,
+			cpugauge, cpunumber, cpufreq,
+			memgauge, seps(memsizemb, 3),
+			swapgauge, seps(swapsizemb, 3),
+			diskgauge, disksizegb,
+			uptimefmt,
+			fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
+			bootid,
+		)+NL)
+		return
+	}
+
 	// https://pkg.go.dev/github.com/shirou/gopsutil/v4/host#Users
 	userstats, err := pshost.Users()
 	if err != nil {
-		perr("ERROR pshost.Users %v", err)
+		perr(F("ERROR pshost.Users %v", err))
 		//os.Exit(1)
 	}
 	// https://pkg.go.dev/slices#SortFunc
@@ -203,8 +209,7 @@ func print() {
 		// https://pkg.go.dev/cmp#Compare
 		return cmp.Compare(a.Started, b.Started) * -1
 	})
-	//perr("DEBUG userstats %+v", userstats)
-	//F := fmt.Sprintf
+	//perr(F("DEBUG userstats %+v", userstats))
 	var users []string
 	for _, u := range userstats {
 		ufmt := "[" + u.User + "]"
@@ -221,7 +226,7 @@ func print() {
 
 	procs, err := psproc.Processes()
 	if err != nil {
-		perr("ERROR psproc.Processes %v", err)
+		perr(F("ERROR psproc.Processes %v", err))
 		os.Exit(1)
 	}
 
@@ -229,16 +234,16 @@ func print() {
 	// https://pkg.go.dev/github.com/shirou/gopsutil/v4/net#Connections
 	inet4conns, err := psnet.Connections("inet4")
 	if err != nil {
-		perr("ERROR psnet.Connections inet4 %v", err)
+		perr(F("ERROR psnet.Connections inet4 %v", err))
 		os.Exit(1)
 	}
-	//perr("inet4conns<%d>", len(inet4conns))
+	//perr(F("inet4conns<%d>", len(inet4conns)))
 	inet6conns, err := psnet.Connections("inet6")
 	if err != nil {
-		perr("ERROR psnet.Connections inet6 %v", err)
+		perr(F("ERROR psnet.Connections inet6 %v", err))
 		os.Exit(1)
 	}
-	//perr("inet6conns<%d>", len(inet6conns))
+	//perr(F("inet6conns<%d>", len(inet6conns)))
 	// https://pkg.go.dev/slices#SortFunc
 	// https://pkg.go.dev/cmp#Compare
 	inetconns := append(inet4conns, inet6conns...)
@@ -261,31 +266,32 @@ func print() {
 		}
 		p, err := psproc.NewProcess(c.Pid)
 		if err != nil {
-			perr("ERROR psproc.NewProcess <%d> %v", c.Pid, err)
+			perr(F("ERROR psproc.NewProcess <%d> %v", c.Pid, err))
 		}
 		pname, err := p.Name()
 		if err != nil {
-			perr("ERROR p.Name <%d> %v", p.Pid, err)
+			perr(F("ERROR p.Name <%d> %v", p.Pid, err))
 		}
-		cdesc := fmt.Sprintf("[%s:%s:%d]", pname, claddrip, c.Laddr.Port)
+		cdesc := F("[%s:%s:%d]", pname, claddrip, c.Laddr.Port)
 		if !slices.Contains(listens, cdesc) {
 			listens = append(listens, cdesc)
 		}
 	}
 
-	pout(
-		"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> bootid[%s] read<%s> write<%s> users(%s) nprocs<%s> listens(%s)",
+	pout(F(
+		"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> read<%s> write<%s> bootid[%s] users(%s) nprocs<%s> listens(%s)",
 		tsnow, Hostname,
 		cpugauge, cpunumber, cpufreq,
 		memgauge, seps(memsizemb, 3),
 		swapgauge, seps(swapsizemb, 3),
 		diskgauge, disksizegb,
-		uptimefmt, bootid,
+		uptimefmt,
 		fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
+		bootid,
 		strings.Join(users, N),
 		seps(uint64(len(procs)), 3),
 		strings.Join(listens, N),
-	)
+	)+NL)
 	return
 }
 
@@ -302,12 +308,12 @@ func main() {
 	case "usss":
 		PrintShort = false
 	default:
-		perr("ERROR invalid command name [%s]", cmdname)
+		perr(F("ERROR invalid command name [%s]", cmdname))
 		os.Exit(1)
 	}
 
 	args := os.Args[1:]
-	//perr("DEBUG args %#v", args)
+	//perr(F("DEBUG args %#v", args))
 	n := 0
 	for _, a := range args {
 		if a != "" {
@@ -316,17 +322,17 @@ func main() {
 		}
 	}
 	args = args[:n]
-	//perr("DEBUG n <%d> args %#v", n, args)
+	//perr(F("DEBUG n <%d> args %#v", n, args))
 
 	if len(args) == 1 && args[0] == "version" {
-		fmt.Print(VERSION + NL)
+		pout(VERSION + NL)
 		os.Exit(0)
 	}
 
 	if len(args) > 0 {
 		ri, err := strconv.Atoi(args[0])
 		if err != nil {
-			perr("ERROR invalid integer [%s] for repeat interval in seconds", args[0])
+			perr(F("ERROR invalid integer [%s] for repeat interval in seconds", args[0]))
 			os.Exit(1)
 		}
 		PollInterval = time.Duration(ri) * time.Second
@@ -335,7 +341,7 @@ func main() {
 	if len(args) > 1 {
 		tl, err := strconv.Atoi(args[1])
 		if err != nil {
-			perr("ERROR invalid integer [%s] for time limit in seconds", args[1])
+			perr(F("ERROR invalid integer [%s] for time limit in seconds", args[1]))
 			os.Exit(1)
 		}
 		TimeLimit = time.Duration(tl) * time.Second
@@ -343,7 +349,7 @@ func main() {
 
 	Hostname, err = os.Hostname()
 	if err != nil {
-		perr("ERROR Hostname %v", err)
+		perr(F("ERROR Hostname %v", err))
 		os.Exit(1)
 	}
 	//Hostname = strings.TrimSuffix(Hostname, ".local")
@@ -370,7 +376,7 @@ func main() {
 }
 
 func fmttime(t time.Time) string {
-	ts := fmt.Sprintf(
+	ts := F(
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
@@ -395,25 +401,13 @@ func fmtdursec(t uint64) string {
 func seps(i uint64, e uint64) string {
 	ee := uint64(math.Pow(10, float64(e)))
 	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
+		return F("%d", i%ee)
 	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+		f := F("0%dd", e)
+		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
 
-func perr(msg string, args ...interface{}) {
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
-	}
-}
-
-func pout(msg string, args ...interface{}) {
-	if len(args) == 0 {
-		fmt.Fprint(os.Stdout, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stdout, msg+NL, args...)
-	}
+func perr(msg string) {
+	fmt.Fprint(os.Stderr, msg+NL)
 }
