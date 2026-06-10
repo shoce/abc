@@ -370,7 +370,7 @@ func main() {
 
 func TermBold(s string) string {
 	if TERM != "" {
-		return "\033[1m" + s + "\033[21m"
+		return "\033[1m" + s + "\033[0m"
 	}
 	return s
 }
