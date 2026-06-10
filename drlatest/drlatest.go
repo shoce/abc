@@ -135,13 +135,13 @@ func main() {
 					pout(F("%s%s:%s", RegistryHost, RegistryRepo, tag)+NL)
 			}
 		} else if len(tags) > 0 {
-				pout(F("%s%s:%s", RegistryHost, RegistryRepo, tags[len(tags)-1]))
+				pout(F("%s%s:%s", RegistryHost, RegistryRepo, tags[len(tags)-1])+NL)
 		}
 
 	}
 }
 
 func perr(msg string) (int, error) {
-	return fmt.Fprint(os.Stderr, msg)
+	return fmt.Fprint(os.Stderr, msg+NL)
 }
 
