@@ -32,12 +32,13 @@ import (
 const (
 	N   = ""
 	SP  = " "
+	SPAC = "    "
 	TAB = "\t"
 	NL  = "\n"
 	SEP = ","
 
 	VisualRatio    = 12
-	HostnameMaxLen = 32
+	HostnameMaxLen = 66
 )
 
 var (
@@ -54,7 +55,7 @@ var (
 	pout = fmt.Print
 )
 
-func print() {
+func uss() (s string, err error){
 	tsnow := fmttime(time.Now().Local())
 
 	cpuInterval := PollInterval
@@ -63,16 +64,14 @@ func print() {
 	}
 	cpupercents, err := pscpu.Percent(cpuInterval, false)
 	if err != nil {
-		perr(F("ERROR pscpu.Percent %v", err))
-		os.Exit(1)
+		return "", EF("pscpu.Percent %v", err)
 	}
 	cpupercent := int(cpupercents[0])
 	cpugauge := (strings.Repeat("=", cpupercent/VisualRatio) +
 		strings.Repeat("-", 100/VisualRatio-cpupercent/VisualRatio))
 	cpunumber, err := pscpu.Counts(false)
 	if err != nil {
-		perr(F("ERROR pscpu.Counts %v", err))
-		os.Exit(1)
+		return "", EF("pscpu.Counts %v", err)
 	}
 
 	var cpufreqkhz uint64
@@ -101,7 +100,7 @@ func print() {
 			// https://pkg.go.dev/strconv#ParseUint
 			cpufreqmhz, err = strconv.ParseFloat(lff[len(lff)-1], 64)
 			if err != nil {
-				//perr(F("WARNING ParseFloat [%s] %v", cpuinfomhz, err))
+				perr(F("WARNING ParseFloat [%s] %v", lff[len(lff)-1], err))
 			}
 		}
 	}
@@ -122,8 +121,7 @@ func print() {
 
 	mem, err := psmem.VirtualMemory()
 	if err != nil {
-		perr(F("ERROR psmem.VirtualMemory %v", err))
-		os.Exit(1)
+		return "", EF("psmem.VirtualMemory %v", err)
 	}
 	memsizemb := mem.Total / (1 << 20)
 	mempercent := int(mem.UsedPercent)
@@ -132,8 +130,7 @@ func print() {
 
 	swap, err := psmem.SwapMemory()
 	if err != nil {
-		perr(F("ERROR psmem.SwapMemory %v", err))
-		os.Exit(1)
+		return "", EF("ERROR psmem.SwapMemory %v", err)
 	}
 	swapsizemb := swap.Total / (1 << 20)
 	swappercent := int(swap.UsedPercent)
@@ -147,8 +144,7 @@ func print() {
 
 	disk, err := psdisk.Usage("/")
 	if err != nil {
-		perr(F("ERROR psdisk.Usage %v", err))
-		os.Exit(1)
+		return "", EF("psdisk.Usage %v", err)
 	}
 	disksizegb := int(disk.Total / (1 << 30))
 	diskpercent := int(disk.UsedPercent)
@@ -157,10 +153,19 @@ func print() {
 
 	uptime, err := pshost.Uptime()
 	if err != nil {
-		perr(F("ERROR pshost.Uptime %v", err))
-		os.Exit(1)
+		return "", EF("pshost.Uptime %v", err)
 	}
 	uptimefmt := fmtdursec(uptime)
+
+	var diskrdt, diskwrt uint64
+	diskstats, err := psdisk.IOCounters()
+	if err != nil {
+		return "", EF("psdisk.IOCounters %v", err)
+	}
+	for _, dss := range diskstats {
+		diskrdt += dss.ReadTime
+		diskwrt += dss.WriteTime
+	}
 
 	boot_id_path := "/proc/sys/kernel/random/boot_id"
 	bootidbb, err := os.ReadFile(boot_id_path)
@@ -172,37 +177,27 @@ func print() {
 		bootid = bootid[:4]
 	}
 
-	var diskrdt, diskwrt uint64
-	diskstats, err := psdisk.IOCounters()
-	if err != nil {
-		perr(F("ERROR psdisk.IOCounters %v", err))
-		os.Exit(1)
-	}
-	for _, dss := range diskstats {
-		diskrdt += dss.ReadTime
-		diskwrt += dss.WriteTime
-	}
-
+	s = F(
+		"<%s> [%s]" + 
+		NL + 
+		SPAC + "cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> read<%s> write<%s> bootid[%s]",
+		tsnow, Hostname,
+		cpugauge, cpunumber, cpufreq,
+		memgauge, seps(memsizemb, 3),
+		swapgauge, seps(swapsizemb, 3),
+		diskgauge, disksizegb,
+		uptimefmt,
+		fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
+		bootid,
+	)
 	if PrintShort {
-		pout(F(
-			"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> read<%s> write<%s> bootid[%s]",
-			tsnow, Hostname,
-			cpugauge, cpunumber, cpufreq,
-			memgauge, seps(memsizemb, 3),
-			swapgauge, seps(swapsizemb, 3),
-			diskgauge, disksizegb,
-			uptimefmt,
-			fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
-			bootid,
-		)+NL)
-		return
+		return s, nil
 	}
 
 	// https://pkg.go.dev/github.com/shirou/gopsutil/v4/host#Users
 	userstats, err := pshost.Users()
 	if err != nil {
-		perr(F("ERROR pshost.Users %v", err))
-		//os.Exit(1)
+		//return "", EF("pshost.Users %v", err))
 	}
 	// https://pkg.go.dev/slices#SortFunc
 	slices.SortFunc(userstats, func(a, b pshost.UserStat) int {
@@ -226,24 +221,21 @@ func print() {
 
 	procs, err := psproc.Processes()
 	if err != nil {
-		perr(F("ERROR psproc.Processes %v", err))
-		os.Exit(1)
+		return "", EF("psproc.Processes %v", err)
 	}
 
 	var listens []string
 	// https://pkg.go.dev/github.com/shirou/gopsutil/v4/net#Connections
 	inet4conns, err := psnet.Connections("inet4")
 	if err != nil {
-		perr(F("ERROR psnet.Connections inet4 %v", err))
-		os.Exit(1)
+		return "", EF("psnet.Connections inet4 %v", err)
 	}
-	//perr(F("inet4conns<%d>", len(inet4conns)))
+	//perr(F("DEBUG inet4conns<%d>", len(inet4conns)))
 	inet6conns, err := psnet.Connections("inet6")
 	if err != nil {
-		perr(F("ERROR psnet.Connections inet6 %v", err))
-		os.Exit(1)
+		return "", EF("psnet.Connections inet6 %v", err)
 	}
-	//perr(F("inet6conns<%d>", len(inet6conns)))
+	//perr(F("DEBUG inet6conns<%d>", len(inet6conns)))
 	// https://pkg.go.dev/slices#SortFunc
 	// https://pkg.go.dev/cmp#Compare
 	inetconns := append(inet4conns, inet6conns...)
@@ -266,11 +258,11 @@ func print() {
 		}
 		p, err := psproc.NewProcess(c.Pid)
 		if err != nil {
-			perr(F("ERROR psproc.NewProcess <%d> %v", c.Pid, err))
+			return "", EF("psproc.NewProcess <%d> %v", c.Pid, err)
 		}
 		pname, err := p.Name()
 		if err != nil {
-			perr(F("ERROR p.Name <%d> %v", p.Pid, err))
+			return "", EF("p.Name <%d> %v", p.Pid, err)
 		}
 		cdesc := F("[%s:%s:%d]", pname, claddrip, c.Laddr.Port)
 		if !slices.Contains(listens, cdesc) {
@@ -278,21 +270,17 @@ func print() {
 		}
 	}
 
-	pout(F(
-		"<%s> [%s] cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> read<%s> write<%s> bootid[%s] users(%s) nprocs<%s> listens(%s)",
-		tsnow, Hostname,
-		cpugauge, cpunumber, cpufreq,
-		memgauge, seps(memsizemb, 3),
-		swapgauge, seps(swapsizemb, 3),
-		diskgauge, disksizegb,
-		uptimefmt,
-		fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
-		bootid,
+	s += F(
+		NL +
+		SPAC + "users(%s) nprocs<%s>" +
+		NL + 
+		SPAC + "listens(%s)",
 		strings.Join(users, N),
 		seps(uint64(len(procs)), 3),
 		strings.Join(listens, N),
-	)+NL)
-	return
+	)
+	return s, nil
+
 }
 
 func init() {
@@ -361,7 +349,12 @@ func main() {
 		st := time.Now()
 		for {
 			sti := time.Now()
-			print()
+			if s, err := uss(); err != nil {
+				perr(F("ERROR %v", err))
+				os.Exit(1)
+			} else {
+				pout(s+NL)
+			}
 			sli := PollInterval - time.Since(sti)
 			if sli > 0 {
 				time.Sleep(sli)
@@ -371,7 +364,12 @@ func main() {
 			}
 		}
 	} else {
-		print()
+		if s, err := uss(); err != nil {
+			perr(F("ERROR %v", err))
+			os.Exit(1)
+		} else {
+			pout(s+NL)
+		}
 	}
 }
 
