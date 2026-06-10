@@ -19,16 +19,24 @@ Oct 28 21:37:28 ci sshd[3685911]: error: session_signal_req: session signalling 
 026/0601	clip[]
 */
 
-// GoGet GoFmt GoBuildNull GoBuild
-// GoRun -- put a '<' <readme.text #ae:>>
-// Kill GoRun
+/*
+GoGet 
+GoFmt 
+GoBuildNull 
+GoBuild
+GoRun -- put a '<' <readme.text #ae:>>
+Kill GoRun
+*/
 
 /*
 
 VARIABLES
-`Host` variable checked before every command execution: if it is empty then run locally; otherwise run via ssh.
-`User` variable stores user name if run via ssh.
-`Status` variable tells exit status of the last command executed.
+`host` variable is checked before every command execution: if it is empty then run locally; otherwise run via ssh.
+`user` variable stores user name if run via ssh.
+'userpass' 
+'userkeyfile' 
+'userkey' 
+`status` variable tells exit status of the last command executed.
 
 //
 notes for possible future scripting language:
@@ -174,27 +182,27 @@ func init() {
 
 	var err error
 
-	Proxy = os.Getenv("Proxy")
+	Proxy = os.Getenv("proxy")
 	perr(F("VERBOSE Proxy [%s]", Proxy))
 	ProxyChain = strings.FieldsFunc(Proxy, func(c rune) bool { return c == ';' })
 	perr(F("VERBOSE ProxyChain <%d> %v", len(ProxyChain), ProxyChain))
 	ProxyDialer = proxy.Direct
 
-	Host = os.Getenv("Host")
+	Host = os.Getenv("host")
 	perr(F("VERBOSE Host [%s]", Host))
 	if Host == "" {
-		perr(F("ERROR Host env var empty"))
+		perr(F("ERROR host env var empty"))
 		os.Exit(1)
 	}
 
-	User = os.Getenv("User")
+	User = os.Getenv("user")
 	perr(F("VERBOSE User [%s]", User))
 	if User == "" {
-		perr(F("ERROR User env var empty"))
+		perr(F("ERROR user env var empty"))
 		os.Exit(1)
 	}
 
-	UserPassword = os.Getenv("UserPassword")
+	UserPassword = os.Getenv("userpass")
 	if UserPassword != "" {
 		UserAuthMethod = ssh.Password(UserPassword)
 	}
@@ -207,7 +215,7 @@ func init() {
 		}
 	}
 
-	UserKeyFile = os.ExpandEnv(os.Getenv("UserKeyFile"))
+	UserKeyFile = os.ExpandEnv(os.Getenv("userkeyfile"))
 	if UserKeyFile != "" {
 		userkeybb, err := ioutil.ReadFile(UserKeyFile)
 		if err != nil {
@@ -217,7 +225,7 @@ func init() {
 		UserKey = string(userkeybb)
 	}
 
-	if os.Getenv("UserKey") != "" {
+	if os.Getenv("userkey") != "" {
 		UserKey = os.Getenv("UserKey")
 	}
 

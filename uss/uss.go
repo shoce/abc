@@ -180,7 +180,9 @@ func uss() (s string, err error){
 	s = F(
 		"<%s> [%s]" + 
 		NL + 
-		SPAC + "cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb> uptime<%s> read<%s> write<%s> bootid[%s]",
+		SPAC + "cpu%s<%d>%s mem%s<%smb> swap%s<%smb> disk%s<%dgb>" +
+		NL +
+		SPAC + "uptime<%s> read<%s> write<%s> bootid[%s]",
 		tsnow, Hostname,
 		cpugauge, cpunumber, cpufreq,
 		memgauge, seps(memsizemb, 3),
@@ -272,12 +274,14 @@ func uss() (s string, err error){
 
 	s += F(
 		NL +
-		SPAC + "users(%s) nprocs<%s>" +
+		SPAC + "nprocs<%s>" +
 		NL + 
+		SPAC + "users(%s)" + 
+		NL +
 		SPAC + "listens(%s)",
-		strings.Join(users, N),
 		seps(uint64(len(procs)), 3),
-		strings.Join(listens, N),
+		strings.Join(users, SP),
+		strings.Join(listens, SP),
 	)
 	return s, nil
 
