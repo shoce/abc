@@ -274,9 +274,7 @@ func uss() (s string, err error){
 
 	s += F(
 		NL +
-		SPAC + "nprocs<%s>" +
-		NL + 
-		SPAC + "users(%s)" + 
+		SPAC + "nprocs<%s> users(%s)" + 
 		NL +
 		SPAC + "listens(%s)",
 		seps(uint64(len(procs)), 3),
