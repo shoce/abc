@@ -270,28 +270,18 @@ func init() {
 func main() {
 	var err error
 
-	sigintchan := make(chan os.Signal, 1)
-	signal.Notify(sigintchan, syscall.SIGINT)
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGHUP)
 	go func() {
 		for {
-			s := <-sigintchan
-			switch s {
+			sig := <-sigchan
+			switch sig {
 			case syscall.SIGINT:
 				fmt.Fprint(os.Stderr, NL)
 				perr("interrupt signal")
 				if InterruptChan != nil {
 					InterruptChan <- true
 				}
-			}
-		}
-	}()
-
-	sighupchan := make(chan os.Signal, 1)
-	signal.Notify(sighupchan, syscall.SIGHUP)
-	go func() {
-		for {
-			s := <-sighupchan
-			switch s {
 			case syscall.SIGHUP:
 				fmt.Fprint(os.Stderr, NL)
 				perr("hangup signal")
@@ -1038,3 +1028,4 @@ func run(cmds string, cmd []string, stdin io.Reader) (status string, err error) 
 		return runssh(cmds, cmd, stdin)
 	}
 }
+
