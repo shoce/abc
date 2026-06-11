@@ -255,8 +255,14 @@ func uss() (s string, err error){
 		if claddrip == "::1" {
 			continue
 		}
-		if claddrip == "0.0.0.0" || claddrip == "::" {
+		if claddrip == "0.0.0.0" {
+			claddrip = "0"
+		}
+		if claddrip == "::" {
 			claddrip = "*"
+		}
+		if strings.Contains(claddrip, ":") {
+			claddrip = "[" + claddrip + "]"
 		}
 		p, err := psproc.NewProcess(c.Pid)
 		if err != nil {
