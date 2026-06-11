@@ -42,18 +42,19 @@ hx get scheme://host:port/path/subpath header1:v1 header2:v2 arg1=val1 arg2=val2
 
 	USERAGENT = "hx/1.0"
 
-	HxHeaders bool
+	PrintHeaders bool
 
-	// TODO basic auth
-	HxUser string
-	HxPass string
+	// TODO basicauth
+	User string
+	Pass string
 
 	// TODO timeout
-	HxTimeout time.Duration
+	Timeout time.Duration
 
-	HxInsecure bool
+	Insecure bool
 
 	F = fmt.Sprintf
+	EF = fmt.Errorf
 	pout = fmt.Print
 )
 
@@ -63,12 +64,12 @@ func init() {
 		DEBUG = true
 	}
 
-	if os.Getenv("HxHeaders") != "" {
-		HxHeaders = true
+	if os.Getenv("hh") != "" {
+		PrintHeaders = true
 	}
 
-	if os.Getenv("HxInsecure") != "" {
-		HxInsecure = true
+	if os.Getenv("insecure") != "" {
+		Insecure = true
 	}
 
 }
@@ -82,13 +83,13 @@ defer fd3.Close()
 // https://pkg.go.dev/io#ReadAll
 data, err := io.ReadAll(fd3)
 if err != nil { perr(F("DEBUG argss io.ReadAll fd3 %v", err)) }
-if len(data) == 0 { return; }
+if len(data)==0 { return; }
 if len(data)==1 && data[0]=='\n' { return; }
 
 // https://pkg.go.dev/strings#Split
 fd3args := strings.Split(string(data), NL)
 if len(fd3args)>0 && fd3args[len(fd3args)-1]=="" {
-fd3args = fd3args[:len(args)-1] 
+fd3args = fd3args[:len(fd3args)-1] 
 }
 perr(F("DEBUG argss args(%v) fd3args(%v)", args, fd3args))
 //if len(fd3args)>0 { args = fd3args }
@@ -132,7 +133,7 @@ func main() {
 	switch strings.ToLower(args[0]) {
 	case "head":
 		hmethod = http.MethodHead
-		HxHeaders = true
+		PrintHeaders = true
 	case "get":
 		hmethod = http.MethodGet
 	case "post":
@@ -183,12 +184,12 @@ func main() {
 		aisheader := iheader >= 0 && (iquery < 0 || iquery > iheader)
 		aisquery := iquery >= 0 && (iheader < 0 || iheader > iquery)
 		// https://pkg.go.dev/strings#SplitN
-		if aisquery {
-			akv := strings.SplitN(a, "=", 2)
-			hquery.Add(akv[0], akv[1])
-		} else if aisheader {
+		if aisheader {
 			akv := strings.SplitN(a, ":", 2)
 			hheader.Add(akv[0], akv[1])
+		} else if aisquery {
+			akv := strings.SplitN(a, "=", 2)
+			hquery.Add(akv[0], akv[1])
 		} else {
 			perr(F("ERROR invalid arg [%s]", a))
 			os.Exit(1)
@@ -213,7 +214,7 @@ func main() {
 
 	// https://pkg.go.dev/http#Client
 	hclient := &http.Client{}
-	if HxInsecure {
+	if Insecure {
 		hclient.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
@@ -244,8 +245,16 @@ func main() {
 		GotFirstResponseByte: func() {},
 	}
 
+	var hbody io.Reader
+	switch hmethod {
+	case http.MethodPost, http.MethodPut, http.MethodPatch:
+		if stat, err := os.Stdin.Stat(); err==nil && (stat.Mode()&os.ModeCharDevice)==0 {
+			hbody = os.Stdin
+		}
+	}
+
 	// https://pkg.go.dev/http#NewRequest
-	hreq, err := http.NewRequest(hmethod, hurl.String(), nil)
+	hreq, err := http.NewRequest(hmethod, hurl.String(), hbody)
 	if err != nil {
 		perr(F("ERROR NewRequest %v", err))
 		os.Exit(1)
@@ -290,7 +299,7 @@ func main() {
 
 	defer hresp.Body.Close()
 
-	if HxHeaders {
+	if PrintHeaders {
 		pout(hresp.Status+NL)
 		for hhk, hhvv := range hresp.Header {
 			for _, hhv := range hhvv {
@@ -331,11 +340,11 @@ func fmtdur(t uint64) string {
 	return durs
 }
 
-func perr(msgtext string) {
-	if strings.HasPrefix(msgtext, "DEBUG ") && !DEBUG {
+func perr(msg string) {
+	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
 		return
 	}
-	fmt.Fprint(os.Stderr, msgtext+NL)
+	fmt.Fprint(os.Stderr, msg+NL)
 }
 
 func seps(i uint64, e uint64) string {
