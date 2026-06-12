@@ -284,13 +284,13 @@ func perr(msg string) (int, error) {
 	return fmt.Fprint(os.Stderr, msg+NL)
 }
 
-func fmtdursec(t uint64) string {
+func fmtdursec(t uint64) (ds string) {
 	tdays, tsecs := t/(24*3600), t%(24*3600)
-	ts := F("%ss", seps(tsecs, 2))
+	ds = F("%ss", seps(tsecs, 2))
 	if tdays > 0 {
-		ts = F("%sd", seps(tdays, 2)) + ts
+		ds = F("%sd"+SEP, seps(tdays, 2)) + ds
 	}
-	return ts
+	return ds
 }
 
 func seps(i uint64, e uint64) string {
