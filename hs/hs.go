@@ -369,7 +369,8 @@ func main() {
 
 	inreader := bufio.NewReaderSize(os.Stdin, InReaderBufferSize)
 
-	readcmdstdin := false
+	var readcmdstdin bool
+	readcmdstdin = false
 	if len(args) > 0 {
 		cmd := args[:]
 		if cmd[len(cmd)-1] == "<" {
@@ -504,6 +505,7 @@ func main() {
 		if readcmdstdin {
 			perr(F("host=%s user=%s hs -- %s %s", HOST, USER, cmds, TermUnderline("stdin:")))
 			stdinbb, err = ioutil.ReadAll(os.Stdin)
+			readcmdstdin = false
 			if err != nil {
 				perr(F("ERROR stdin read %v", err))
 				continue
