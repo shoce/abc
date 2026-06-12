@@ -38,6 +38,10 @@ const (
 
 var (
 	DEBUG bool
+	
+	F = fmt.Sprintf
+	EF = fmt.Errorf
+	pout = fmt.Print
 )
 
 type Process struct {
@@ -88,7 +92,7 @@ func init() {
 	var err error
 
 	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Println(VERSION)
+		pout(VERSION+NL)
 		os.Exit(0)
 	}
 
@@ -98,20 +102,20 @@ func init() {
 
 	BootTime, err = GetBootTime()
 	if err != nil {
-		perr("ERROR GetBootTime %v", err)
+		perr(F("ERROR GetBootTime %v", err))
 		os.Exit(1)
 	}
-	perr("DEBUG BootTime <%s>", BootTime.Format("2006:0102:150405"))
+	perr(F("DEBUG BootTime <%s>", BootTime.Format("2006:0102:150405")))
 
 	ClkTck, err = GetClkTck()
 	if err != nil {
-		perr("ERROR GetClkTck %v", err)
+		perr(F("ERROR GetClkTck %v", err))
 		os.Exit(1)
 	}
-	perr("DEBUG ClkTck <%d>", ClkTck)
+	perr(F("DEBUG ClkTck <%d>", ClkTck))
 
 	PageSize = os.Getpagesize()
-	perr("DEBUG PageSize <%d>", PageSize)
+	perr(F("DEBUG PageSize <%d>", PageSize))
 }
 
 func GetClkTck() (int64, error) {
@@ -133,7 +137,7 @@ func main() {
 
 	PP, err = GetProcesses()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR GetProcesses %v"+NL, err)
+		perr(F("ERROR GetProcesses %v", err))
 		os.Exit(1)
 	}
 
@@ -208,10 +212,10 @@ func main() {
 
 		pids := make([]string, 0, 12)
 		for _, pid := range p.Pids {
-			pids = append(pids, fmt.Sprintf("%d", pid))
+			pids = append(pids, F("%d", pid))
 		}
 		for i := range pids {
-			pids[i] = fmt.Sprintf("<%s>", pids[i])
+			pids[i] = F("<%s>", pids[i])
 		}
 		pidss := strings.Join(pids, N)
 
@@ -220,26 +224,26 @@ func main() {
 			tags = append(tags, TagKubepod)
 		}
 		for i := range tags {
-			tags[i] = fmt.Sprintf("[%s]", tags[i])
+			tags[i] = F("[%s]", tags[i])
 		}
 		tagss := strings.Join(tags, N)
 
 		procstatss := []string{}
 		if !BootTime.IsZero() && !p.Starttime.IsZero() {
 			procstatss = append(procstatss,
-				fmt.Sprintf("up<%s>",
+				F("up<%s>",
 					fmtdursec(uint64(time.Since(p.Starttime).Seconds()))),
 			)
 		}
 		if p.Utime+p.Stime > 0 {
 			procstatss = append(procstatss,
-				fmt.Sprintf("cpu<%s>",
+				F("cpu<%s>",
 					fmtdursec(uint64((p.Utime+p.Stime).Seconds()))),
 			)
 		}
 		if p.Vsize > 0 {
 			procstatss = append(procstatss,
-				fmt.Sprintf("rss<%skb>",
+				F("rss<%skb>",
 					seps(uint64(p.Rss)*uint64(PageSize)/1024, 3)),
 			)
 		}
@@ -268,28 +272,23 @@ func main() {
 		}
 		procinfo += cmd
 		procinfo += strings.Join(cmdargs, N)
-		procinfo += NL
-		fmt.Print(procinfo)
+		pout(procinfo+NL)
 
 	}
 }
 
-func perr(msg string, args ...interface{}) {
+func perr(msg string) (int, error) {
 	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
-		return
+		return 0, nil
 	}
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
-	}
+	return fmt.Fprint(os.Stderr, msg+NL)
 }
 
 func fmtdursec(t uint64) string {
 	tdays, tsecs := t/(24*3600), t%(24*3600)
-	ts := fmt.Sprintf("%ds", tsecs)
+	ts := F("%ss", seps(tsecs, 2))
 	if tdays > 0 {
-		ts = fmt.Sprintf("%dd"+SEP, tdays) + ts
+		ts = F("%sd", seps(tdays, 2)) + ts
 	}
 	return ts
 }
@@ -297,9 +296,9 @@ func fmtdursec(t uint64) string {
 func seps(i uint64, e uint64) string {
 	ee := uint64(math.Pow(10, float64(e)))
 	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
+		return F("%d", i%ee)
 	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+		f := F("0%dd"+SEP, e)
+		return F("%s"+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
