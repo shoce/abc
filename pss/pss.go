@@ -296,9 +296,8 @@ func fmtdursec(t uint64) string {
 func seps(i uint64, e uint64) string {
 	ee := uint64(math.Pow(10, float64(e)))
 	if i < ee {
-		return F("%d", i%ee)
+		return F("%d"+SEP, i)
 	} else {
-		f := F("0%dd"+SEP, e)
-		return F("%s"+"%"+f, seps(i/ee, e), i%ee)
+		return F("%s"+"%"+F("0%dd"+SEP, e), seps(i/ee, e), i%ee)
 	}
 }
