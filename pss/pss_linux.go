@@ -59,7 +59,7 @@ func GetProcesses() ([]Process, error) {
 		pstatpath := fmt.Sprintf("/proc/%d/stat", p.Pid)
 		pstatbb, err := ioutil.ReadFile(pstatpath)
 		if err != nil {
-			perr("ERROR read %s %v", pstatpath, err)
+			perr(F("ERROR read %s %v", pstatpath, err))
 			continue
 		}
 
@@ -101,7 +101,7 @@ func GetProcesses() ([]Process, error) {
 		cmdlinepath := fmt.Sprintf("/proc/%d/cmdline", p.Pid)
 		cmdlinebb, err := ioutil.ReadFile(cmdlinepath)
 		if err != nil {
-			perr("ERROR read %s %v", cmdlinepath, err)
+			perr(F("ERROR read %s %v", cmdlinepath, err))
 			continue
 		}
 		cmdlinebbb := bytes.Split(cmdlinebb, []byte{0})
@@ -115,7 +115,7 @@ func GetProcesses() ([]Process, error) {
 		cgrouppath := fmt.Sprintf("/proc/%d/cgroup", p.Pid)
 		cgroupbb, err := ioutil.ReadFile(cgrouppath)
 		if err != nil {
-			perr("ERROR read %s %v", cgrouppath, err)
+			perr(F("ERROR read %s %v", cgrouppath, err))
 			continue
 		}
 		p.Cgroup = string(cgroupbb)
