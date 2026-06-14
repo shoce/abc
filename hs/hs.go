@@ -1,6 +1,5 @@
+// seps(
 /*
-Hs
-
 HISTORY
 020/0605 v1
 020/1016 repl
@@ -29,7 +28,6 @@ Kill GoRun
 */
 
 /*
-
 VARIABLES
 `host` variable is checked before every command execution: if it is empty then run locally; otherwise run via ssh.
 `user` variable stores user name if run via ssh.
@@ -49,7 +47,6 @@ for x, y := / loop
 ~ regexp string / match string against regexp
 exit [status] / exit shell with status
 //
-
 */
 
 package main
@@ -62,7 +59,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"net"
 	"net/url"
 	"os"
@@ -612,21 +608,26 @@ func fmtdur(td time.Duration) string {
 
 func fmtdursec(t uint64) string {
 	tdays, tsecs := t/(24*3600), t%(24*3600)
-	ts := seps(tsecs, 2) + "s"
+	//ts := seps(tsecs, 2) + "s"
+	ts :=F("%ds", tsecs)
 	if tdays > 0 {
-		ts = seps(tdays, 2) + "d" + SEP + ts
+		//ts = seps(tdays, 2) + "d" + SEP + ts
+		ts = F("%dd", tdays) + ts
 	}
 	return ts
 }
 
-func seps(i uint64, e uint64) string {
-	ee := uint64(math.Pow(10, float64(e)))
-	if i < ee {
-		return F("%d", i%ee)
-	} else {
-		f := F("0%dd", e)
-		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
+func seps(i uint64, e int) (s string) {
+	if e < 1 { return SEP+"🖕🏽"+SEP }
+	var rr [28]rune // 2**64 = 18,446,744,073,709,551,616
+	var sep rune = []rune(SEP)[0]
+	urr := []rune(strconv.FormatUint(i, 10))
+	j := len(rr)-1
+	for i := len(urr)-1 ; i >= 0 ; i-- {
+		if (len(urr)-1-i)%e==0 { rr[j] = sep ; j-- ; }
+		rr[j] = urr[i] ; j-- ;
 	}
+	return string(rr[j+1:])
 }
 
 func logstatus() {

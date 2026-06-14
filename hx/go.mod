@@ -2,4 +2,4 @@ module github.com/shoce/abc/hx
 
 go 1.25.0
 
-require golang.org/x/exp v0.0.0-20260603202125-055de637280b
+require golang.org/x/exp v0.0.0-20260611194520-c48552f49976

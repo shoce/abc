@@ -8,8 +8,12 @@ ln -s g gvr
 HISTORY
 026/0519 func argss()
 */
-
-// GoGet GoFmt GoBuildNull GoBuild
+/*
+GoGet 
+GoFmt 
+GoBuildNull 
+GoBuild
+*/
 
 package main
 
@@ -160,5 +164,5 @@ func main() {
 	}
 }
 
-func perr(msgtext string) { fmt.Fprint(os.Stderr, msgtext+NL) }
+func perr(msg string) { fmt.Fprint(os.Stderr, msg+NL) }
 

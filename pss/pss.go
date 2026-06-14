@@ -1,21 +1,26 @@
+// seps(
 /*
-history:
+HISTORY
 20/290 v1
 20/293 option "0" to show the tree of processes starting with with pid=0
 20/301 first arg is pid to specify the root process
 20/307 proper sorting to build visual process tree
 20/307 accept any number of arguments as filters by process id or by process name
 */
-
-// GoFixDiff GoFixFix
-// GoGet GoFmt GoBuildNull GoBuild
-// GoRun
+/*
+GoFixDiff
+GoFixFix
+GoGet
+GoFmt
+GoBuildNull
+GoBuild
+GoRun
+*/
 
 package main
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"slices"
 	"sort"
@@ -38,7 +43,7 @@ const (
 
 var (
 	DEBUG bool
-	
+
 	F = fmt.Sprintf
 	EF = fmt.Errorf
 	pout = fmt.Print
@@ -293,11 +298,15 @@ func fmtdursec(t uint64) (ds string) {
 	return ds
 }
 
-func seps(i uint64, e uint64) string {
-	ee := uint64(math.Pow(10, float64(e)))
-	if i < ee {
-		return F("%d"+SEP, i)
-	} else {
-		return F("%s"+"%"+F("0%dd"+SEP, e), seps(i/ee, e), i%ee)
+func seps(i uint64, e int) (s string) {
+	if e < 1 { return SEP+"🖕🏽"+SEP }
+	var rr [28]rune // 2**64 = 18,446,744,073,709,551,616
+	var sep rune = []rune(SEP)[0]
+	urr := []rune(strconv.FormatUint(i, 10))
+	j := len(rr)-1
+	for i := len(urr)-1 ; i >= 0 ; i-- {
+		if (len(urr)-1-i)%e==0 { rr[j] = sep ; j-- ; }
+		rr[j] = urr[i] ; j-- ;
 	}
+	return string(rr[j+1:])
 }

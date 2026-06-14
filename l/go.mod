@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/ipfs/go-cid v0.6.1
 	github.com/multiformats/go-multihash v0.2.3
-	golang.org/x/exp v0.0.0-20260603202125-055de637280b
+	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
 )
 
 require (
