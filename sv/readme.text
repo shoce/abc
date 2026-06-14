@@ -1,0 +1,17 @@
+Daemontools services tool
+
+COMMANDS
+	stat
+	up
+	down
+	once
+	pause
+	cont
+	hangup
+	int
+	term
+	kill
+	usr1
+	usr2
+
+
