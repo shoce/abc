@@ -1,15 +1,21 @@
 /*
-history: 2015-1210 v1
+HISTORY
+2015-1210 v1
 */
 
-// GoFmt GoBuildNull GoBuild
-// GoRun /etc/service/*
+/*
+GoFmt 
+GoBuildNull 
+GoBuild
+GoRun /etc/service/*
+*/
 
 package main
 
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"os"
 	"time"
 )
@@ -47,6 +53,12 @@ const (
 	EPOCH = 4611686018427387914
 )
 
+var (
+	F = fmt.Sprintf
+	EF = fmt.Errorf
+	pout = fmt.Print
+)
+
 type Service struct {
 	Path string
 
@@ -78,21 +90,21 @@ func (s Service) DownPath() string {
 func (s Service) WriteControl(c string) error {
 	f, err := os.OpenFile(s.ControlPath(), os.O_WRONLY, os.ModeNamedPipe)
 	if err != nil {
-		return fmt.Errorf("os.OpenFile %s %s", s.ControlPath(), err)
+		return EF("os.OpenFile %s %s", s.ControlPath(), err)
 	}
 	b := []byte(c)
 	n, err := f.Write(b)
 	if err != nil {
 		f.Close()
-		return fmt.Errorf("File.Write %s", err)
+		return EF("File.Write %s", err)
 	}
 	if n != len(b) {
 		f.Close()
-		return fmt.Errorf("File.Write wrote %d bytes instead of %d bytes", n, len(b))
+		return EF("File.Write wrote %d bytes instead of %d bytes", n, len(b))
 	}
 	err = f.Close()
 	if err != nil {
-		return fmt.Errorf("File.Close %s", err)
+		return EF("File.Close %s", err)
 	}
 	return nil
 }
@@ -105,21 +117,21 @@ func (s *Service) ReadStatus() error {
 	b := make([]byte, 20)
 	f, err := os.Open(s.StatusPath())
 	if err != nil {
-		return fmt.Errorf("os.Open %s %s", s.StatusPath(), err)
+		return EF("os.Open %s %s", s.StatusPath(), err)
 	}
 	n, err := f.Read(b)
 	if err != nil {
 		f.Close()
-		return fmt.Errorf("File.Read %s", err)
+		return EF("File.Read %s", err)
 	}
 	err = f.Close()
 	if err != nil {
-		return fmt.Errorf("File.Close %s", err)
+		return EF("File.Close %s", err)
 	}
 
 	//perr("DEBUG % x", b)
 	if n < 18 {
-		return fmt.Errorf("Service.Read returned %d bytes %s", n, err)
+		return EF("Service.Read returned %d bytes %s", n, err)
 	}
 	s.Seconds = int64(binary.BigEndian.Uint64(b[0:8]))
 	now := time.Now().UTC().Unix() + EPOCH
@@ -181,33 +193,38 @@ func main() {
 		s := Service{Path: sp}
 		err := s.ReadStatus()
 		if err != nil {
-			perr("ERROR Service.ReadStatus %s", err)
+			perr(F("ERROR Service.ReadStatus %s", err))
 			os.Exit(1)
 		}
 
 		durdays, dursecs := s.Seconds/(24*3600), s.Seconds%(24*3600)
-		durfmt := fmt.Sprintf("%ds", dursecs)
+		durfmt := F("%ss", seps(uint64(dursecs), 2))
 		if durdays > 0 {
-			durfmt = fmt.Sprintf("%dd"+SEP, durdays) + durfmt
+			durfmt = F("%sd"+SEP, seps(uint64(durdays), 2)) + durfmt
 		}
 
 		/*
-			fmt.Printf(
-				"%s: %s pid<%d> <%ds>, %s"+NL,
+			pout(F(
+				"%s: %s pid<%d> <%ds>, %s",
 				s.Path, s.Status, s.PID, s.Seconds, s.Action,
-			)
+			)+NL)
 		*/
-		fmt.Printf(
-			"path[%s] status[%s] pid<%d> seconds<%s> action[%s]"+NL,
+		pout(F(
+			"path[%s] status[%s] pid<%d> seconds<%s> action[%s]",
 			s.Path, s.Status, s.PID, durfmt, s.Action,
-		)
+		)+NL)
 	}
 }
 
-func perr(msg string, args ...interface{}) {
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
+func perr(msg string) {
+	fmt.Fprint(os.Stderr, msg+NL)
+}
+
+func seps(i uint64, e uint64) string {
+	ee := uint64(math.Pow(10, float64(e)))
+	if i < ee {
+		return F("%d"+SEP, i)
 	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
+		return F("%s"+"%"+F("0%dd"+SEP, e), seps(i/ee, e), i%ee)
 	}
 }
