@@ -1,4 +1,4 @@
-// escape
+// 
 /*
 HISTORY
 026/0620 v1
@@ -55,7 +55,7 @@ func main() {
 		ss := R.FindAllString(line, -1) 
 		for i := range ss {
 			if ss[i][0] >= '0' && ss[i][0] <= '9' {
-				ss[i] = sepss(ss[i], 3)
+				ss[i] = "<"+sepss(ss[i], 3)+">"
 			}
 		}
 		pout(strings.Join(ss, N)+NL)
