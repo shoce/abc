@@ -26,7 +26,7 @@ const (
 	SPAC = "    "
 	SEP = ","
 
-	Rdigits = `\d+|\D+`
+	Rdigits = `-?\d+|\D+`
 
 	ScannerBufferSize = 1 << 20 //ae:>>
 )
@@ -54,7 +54,7 @@ func main() {
 		line = scanner.Text()
 		ss := R.FindAllString(line, -1) 
 		for i := range ss {
-			if ss[i][0] >= '0' && ss[i][0] <= '9' {
+			if ss[i][0]=='-' || (ss[i][0]>='0' && ss[i][0]<='9') {
 				ss[i] = "<"+sepss(ss[i], 3)+">"
 			}
 		}
@@ -74,7 +74,7 @@ func sepss(q string, e int) (s string) {
 	var sep rune = []rune(SEP)[0]
 	j := len(rr)-1
 	for i := len(qrr)-1 ; i >= 0 ; i-- {
-		if (len(qrr)-1-i)%e==0 { rr[j] = sep ; j-- ; }
+		if (len(qrr)-1-i)%e==0 && qrr[i]!='-' { rr[j] = sep ; j-- ; }
 		rr[j] = qrr[i] ; j-- ;
 	}
 	return string(rr[j+1:])
