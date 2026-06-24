@@ -22,6 +22,9 @@ const (
 
 var (
 	TRASH = "/trash/"
+	
+	F = fmt.Sprintf
+	pout = fmt.Print
 )
 
 func init() {
@@ -30,14 +33,14 @@ func init() {
 		TRASH = v
 		TRASH, err = filepath.Abs(TRASH)
 		if err != nil {
-			perr("ERROR filepath.Abs [%s] %v", TRASH, err)
+			perr(F("ERROR filepath.Abs [%s] %v", TRASH, err))
 			os.Exit(1)
 		}
 		TRASH += string(filepath.Separator)
 	} else if v := os.Getenv("HOME"); v != "" {
 		TRASH = filepath.Join(v, TRASH) + string(filepath.Separator)
 	}
-	perr("DEBUG TRASH [%s]", TRASH)
+	perr(F("DEBUG TRASH [%s]", TRASH))
 }
 
 func main() {
@@ -45,12 +48,14 @@ func main() {
 	switch cmdname {
 	case "rem":
 		rem()
+	case "remdu":
+		remdu()
 	case "remls":
 		remls()
 	case "remrem":
 		remrem()
 	default:
-		perr("ERROR invalid command name [%s]", cmdname)
+		perr(F("ERROR invalid command name [%s]", cmdname))
 		os.Exit(1)
 	}
 }
@@ -65,7 +70,12 @@ func rem() {
 		args = append(args, a)
 	}
 	if len(args) == 0 {
-		perr("USAGE rem path...")
+		perr("USAGE"+NL+
+			TAB+"rem path..."+NL+
+			TAB+"remdu"+NL+
+			TAB+"remls"+NL+
+			TAB+"remrem"+NL,
+			)
 		os.Exit(1)
 	}
 	for _, a := range args {
@@ -73,7 +83,7 @@ func rem() {
 		if !filepath.IsAbs(apath) {
 			apath, err = filepath.Abs(apath)
 			if err != nil {
-				perr("ERROR filepath.Abs [%s] %v", apath, err)
+				perr(F("ERROR filepath.Abs [%s] %v", apath, err))
 				continue
 			}
 		}
@@ -85,12 +95,12 @@ func rem() {
 		trashapathdir := filepath.Join(TRASH, filepath.Dir(apath))
 		err = os.MkdirAll(trashapathdir, 0700)
 		if err != nil {
-			perr(TAB+"ERROR %v", err)
+			perr(F(TAB+"ERROR %v", err))
 		}
 		trashapath := filepath.Join(TRASH, apath)
 		err = os.Rename(apath, trashapath)
 		if err != nil {
-			perr(TAB+"ERROR %v", err)
+			perr(F(TAB+"ERROR %v", err))
 		} else {
 			perr(TAB + trashapath)
 		}
@@ -98,28 +108,22 @@ func rem() {
 	os.Exit(0)
 }
 
+func remdu() {
+	pout("du -s -m" + SP + TRASH + NL)
+	os.Exit(0)
+}
+
 func remls() {
-	pout("lsr" + SP + TRASH)
+	pout("lsr" + SP + TRASH + NL)
 	os.Exit(0)
 }
 
 func remrem() {
-	pout("rm -r -v" + SP + filepath.Join(TRASH, "*"))
+	pout("rm -r -f -v" + SP + TRASH + NL)
 	os.Exit(0)
 }
 
-func perr(msg string, args ...interface{}) {
-	if len(args) == 0 {
-		fmt.Fprint(os.Stderr, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stderr, msg+NL, args...)
-	}
+func perr(msg string) {
+	fmt.Fprint(os.Stderr, msg+NL)
 }
 
-func pout(msg string, args ...interface{}) {
-	if len(args) == 0 {
-		fmt.Fprint(os.Stdout, msg+NL)
-	} else {
-		fmt.Fprintf(os.Stdout, msg+NL, args...)
-	}
-}

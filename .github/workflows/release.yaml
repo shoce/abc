@@ -59,6 +59,7 @@ jobs:
           ln l llr
           ln put append
           ln pout perr
+          ln rem remdu
           ln rem remls
           ln rem remrem
           ln sre srer
