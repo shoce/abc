@@ -5,7 +5,6 @@ HISTORY
 021/0329 add cid printing
 021/1026 add -1 option
 */
-
 /*
 INSTALL
 ln l ls
@@ -15,7 +14,6 @@ ln l lr
 ln l lsr
 ln l llr
 */
-
 /*
 GoGet
 GoFmt
@@ -66,42 +64,32 @@ var (
 	ShowCid     bool
 
 	F = fmt.Sprintf
+	FI = strconv.FormatInt
 	EF = fmt.Errorf
 	pout = fmt.Print
 )
 
-func printinfo(path string, info os.FileInfo) error {
-	var err error
-
+func printinfo(path string, info os.FileInfo) (err error) {
+	if path=="" { return EF("path string empty") }
 	s := path
-
 	s = strings.ReplaceAll(s, TAB, "\\\t")
-
 	var finfo os.FileInfo = info
-
-	if finfo.Mode().IsDir() {
+	if finfo.Mode().IsDir() && s[len(s)-1]!=os.PathSeparator {
 		s += string(os.PathSeparator)
-	}
-
+	} 
 	if fperm := finfo.Mode().Perm(); fperm&0111 != 0 {
 		s = TermBold(s)
 		//s = TermItalic(s)
 		//s = TermUnderline(s)
 	}
-
 	if ShowSymlink && (finfo.Mode()&os.ModeSymlink) != 0 {
 		finfo, err = os.Lstat(path)
-		if err != nil {
-			return err
-		}
+		if err != nil { return err }
 		var linkpath string
 		linkpath, err = os.Readlink(path)
-		if err != nil {
-			return err
-		}
+		if err != nil { return err }
 		s += TAB + F("symlink[%s]", linkpath)
 	}
-
 	if ShowSize && !finfo.Mode().IsDir() && (info.Mode()&os.ModeSymlink == 0) {
 		s += TAB + F("size<%s>", seps(int(finfo.Size()), 3))
 	}
@@ -111,25 +99,23 @@ func printinfo(path string, info os.FileInfo) error {
 	if ShowSize && (info.Mode()&os.ModeSymlink != 0) {
 		s += TAB + "size<symlink>"
 	}
-
 	if ShowTime {
 		s += TAB + "mtime<" + fmttime(finfo.ModTime()) + ">"
 	}
-
 	if ShowPerm {
 		s += TAB + F("perm<%04o>", finfo.Mode().Perm())
 	}
-
 	if ShowOwner {
 		var fstatuid, fstatgid string
 		if fstat, ok := finfo.Sys().(*syscall.Stat_t); ok {
-			fstatuid, fstatgid = strconv.FormatUint(uint64(fstat.Uid), 10), strconv.FormatUint(uint64(fstat.Gid), 10)
+			fstatuid = FI(int64(fstat.Uid), 10)
+			fstatgid = FI(int64(fstat.Gid), 10)
 		} else {
-			fstatuid, fstatgid = "?", "?"
+			fstatuid = "?"
+			fstatgid = "?"
 		}
 		s += TAB + F("uid<%s> gid<%s>", fstatuid, fstatgid)
 	}
-
 	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink == 0) {
 		f, err := os.Open(path)
 		if err != nil {
@@ -145,7 +131,6 @@ func printinfo(path string, info os.FileInfo) error {
 		c := cid.NewCidV1(cid.Raw, fmh)
 		s += TAB + F("cid[%s]", c)
 	}
-
 	pout(s+NL)
 	return nil
 }
@@ -164,81 +149,52 @@ func fls(path string, info os.FileInfo, err error) error {
 
 func list(path string) error {
 	var listdir bool
-	if strings.HasSuffix(path, "/") {
-		listdir = true
-	}
-
+	if strings.HasSuffix(path, "/") { listdir = true }
 	path, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-
+	if err != nil { return err }
 	pathstat, err := os.Lstat(path)
-	if err != nil {
-		return err
-	}
-
+	if err != nil { return err } 
 	if (pathstat.Mode() & os.ModeSymlink) != 0 {
 		linktargetpath, err := os.Readlink(path)
-		if err != nil {
-			return err
-		}
+		if err != nil { return err }
 		if !filepath.IsAbs(linktargetpath) {
 			linktargetpath = filepath.Clean(filepath.Join(filepath.Dir(path), linktargetpath))
 		}
 		linktargetstat, err := os.Lstat(linktargetpath)
-		if err != nil {
-			return err
-		}
+		if err != nil { return err }
 		if !linktargetstat.Mode().IsDir() && listdir {
 			return EF("[%s] symlink[%s] is not a dir", path, linktargetpath)
 		}
 	} else if !pathstat.Mode().IsDir() && listdir {
 		return EF("[%s] is not a dir", path)
 	}
-
 	if Recursive {
 		err = filepath.Walk(path, fls)
-		if err != nil {
-			return err
-		}
+		if err != nil { return err }
 	} else if listdir {
-		if err := printinfo(path, pathstat); err != nil {
-			return err
-		}
-
+		err = printinfo(path, pathstat)
+		if err != nil { return err }
 		d, err := os.Open(path)
-		if err != nil {
-			return err
-		}
+		if err != nil { return err }
 		defer d.Close()
-
 		for {
 			ee, err := d.ReadDir(ReadDirN)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
+			if err == io.EOF { break }
+			if err != nil { return err }
 			slices.SortFunc(ee, func(a, b fs.DirEntry) int {
 				return strings.Compare(a.Name(), b.Name())
 			})
 			for _, e := range ee {
 				fstat, err := e.Info()
-				if err != nil {
-					return err
-				}
+				if err != nil { return err }
 				fpath := filepath.Join(path, e.Name())
 				printinfo(fpath, fstat)
 			}
 		}
 	} else {
-		if err := printinfo(path, pathstat); err != nil {
-			return err
-		}
+		err = printinfo(path, pathstat)
+		if err != nil { return err }
 	}
-
 	return nil
 }
 
@@ -247,11 +203,9 @@ func init() {
 		pout(VERSION + NL)
 		os.Exit(0)
 	}
-
 	if v := os.Getenv("DEBUG"); v != "" {
 		DEBUG = true
 	}
-
 	if v := os.Getenv("TERM"); v != "" {
 		TERM = v
 	}
@@ -297,8 +251,7 @@ func main() {
 
 	args := os.Args[1:]
 	perr(F("DEBUG args %#v", args))
-
-	n := 0
+	var n int
 	for _, a := range args {
 		if a != "" {
 			args[n] = a
@@ -307,12 +260,9 @@ func main() {
 	}
 	args = args[:n]
 	perr(F("DEBUG n <%d> args %#v", n, args))
-
 	n = 0
 	for _, a := range args {
-		if !strings.HasPrefix(a, "-") {
-			break
-		}
+		if !strings.HasPrefix(a, "-") { break }
 		switch a {
 		case "--":
 			break
@@ -358,7 +308,6 @@ func main() {
 	if len(paths) == 0 {
 		paths = append(paths, "./")
 	}
-
 	for _, p := range paths {
 		err = list(p)
 		if err != nil {
@@ -369,28 +318,22 @@ func main() {
 }
 
 func TermBold(s string) string {
-	if TERM != "" {
-		return "\033[1m" + s + "\033[0m"
-	}
-	return s
+	if TERM == "" { return s }
+	return "\033[1m" + s + "\033[0m"
 }
 
 func TermItalic(s string) string {
-	if TERM != "" {
-		return "\033[3m" + s + "\033[23m"
-	}
-	return s
+	if TERM == "" { return s }
+	return "\033[3m" + s + "\033[23m"
 }
 
 func TermUnderline(s string) string {
-	if TERM != "" {
-		return "\033[4m" + s + "\033[24m"
-	}
-	return s
+	if TERM == "" { return s }
+	return "\033[4m" + s + "\033[24m"
 }
 
-func fmttime(t time.Time) string {
-	ts := F(
+func fmttime(t time.Time) (ts string) {
+	ts = F(
 		"%d:%02d%02d:%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
@@ -400,22 +343,17 @@ func fmttime(t time.Time) string {
 	} else {
 		ts += "-"
 	}
-	return ts
+	return
 }
 
 func seps(i, e int) string {
 	ee := int(math.Pow(10, float64(e)))
-	if i < ee {
-		return F("%d", i%ee)
-	} else {
-		f := F("0%dd", e)
-		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
-	}
+	if i < ee { return FI(int64(i%ee), 10) }
+	f := "%0"+FI(int64(e), 10)+"d"
+	return seps(i/ee, e)+SEP+F(f , i%ee)
 }
 
 func perr(msg string) {
-	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
-		return
-	}
+	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG { return }
 	fmt.Fprint(os.Stderr, msg+NL)
 }

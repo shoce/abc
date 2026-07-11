@@ -74,8 +74,10 @@ func main() {
 
 	for {
 		Command = exec.Command(cmd, args...)
-		Command.Stdin, Command.Stdout, Command.Stderr = os.Stdin, os.Stdout, os.Stderr
-		perr("VERBOSE %s :", Command)
+		Command.Stdin = os.Stdin
+		Command.Stdout = os.Stdout
+		Command.Stderr = os.Stderr
+		perr("VERBOSE [%s]", Command)
 
 		err = Command.Run()
 		os.Stdout.Sync()
