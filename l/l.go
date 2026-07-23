@@ -182,7 +182,26 @@ func list(path string) error {
 			if err == io.EOF { break }
 			if err != nil { return err }
 			slices.SortFunc(ee, func(a, b fs.DirEntry) int {
-				return strings.Compare(a.Name(), b.Name())
+				// https://pkg.go.dev/strings#Compare
+				an, bn := a.Name(), b.Name()
+				ai, aerr := strconv.ParseInt(an, 16, 64)
+				bi, berr := strconv.ParseInt(bn, 16, 64)
+				if aerr==nil && berr==nil {
+					if ai<bi { return -1 }
+					if ai==bi { return 0 }
+					return 1
+				}
+				return strings.Compare(an, bn)
+				if len(an)!=len(bn) {
+					if len(an)<len(bn) { return -1 }
+					return 1
+				}
+				for i, _ := range an {
+					if an[i]<bn[i] { return -1 }
+					if an[i]==bn[i] { continue }
+					if an[i]>bn[i] { return 1 }
+				}
+				return 0
 			})
 			for _, e := range ee {
 				fstat, err := e.Info()
