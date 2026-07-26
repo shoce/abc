@@ -54,7 +54,7 @@ func main() {
 		}
 	}
 	if len(os.Args) < 4 || cmdbegin == 0 || cmdbegin > len(os.Args)-1 {
-		perr("USAGE envrange varname value1 value2 value3... -- command [args]")
+		perr("USAGE envrange varname value1 value2 value3 ... -- command [args...]")
 		os.Exit(1)
 	}
 	
@@ -63,9 +63,9 @@ func main() {
 	cmd := os.Args[cmdbegin]
 	args := os.Args[cmdbegin+1:]
 	perr(F("DEBUG VarName [%s]", VarName))
-	perr(F("DEBUG VarValues (%v)", VarValues))
+	perr(F("DEBUG VarValues (%s)", AtonListString(VarValues)))
 	perr(F("DEBUG cmd [%s]", cmd))
-	perr(F("DEBUG args (%v)", args))
+	perr(F("DEBUG args (%s)", AtonListString(args)))
 	
 	for _, v := range VarValues {
 		Command := exec.Command(cmd, args...)
@@ -89,5 +89,13 @@ func perr(msg string) {
 	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG { return }
 	if strings.HasPrefix(msg, "VERBOSE ") && !VERBOSE { return }
 	fmt.Fprint(os.Stderr, msg+NL)
+}
+
+func AtonListString(ss []string) string {
+        var aa []string
+        for _, s := range ss {
+                aa = append(aa, "["+s+"]")
+        }
+        return strings.Join(aa, " ")
 }
 

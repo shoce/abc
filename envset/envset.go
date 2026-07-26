@@ -61,9 +61,9 @@ func main() {
 	Vars := os.Args[1:cmdbegin-1]
 	cmd := os.Args[cmdbegin]
 	args := os.Args[cmdbegin+1:]
-	perr(F("DEBUG Vars (%v)", Vars))
+	perr(F("DEBUG Vars (%s)", AtonListString(Vars)))
 	perr(F("DEBUG cmd [%s]", cmd))
-	perr(F("DEBUG args (%v)", args))
+	perr(F("DEBUG args (%s)", AtonListString(args)))
 	
 	Command := exec.Command(cmd, args...)
 	Command.Stdin, Command.Stdout, Command.Stderr = os.Stdin, os.Stdout, os.Stderr
@@ -88,5 +88,13 @@ func perr(msg string) {
 	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG { return }
 	if strings.HasPrefix(msg, "VERBOSE ") && !VERBOSE { return }
 	fmt.Fprint(os.Stderr, msg+NL)
+}
+
+func AtonListString(ss []string) string {
+        var aa []string
+        for _, s := range ss {
+                aa = append(aa, "["+s+"]")
+        }
+        return strings.Join(aa, " ")
 }
 
