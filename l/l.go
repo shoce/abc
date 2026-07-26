@@ -184,9 +184,9 @@ func list(path string) error {
 			slices.SortFunc(ee, func(a, b fs.DirEntry) int {
 				// https://pkg.go.dev/strings#Compare
 				an, bn := a.Name(), b.Name()
-				ai, aerr := strconv.ParseInt(an, 16, 64)
-				bi, berr := strconv.ParseInt(bn, 16, 64)
-				if aerr==nil && berr==nil {
+				ai, aierr := strconv.ParseInt(an, 16, 64)
+				bi, bierr := strconv.ParseInt(bn, 16, 64)
+				if aierr==nil && bierr==nil {
 					if ai<bi { return -1 }
 					if ai==bi { return 0 }
 					return 1
