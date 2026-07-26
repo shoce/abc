@@ -84,6 +84,7 @@ type ProcessFilter struct {
 
 var (
 	VERSION string
+	PID int
 
 	BootTime time.Time
 	ClkTck   int64
@@ -95,30 +96,26 @@ var (
 
 func init() {
 	var err error
-
 	if len(os.Args) == 2 && os.Args[1] == "version" {
 		pout(VERSION+NL)
 		os.Exit(0)
 	}
-
 	if os.Getenv("DEBUG") != "" {
 		DEBUG = true
 	}
-
+	PID = os.Getpid()
 	BootTime, err = GetBootTime()
 	if err != nil {
 		perr(F("ERROR GetBootTime %v", err))
 		os.Exit(1)
 	}
 	perr(F("DEBUG BootTime <%s>", BootTime.Format("2006:0102:150405")))
-
 	ClkTck, err = GetClkTck()
 	if err != nil {
 		perr(F("ERROR GetClkTck %v", err))
 		os.Exit(1)
 	}
 	perr(F("DEBUG ClkTck <%d>", ClkTck))
-
 	PageSize = os.Getpagesize()
 	perr(F("DEBUG PageSize <%d>", PageSize))
 }
@@ -129,7 +126,6 @@ func GetClkTck() (int64, error) {
 
 func main() {
 	var err error
-
 	for _, a := range os.Args[1:] {
 		a = strings.TrimSpace(a)
 		filtertext := a
@@ -139,13 +135,11 @@ func main() {
 	if len(FF) == 0 {
 		FF = []ProcessFilter{ProcessFilter{Pid: 1}}
 	}
-
 	PP, err = GetProcesses()
 	if err != nil {
 		perr(F("ERROR GetProcesses %v", err))
 		os.Exit(1)
 	}
-
 	sort.Slice(PP, func(i, j int) bool {
 		if PP[i].Ppid < PP[j].Ppid {
 			return true
@@ -155,7 +149,6 @@ func main() {
 		}
 		return PP[i].Pid < PP[j].Pid
 	})
-
 	for i, p := range PP {
 		PP[i].Pids = []int64{p.Pid}
 		if p.Pid == p.Ppid || p.Ppid == 0 {
@@ -167,7 +160,6 @@ func main() {
 			}
 		}
 	}
-
 	sort.Slice(PP, func(i, j int) bool {
 		ml := min(len(PP[i].Pids), len(PP[j].Pids))
 		for k := 0; k < ml; k++ {
@@ -183,11 +175,9 @@ func main() {
 		}
 		return false
 	})
-
 	for _, p := range PP {
-
+		if len(FF)>0 && p.Pid==int64(PID) { continue }
 		skip := true
-
 		for _, f := range FF {
 			if f.Text != "" {
 				if strings.Contains(p.Name, f.Text) {
@@ -201,20 +191,11 @@ func main() {
 					}
 				}
 			}
-			if f.Pid > 0 {
-				if slices.Contains(p.Pids, f.Pid) {
-					skip = false
-				}
-			}
-			if !skip {
-				break
-			}
+			if f.Pid>0 && slices.Contains(p.Pids, f.Pid) { skip = false }
+			if !skip { break }
 		}
-
-		if skip {
-			continue
-		}
-
+		if skip { continue }
+		
 		pids := make([]string, 0, 12)
 		for _, pid := range p.Pids {
 			pids = append(pids, F("%d", pid))
@@ -223,7 +204,6 @@ func main() {
 			pids[i] = F("<%s>", pids[i])
 		}
 		pidss := strings.Join(pids, N)
-
 		var tags []string
 		if p.Kubepod {
 			tags = append(tags, TagKubepod)
@@ -232,7 +212,6 @@ func main() {
 			tags[i] = F("[%s]", tags[i])
 		}
 		tagss := strings.Join(tags, N)
-
 		procstatss := []string{}
 		if !BootTime.IsZero() && !p.Starttime.IsZero() {
 			procstatss = append(procstatss,
@@ -253,7 +232,6 @@ func main() {
 			)
 		}
 		procstats := strings.Join(procstatss, SP)
-
 		cmd := "[]"
 		cmdargs := make([]string, 0, len(p.Cmdline))
 		if len(p.Cmdline) > 0 {
@@ -266,7 +244,6 @@ func main() {
 				}
 			}
 		}
-
 		procinfo := pidss
 		if tagss != "" {
 			procinfo += tagss
@@ -278,7 +255,6 @@ func main() {
 		procinfo += cmd
 		procinfo += strings.Join(cmdargs, N)
 		pout(procinfo+NL)
-
 	}
 }
 
