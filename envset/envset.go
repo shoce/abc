@@ -53,36 +53,35 @@ func main() {
 			break
 		}
 	}
-	if len(os.Args) < 4 || cmdbegin == 0 || cmdbegin > len(os.Args)-1 {
-		perr("USAGE range varname value1 value2 value3... -- command [args]")
+	if len(os.Args) < 2 || cmdbegin == 0 || cmdbegin > len(os.Args)-1 {
+		perr("USAGE envset name1=value1 name2=value2 ... -- command [args]")
 		os.Exit(1)
 	}
 	
-	VarName := os.Args[1]
-	VarValues := os.Args[2:cmdbegin-1]
+	Vars := os.Args[1:cmdbegin-1]
 	cmd := os.Args[cmdbegin]
 	args := os.Args[cmdbegin+1:]
-	perr(F("DEBUG VarName [%s]", VarName))
-	perr(F("DEBUG VarValues (%v)", VarValues))
+	perr(F("DEBUG Vars (%v)", Vars))
 	perr(F("DEBUG cmd [%s]", cmd))
 	perr(F("DEBUG args (%v)", args))
 	
-	for _, v := range VarValues {
-		Command := exec.Command(cmd, args...)
-		Command.Stdin, Command.Stdout, Command.Stderr = os.Stdin, os.Stdout, os.Stderr
-		for _, e := range os.Environ() {
-			Command.Env = append(Command.Env, e)
-		}
-		Command.Env = append(Command.Env, VarName+"="+v)
-		perr(F("VERBOSE [%s][%s] [%s]", VarName, v, Command))
-		err = Command.Run()
-		os.Stderr.Sync()
-		os.Stdout.Sync()
-		if err != nil {
-			perr(F("ERROR [%s][%s] [%s] %v", VarName, v, Command, err)) 
-		}
+	Command := exec.Command(cmd, args...)
+	Command.Stdin, Command.Stdout, Command.Stderr = os.Stdin, os.Stdout, os.Stderr
+	for _, e := range os.Environ() {
+		Command.Env = append(Command.Env, e)
 	}
-
+	for _, v := range Vars {
+		vs := os.ExpandEnv(v)
+		perr(F("VERBOSE [%s]", vs))
+		Command.Env = append(Command.Env, vs)
+	}
+	err = Command.Run()
+	os.Stderr.Sync()
+	os.Stdout.Sync()
+	if err != nil {
+		perr(F("ERROR [%s] %v", Command, err)) 
+	}
+	
 }
 
 func perr(msg string) {
