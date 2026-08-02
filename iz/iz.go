@@ -1,3 +1,7 @@
+/*
+HISTORY
+26:0802 v1
+*/
 package main
 import (
 	"fmt"
@@ -45,6 +49,11 @@ func main() {
 	if len(args)==0 { args = []string{"."} }
 	var total int64
 	for _, a := range args {
+		// https://pkg.go.dev/os#Stat
+		afi, err := os.Stat(a)
+		if err==nil && afi.IsDir() && a[len(a)-1]!=filepath.Separator { 
+			a += string(filepath.Separator) 
+		}
 		asz := iz(a)
 		total += asz
 		pout(F("<%s,> [%s]\n", commas(asz), a))
