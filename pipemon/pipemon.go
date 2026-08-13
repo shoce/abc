@@ -4,9 +4,10 @@ history:
 2020-0127 ignore SIGURG
 2025-0807 seps + end of stdin
 */
-
-// GoGet GoFmt GoBuild
-
+/*
+GoGet
+GoBuild
+*/
 /*
 pipemon </dev/random >/dev/null
 pipemon </etc/passwd >/dev/null
@@ -21,22 +22,24 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
 
 const (
 	SEP = ","
-
 	NL = "\n"
-
 	CopyNBytes = 64 << 10
 )
 
 var (
-	err     error
-	t0      time.Time
+	err error
+	t0 time.Time
 	written uint64
+	
+	F = fmt.Sprintf
+	FI = strconv.FormatInt
 )
 
 func copy(ch chan error) {
@@ -51,27 +54,21 @@ func copy(ch chan error) {
 
 func main() {
 	t0 = time.Now()
-
 	var sigchan = make(chan os.Signal)
 	signal.Notify(sigchan)
-
 	var copychan = make(chan error)
 	go copy(copychan)
-
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
 			report()
 		}
 	}()
-
 	for {
 		select {
 		case s := <-sigchan:
-			if s == syscall.SIGURG {
-				continue
-			}
-			perr("signal %v", s)
+			if s == syscall.SIGURG { continue }
+			perr(F("signal %v", s))
 			report()
 			os.Exit(1)
 		case e := <-copychan:
@@ -80,7 +77,7 @@ func main() {
 				perr("end of stdin")
 				os.Exit(0)
 			} else {
-				perr("error copy %v", e)
+				perr(F("error copy %v", e))
 				report()
 				os.Exit(1)
 			}
@@ -88,29 +85,22 @@ func main() {
 	}
 }
 
-func seps(i uint64, e int) string {
-	ee := uint64(math.Pow(10, float64(e)))
-	if i < ee {
-		return fmt.Sprintf("%d", i%ee)
-	} else {
-		f := fmt.Sprintf("0%dd", e)
-		return fmt.Sprintf("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
-	}
-}
-
-func perr(msg string, args ...interface{}) {
-	msgtext := msg
-	if len(args) > 0 {
-		msgtext = fmt.Sprintf(msg, args...)
-	}
-	fmt.Fprint(os.Stderr, "pipemon "+msgtext+NL)
-}
-
 func report() {
 	dt := time.Since(t0).Seconds()
-	perr("time <%ss> written <%skb> rate <%skbps>",
-		seps(uint64(dt), 2),
-		seps(written>>10, 3),
-		seps(uint64(float64(written>>10)/dt), 3),
-	)
+	perr(F("time <%s,s> written <%s,kb> rate <%s,kbps>",
+		seps(int(dt), 2),
+		seps(int(written>>10), 3),
+		seps(int(float64(written>>10)/dt), 3),
+	))
 }
+
+func seps(i, e int) string {
+	ee := int(math.Pow(10, float64(e)))
+	if i < ee { return FI(int64(i%ee), 10) }
+	f := "%0"+FI(int64(e), 10)+"d"
+	return seps(i/ee, e)+SEP+F(f , i%ee)
+}
+
+func perr(msg string) { fmt.Fprint(os.Stderr, "pipemon "+msg+NL) }
+
+

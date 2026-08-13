@@ -4,8 +4,12 @@ history:
 20/1106 suffix every line with shortened hostname
 23/0827 github.com/shirou/gopsutil/v3
 */
-
-// GoGet GoFmt GoBuildNull GoBuild GoRun
+/*
+GoGet
+GoBuildNull
+GoBuild
+GoRun
+*/
 
 package main
 
@@ -51,6 +55,7 @@ var (
 	PrintShort bool
 	
 	F = fmt.Sprintf
+	FI = strconv.FormatInt
 	EF = fmt.Errorf
 	pout = fmt.Print
 )
@@ -113,7 +118,7 @@ func uss() (s string, err error){
 	}
 
 	if cpufreqhz > 0 {
-		cpufreq = seps(cpufreqhz/1_000_000, 3) + "mhz"
+		cpufreq = seps(int(cpufreqhz/1_000_000), 3) + "mhz"
 	}
 	if cpufreq != "" {
 		cpufreq = "<" + cpufreq + ">"
@@ -185,8 +190,8 @@ func uss() (s string, err error){
 		SPAC + "uptime<%s> read<%s> write<%s> bootid[%s]",
 		tsnow, Hostname,
 		cpugauge, cpunumber, cpufreq,
-		memgauge, seps(memsizemb, 3),
-		swapgauge, seps(swapsizemb, 3),
+		memgauge, seps(int(memsizemb), 3),
+		swapgauge, seps(int(swapsizemb), 3),
 		diskgauge, disksizegb,
 		uptimefmt,
 		fmtdursec(diskrdt/1000), fmtdursec(diskwrt/1000),
@@ -283,7 +288,7 @@ func uss() (s string, err error){
 		SPAC + "nprocs<%s> users(%s)" + 
 		NL +
 		SPAC + "listens(%s)",
-		seps(uint64(len(procs)), 3),
+		seps(len(procs), 3),
 		strings.Join(users, SP),
 		strings.Join(listens, SP),
 	)
@@ -397,23 +402,18 @@ func fmttime(t time.Time) string {
 
 func fmtdursec(t uint64) string {
 	tdays, tsecs := t/(24*3600), t%(24*3600)
-	ts := seps(tsecs, 2) + "s"
+	ts := seps(int(tsecs), 2) + "s"
 	if tdays > 0 {
-		ts = seps(tdays, 2) + "d" + SEP + ts
+		ts = seps(int(tdays), 2) + "d" + SEP + ts
 	}
 	return ts
 }
 
-func seps(i uint64, e uint64) string {
-	ee := uint64(math.Pow(10, float64(e)))
-	if i < ee {
-		return F("%d", i%ee)
-	} else {
-		f := F("0%dd", e)
-		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
-	}
+func seps(i, e int) string {
+	ee := int(math.Pow(10, float64(e)))
+	if i < ee { return FI(int64(i%ee), 10) }
+	f := "%0"+FI(int64(e), 10)+"d"
+	return seps(i/ee, e)+SEP+F(f , i%ee)
 }
 
-func perr(msg string) {
-	fmt.Fprint(os.Stderr, msg+NL)
-}
+func perr(msg string) { fmt.Fprint(os.Stderr, msg+NL) }

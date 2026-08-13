@@ -4,9 +4,8 @@ HISTORY
 026/0620 v1
 */
 /*
-GoGet 
-GoFmt 
-GoBuildNull 
+GoGet
+GoBuildNull
 GoBuild
 */
 

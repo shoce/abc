@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/ipfs/go-cid v0.6.2
 	github.com/multiformats/go-multihash v0.2.3
-	golang.org/x/exp v0.0.0-20260718201538-764159d718ef
+	golang.org/x/exp v0.0.0-20260812173653-3d80eb74bc5b
 )
 
 require (
@@ -17,7 +17,7 @@ require (
 	github.com/multiformats/go-multibase v0.3.0 // indirect
 	github.com/multiformats/go-varint v0.1.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )

@@ -16,7 +16,6 @@ ln l llr
 */
 /*
 GoGet
-GoFmt
 GoBuildNull
 GoBuild
 GoRun
@@ -35,7 +34,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
+	
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
 	slices "golang.org/x/exp/slices"
@@ -45,16 +44,16 @@ const (
 	NL  = "\n"
 	TAB = "\t"
 	SEP = ","
-
+	
 	ReadDirN = 9999
 )
 
 var (
 	VERSION string
 	DEBUG   bool
-
+	
 	TERM string
-
+	
 	Recursive   bool
 	ShowSymlink bool
 	ShowSize    bool
@@ -62,7 +61,7 @@ var (
 	ShowPerm    bool
 	ShowOwner   bool
 	ShowCid     bool
-
+	
 	F = fmt.Sprintf
 	FI = strconv.FormatInt
 	EF = fmt.Errorf
