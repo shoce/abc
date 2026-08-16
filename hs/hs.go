@@ -1,4 +1,4 @@
-// seps(
+// seps( CmdHistory :357 pout(
 /*
 HISTORY
 020/0605 v1
@@ -16,17 +16,15 @@ Oct 28 21:37:28 ci sshd[3685911]: error: session_signal_req: session signalling 
 025/0823 Status TermInverse
 026/04	cmd<TAB> and cmd arg<TAB> "autocompletion"
 026/0601	clip[]
+026/0816	save cmd history to $HOME/config/hs/$DATE-$HOST
 */
-
 /*
 GoGet
-GoFmt
 GoBuildNull
 GoBuild
 GoRun -- put a '<' <readme.text #ae:>>
 Kill GoRun
 */
-
 /*
 VARIABLES
 `host` variable is checked before every command execution: if it is empty then run locally; otherwise run via ssh.
@@ -66,12 +64,13 @@ import (
 	"os/signal"
 	"os/user"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
-
+	
 	ssh "golang.org/x/crypto/ssh"
 	proxy "golang.org/x/net/proxy"
 )
@@ -83,18 +82,16 @@ const (
 	NL  = "\n"
 	CR  = "\r"
 	SEP = ","
-
+	
 	PortDefault = "22"
-
+	
 	InReaderBufferSize = 100 * 1000
-
+	
 	CmdHostInfo = `cat /proc/sys/kernel/hostname /proc/sys/kernel/osrelease /proc/sys/kernel/arch /proc/sys/kernel/random/boot_id /proc/stat`
 	CmdPwd      = `pwd`
-
+	
 	CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | LC_ALL=C sort ; done ;`
 	CmdAllFiles    = `find "%s" -maxdepth 1 -print | LC_ALL=C sort`
-
-	CmdHistoryMax = 1111
 )
 
 type CmdHistoryRecord struct {
@@ -104,57 +101,58 @@ type CmdHistoryRecord struct {
 
 var (
 	VERSION string
-
+	
 	LogBeatTime bool
-
 	DEBUG   bool
 	VERBOSE bool
-
+	
 	TERM string
-
+	
 	PROXY       string // proxy chain separated by semicolons
 	ProxyChain  = []string{}
 	ProxyDialer proxy.Dialer
 	ProxyConn   net.Conn
-
+	
 	HOST string // host network address to run commands on: empty or localhost to run with exec() and hostname[:port] to use ssh transport
-
+	
 	SshGatherHostInfo bool
-
 	HOSTNAME string
 	BootTime int64
 	BootId   string
 	Pwd      string
 	Kernel   string
 	Arch     string
-
+	
 	AllPathCmds []string
 	AllFiles    []string
-
-	SshKeepAliveInterval time.Duration = 12 * time.Second
-
+	
+	SshKeepAliveInterval time.Duration = 11 * time.Second
+	
 	SshClientConfig *ssh.ClientConfig
 	SshConn         *ssh.Conn
 	SshClient       *ssh.Client
-
+	
 	USER string // user name
-
-	UserPass       string
-	UserKeyFile    string
-	UserKey        string
-	UserSigner     ssh.Signer
+	
+	UserPass string
+	UserKeyFile string
+	UserKey string
+	UserSigner ssh.Signer
 	UserAuthMethod ssh.AuthMethod
-
+	
 	Status string // status of the last run command
-
+	
+	CmdHistoryMax = 1111
+	CmdHistoryDir = "$HOME/config/hs"
 	CmdHistory []CmdHistoryRecord
-
+	CmdHistoryPath string
+	
 	InterruptChan chan bool
-
+	
 	ClipEnabled bool
-
+	
 	TzBiel *time.Location = time.FixedZone("Biel", 60*60)
-
+	
 	F    = fmt.Sprintf
 	EF = fmt.Errorf
 	pout = fmt.Print
@@ -165,53 +163,49 @@ func init() {
 		pout(VERSION+NL)
 		os.Exit(0)
 	}
-
 	if os.Getenv("DEBUG") != "" {
 		DEBUG = true
 	}
 	if os.Getenv("VERBOSE") != "" {
 		VERBOSE = true
 	}
-
 	if v := os.Getenv("TERM"); v != "" {
 		TERM = v
 	}
-
 	var err error
-
+	
 	PROXY = os.Getenv("proxy")
 	perr(F("VERBOSE PROXY [%s]", PROXY))
 	ProxyChain = strings.FieldsFunc(PROXY, func(c rune) bool { return c == ';' })
 	perr(F("VERBOSE ProxyChain <%d> %v", len(ProxyChain), ProxyChain))
 	ProxyDialer = proxy.Direct
-
+	
 	HOST = os.Getenv("host")
 	perr(F("VERBOSE HOST [%s]", HOST))
 	if HOST == "" {
 		perr("ERROR host env var empty")
 		os.Exit(1)
 	}
-
+	
 	USER = os.Getenv("user")
 	perr(F("VERBOSE USER [%s]", USER))
 	if USER == "" {
 		perr("ERROR user env var empty")
 		os.Exit(1)
 	}
-
 	UserPass = os.Getenv("userpass")
 	if UserPass != "" {
 		UserAuthMethod = ssh.Password(UserPass)
 	}
 	perr(F("VERBOSE UserPass [%s]", UserPass))
-
+	
 	if os.Getenv("home") == "" {
 		err = os.Setenv("home", os.Getenv("HOME"))
 		if err != nil {
 			perr(F("WARNING Setenv home %v", err))
 		}
 	}
-
+	
 	UserKeyFile = os.ExpandEnv(os.Getenv("userkeyfile"))
 	if UserKeyFile != "" {
 		userkeybb, err := ioutil.ReadFile(UserKeyFile)
@@ -221,11 +215,10 @@ func init() {
 		}
 		UserKey = string(userkeybb)
 	}
-
+	
 	if v := os.Getenv("userkey"); v != "" {
 		UserKey = v
 	}
-
 	if UserKey != "" {
 		UserSigner, err = ssh.ParsePrivateKey([]byte(UserKey))
 		if err != nil {
@@ -235,12 +228,12 @@ func init() {
 		UserAuthMethod = ssh.PublicKeys(UserSigner)
 	}
 	perr(F("VERBOSE UserKey [%s]", UserKey))
-
+	
 	if UserAuthMethod == nil {
 		perr("ERROR no user auth method provided; no password and no user key")
 		os.Exit(1)
 	}
-
+	
 	SshClientConfig = &ssh.ClientConfig{
 		User:    USER,
 		Auth:    []ssh.AuthMethod{UserAuthMethod},
@@ -261,12 +254,11 @@ func init() {
 			return nil
 		},
 	}
-
 }
 
 func main() {
 	var err error
-
+	
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGHUP)
 	go func() {
@@ -286,7 +278,7 @@ func main() {
 			}
 		}
 	}()
-
+	
 	args := os.Args[1:]
 	if len(args) > 0 {
 		if args[0] == "--" {
@@ -296,13 +288,13 @@ func main() {
 			os.Exit(1)
 		}
 	}
-
-	if HOST != "" && len(args) == 0 {
+	
+	if HOST!="" && len(args)==0 {
 		SshGatherHostInfo = true
 	}
-
-	if HOST == "" {
-
+	
+	if HOST=="" {
+		
 		HOSTNAME, err = os.Hostname()
 		if err != nil {
 			perr(F("ERROR Hostname %v", err))
@@ -310,15 +302,15 @@ func main() {
 		}
 		//Hostname = strings.TrimSuffix(Hostname, ".local")
 		//perr(F("Hostname [%s]", Hostname))
-
+		
 		u, err := user.Current()
 		if err != nil {
 			perr(F("WARNING user.Current %v", err))
 		}
 		USER = u.Username
-
+		
 	} else {
-
+		
 		if len(ProxyChain) > 0 {
 			for _, p := range ProxyChain {
 				proxyurl, err := url.Parse(p)
@@ -334,7 +326,7 @@ func main() {
 				ProxyDialer = pd
 			}
 		}
-
+		
 		var addrerr *net.AddrError
 		if _, _, err := net.SplitHostPort(HOST); err != nil {
 			if errors.As(err, &addrerr) && addrerr.Err == "missing port in address" {
@@ -352,7 +344,7 @@ func main() {
 				os.Exit(1)
 			}
 		}
-
+		
 		perr(F("DEBUG HOST [%s]", HOST))
 		err = connectssh()
 		if err != nil {
@@ -362,9 +354,19 @@ func main() {
 			defer SshClient.Close()
 		}
 	}
-
+	
+	CmdHistoryDir = os.ExpandEnv(CmdHistoryDir)
+	err = os.MkdirAll(CmdHistoryDir, 0700)
+	if err != nil {
+		perr(F("WARNING MkdirAll [%s] %v", CmdHistoryDir, err))
+	}
+	CmdHistoryPath = fmttime(time.Now())+HOST
+	CmdHistoryPath = filepath.Join(CmdHistoryDir, CmdHistoryPath)
+	perr(F("CmdHistoryPath [%s]", CmdHistoryPath))
+	CmdHistoryAppend(F("user [%s]", USER))
+	
 	inreader := bufio.NewReaderSize(os.Stdin, InReaderBufferSize)
-
+	
 	var readcmdstdin bool
 	readcmdstdin = false
 	if len(args) > 0 {
@@ -374,11 +376,11 @@ func main() {
 			readcmdstdin = true
 		}
 		cmds := strings.Join(cmd, SP)
-
+		
 		if readcmdstdin {
 			perr(F("host=%s user=%s hs -- %s %s", HOST, USER, cmds, TermUnderline("stdin:")))
 		}
-
+		
 		Status, err = run(cmds, cmd, inreader)
 		if err != nil {
 			perr(F("host=%s user=%s hs -- %s %s %v", HOST, USER, cmds, TermInverse("ERROR"), err))
@@ -389,11 +391,11 @@ func main() {
 		}
 		os.Exit(0)
 	}
-
+	
 	var stdinbb []byte
 	for {
 		logstatus()
-
+		
 		cmds, err := inreader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -403,10 +405,10 @@ func main() {
 			perr(F("WARNING ReadString %v", err))
 			continue
 		}
-
+		
 		cmds = strings.TrimSuffix(cmds, NL)
 		perr(F("DEBUG cmds [%s]", cmds))
-
+		
 		if strings.HasSuffix(cmds, TAB) {
 			perr(strings.ReplaceAll(cmds, TAB, `\t`))
 			// https://pkg.go.dev/strings#TrimPrefix
@@ -447,30 +449,35 @@ func main() {
 			}
 			continue
 		}
-
+		
 		switch cmds {
-
+		
 		case ":q":
 			os.Exit(0)
-
+			
+		case ":t":
+			tnow := time.Now()
+			pout(fmttime(tnow)+NL)
+			continue
+			
 		case ":p":
 			tnow := time.Now()
 			for _, ic := range CmdHistory[max(len(CmdHistory)-11, 0):] {
-				pout("%s"+NL+TAB+"<%s> ago", ic.Cmds, fmtdur(tnow.Sub(ic.Timestamp)))
+				pout(F("<%s>"+TAB+"<%s>ago"+TAB+"%s", fmttime(ic.Timestamp), fmtdur(tnow.Sub(ic.Timestamp)), ic.Cmds)+NL)
 			}
 			continue
-
+			
 		case ":pp":
 			tnow := time.Now()
 			for _, ic := range CmdHistory {
-				pout("%s"+NL+TAB+"<%s> ago", ic.Cmds, fmtdur(tnow.Sub(ic.Timestamp)))
+				pout(F("<%s>"+TAB+"<%s>ago"+TAB+"%s", fmttime(ic.Timestamp), fmtdur(tnow.Sub(ic.Timestamp)), ic.Cmds)+NL)
 			}
 			continue
-
+			
 		case ":pwd":
-			pout(Pwd)
+			pout(Pwd+NL)
 			continue
-
+			
 		case ":pb":
 			if clip, err := ClipGet(); err != nil {
 				perr(F("%v", err))
@@ -478,25 +485,25 @@ func main() {
 				pout("[" + clip + "]" + NL)
 			}
 			continue
-
+			
 		case ":clip":
 			ClipEnabled = !ClipEnabled
 			perr(F("ClibEnabled <%t>", ClipEnabled))
 			continue
-
+			
 		//cmds = strings.TrimSpace(cmds)
 		case "":
 			continue
-
+			
 		}
-
+		
 		cmd := strings.Split(cmds, SP)
 		if len(cmd) > 0 && cmd[len(cmd)-1] == "<" {
 			cmd = cmd[:len(cmd)-1]
 			cmds = strings.Join(cmd, SP)
 			readcmdstdin = true
 		}
-
+		
 		stdinbb = nil
 		if readcmdstdin {
 			perr(F("host=%s user=%s hs -- %s %s", HOST, USER, cmds, TermUnderline("stdin:")))
@@ -507,7 +514,7 @@ func main() {
 				continue
 			}
 		}
-
+		
 		Status, err = run(cmds, cmd, bytes.NewBuffer(stdinbb))
 		if err != nil {
 			perr(F("host=%s user=%s hs -- %s %s %v", HOST, USER, cmds, TermInverse("ERROR"), err))
@@ -1027,21 +1034,27 @@ func runlocal(cmds string, cmd []string, stdin io.Reader) (status string, err er
 }
 
 func run(cmds string, cmd []string, stdin io.Reader) (status string, err error) {
-	if cmds == "" && len(cmd) == 0 {
-		return "", EF("cmds and cmd empty")
-	}
-
-	CmdHistory = append(CmdHistory, CmdHistoryRecord{time.Now(), cmds})
-	if len(CmdHistory) > CmdHistoryMax {
-		CmdHistory = CmdHistory[len(CmdHistory)-CmdHistoryMax:]
-	}
+	if cmds == "" && len(cmd) == 0 { return "", EF("cmds and cmd empty") }
+	CmdHistoryAppend(cmds)
 	//fmt.Fprint(os.Stderr, NL)
 	perr(TermUnderline(F("host=%s user=%s hs -- %s", HOST, USER, cmds)))
-
 	if HOST == "" {
 		return runlocal(cmds, cmd, stdin)
 	} else {
 		return runssh(cmds, cmd, stdin)
 	}
+}
+
+func CmdHistoryAppend(cmds string) {
+	tnow := time.Now()
+	CmdHistory = append(CmdHistory, CmdHistoryRecord{tnow, cmds})
+	if len(CmdHistory) > CmdHistoryMax {
+		CmdHistory = CmdHistory[len(CmdHistory)-CmdHistoryMax:]
+	}
+	f, err := os.OpenFile(CmdHistoryPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	if err != nil { perr(F("WARNING OpenFile [%s] %v", CmdHistoryPath, err)) }
+	_, err = f.WriteString("<"+fmttime(tnow)+">"+TAB+cmds+NL)
+	if err != nil { perr(F("WARNING WriteString %v", err)) }
+	f.Close()
 }
 
