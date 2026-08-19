@@ -3,28 +3,28 @@ HISTORY
 26/0330@thailand v1
 026/0519 func args()
 */
-
-// GoGet GoFmt GoBuildNull
-// GoBuild GoRun
-
+/*
+GoGet
+GoBuildNull
+GoBuild
+GoRun
+*/
 package main
-
 import (
 	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
 	"os"
 	"strings"
 	"time"
-
 	"golang.org/x/exp/slices"
 )
-
 const (
 	N   = ""
 	SP  = " "
@@ -32,46 +32,37 @@ const (
 	NL  = "\n"
 	SEP = ","
 )
-
 var (
 	VERSION string
 	USAGE   string = `USAGE
 hx get scheme://host:port/path/subpath header1:v1 header2:v2 arg1=val1 arg2=val2
 `
 	DEBUG bool
-
+	
 	USERAGENT = "hx/1.0"
-
 	PrintHeaders bool
-
 	// TODO basicauth
 	User string
 	Pass string
-
 	// TODO timeout
 	Timeout time.Duration
-
 	Insecure bool
-
+	
 	F = fmt.Sprintf
 	EF = fmt.Errorf
 	pout = fmt.Print
 )
 
 func init() {
-
 	if os.Getenv("DEBUG") != "" {
 		DEBUG = true
 	}
-
 	if os.Getenv("hh") != "" {
 		PrintHeaders = true
 	}
-
 	if os.Getenv("insecure") != "" {
 		Insecure = true
 	}
-
 }
 
 func argss() (args []string) {
@@ -230,16 +221,38 @@ func main() {
 		TLSHandshakeStart: func() {
 		},
 		TLSHandshakeDone: func(htlsconnstate tls.ConnectionState, err error) {
-			perr(F("DEBUG tls connection state %#v", htlsconnstate))
+			// https://pkg.go.dev/crypto/tls#ConnectionState
+			//perr(F("DEBUG tls %#v", htlsconnstate))
+			var tlsver string
+			switch htlsconnstate.Version {
+			case tls.VersionTLS10: tlsver="1.0"
+			case tls.VersionTLS11: tlsver="1.1"
+			case tls.VersionTLS12: tlsver="1.2"
+			case tls.VersionTLS13: tlsver="1.3"
+			}
+			perr(F(
+				"DEBUG tls Version [%s] ServerName [%s] NegotiatedProtoco [%s]",
+				tlsver, htlsconnstate.ServerName, htlsconnstate.NegotiatedProtocol,
+			))
 			for _, pc := range htlsconnstate.PeerCertificates {
 				perr(F(
-					"DEBUG tls connection peer certificate Issuer [%v] Subject [%v] NotBefore <%s> NotAfter <%s> KeyUsage [%v]",
-					pc.Issuer, pc.Subject, fmttime(pc.NotBefore), fmttime(pc.NotAfter), pc.KeyUsage,
+					"DEBUG tls cert Issuer [%v] Subject [%v] KeyUsage [%v]",
+					pc.Issuer, pc.Subject, pc.KeyUsage,
 				))
 				perr(F(
-					"DEBUG tls connection peer certificate PermittedDNSDomains (%v) PermittedIPRanges (%v) PermittedEmailAddresses (%v) PermittedURIDomains (%v)",
+					"DEBUG tls cert NotBefore <%s> NotAfter <%s> ",
+					fmttime(pc.NotBefore), fmttime(pc.NotAfter),
+				))
+				perr(F(
+					"DEBUG tls cert DNSNames (%s) EmailAddresses (%s) IPAddresses (%s) URIs (%s)",
+					AtonListStrings(pc.DNSNames), AtonListStrings(pc.EmailAddresses), AtonListIPs(pc.IPAddresses), AtonListURLs(pc.URIs),
+				))
+				/*
+				perr(F(
+					"DEBUG tls cert PermittedDNSDomains (%v) PermittedIPRanges (%v) PermittedEmailAddresses (%v) PermittedURIDomains (%v)",
 					pc.PermittedDNSDomains, pc.PermittedIPRanges, pc.PermittedEmailAddresses, pc.PermittedURIDomains,
 				))
+				*/
 			}
 		},
 		GotFirstResponseByte: func() {},
@@ -341,9 +354,7 @@ func fmtdur(t uint64) string {
 }
 
 func perr(msg string) {
-	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG {
-		return
-	}
+	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG { return }
 	fmt.Fprint(os.Stderr, msg+NL)
 }
 
@@ -356,3 +367,22 @@ func seps(i uint64, e uint64) string {
 		return F("%s"+SEP+"%"+f, seps(i/ee, e), i%ee)
 	}
 }
+
+func AtonListStrings(ss []string) string {
+	if len(ss)==0 { return "" }
+	return "[" + strings.Join(ss, "] [") + "]"
+}
+func AtonListIPs(pp []net.IP) string {
+	if len(pp)==0 { return "" }
+	var ss []string
+	for _, p := range pp { ss = append(ss, string(p)) }
+	return "[" + strings.Join(ss, "] [") + "]"
+}
+func AtonListURLs(pp []*url.URL) string {
+	if len(pp)==0 { return "" }
+	var ss []string
+	for _, p := range pp { ss = append(ss, p.String()) }
+	return "[" + strings.Join(ss, "] [") + "]"
+}
+
+
