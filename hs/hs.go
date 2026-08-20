@@ -1,22 +1,23 @@
 // seps( CmdHistory :357 pout( :271 SshCancel :778
 /*
 HISTORY
-020/0605 v1
-020/1016 repl
-020/302 2020/10/28 stdin reading support
-020/302 interrupt signal (ctrl+c) catching so only child processes get it
-still not working with root sessions:
-Oct 28 21:37:28 ci sshd[3685911]: error: session_signal_req: session signalling requires privilege separation
-020/357 UserKeyFile support
-021/0502 InReaderBufferSize
-021/1117 SILENT
-023/0827 VERBOSE
-023/0827 keepalive
-025/0108 sighup
-025/0823 Status TermInverse
+020/0605	v1
+020/1016	repl
+020/302	2020/10/28 stdin reading support
+020/302	interrupt signal (ctrl+c) catching so only child processes get it
+	still not working with root sessions:
+	Oct 28 21:37:28 ci sshd[3685911]: error: session_signal_req: session signalling requires privilege separation
+020/357	UserKeyFile support
+021/0502	InReaderBufferSize
+021/1117	SILENT
+023/0827	VERBOSE
+023/0827	keepalive
+025/0108	sighup
+025/0823	Status TermInverse
 026/04	cmd<TAB> and cmd arg<TAB> "autocompletion"
 026/0601	clip[]
 026/0816	save cmd history to $HOME/config/hs/$DATE-$HOST
+026/0821	interrupt signal
 */
 /*
 GoGet
