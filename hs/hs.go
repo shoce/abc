@@ -714,6 +714,7 @@ func sshkeepalive(cl *ssh.Client, conn net.Conn, ctx context.Context) (err error
 }
 
 func sshrun(cmds string, cmd []string, stdin io.Reader) (status string, err error) {
+	SshErr = nil
 	if SshClient == nil {
 		err = sshconnect()
 		if err != nil { return "", err }
@@ -771,16 +772,14 @@ func sshrun(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	copyerrnotify := make(chan error)
 	go copynotify(os.Stderr, stderrpipe, copyerrnotify)
 	
+	defer func() { SshCtxCancel = SshCtxCancelDef }()
+	SshCtx, SshCtxCancel = context.WithCancel(context.Background())
 	err = session.Start(cmds)
 	if err != nil {
 		perr(F("ERROR Start %v", err))
 		return "", err
 	}
-	SshCtx, SshCtxCancel = context.WithCancel(context.Background())
-	defer func(ctxcancel func()) {
-		ctxcancel()
-		SshCtxCancel = SshCtxCancelDef
-	}(SshCtxCancel)
+	defer func(ctxcancel func()) { ctxcancel() }(SshCtxCancel)
 	go sshkeepalive(SshClient, ProxyConn, SshCtx)
 	go func(ctx context.Context) {
 		<-ctx.Done() //ae:>
@@ -788,7 +787,7 @@ func sshrun(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 		// https://pkg.go.dev/golang.org/x/crypto/ssh
 		err = session.Signal(ssh.SIGINT)
 		if err == io.EOF {
-			perr(F("WARNING session Signal [SIGINT] EOF"))
+			//perr(F("WARNING session Signal [SIGINT] EOF"))
 		} else if err != nil {
 			perr(F("WARNING session Signal [SIGINT] %v", err))
 		} else {
@@ -806,6 +805,11 @@ func sshrun(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 	}(SshCtx)
 	go func() {
 		SshErr = session.Wait()
+		SshCtxCancel()
+		err = <-copyoutnotify
+		if err != nil { perr(F("(%s) ERROR out copy %v", cmds, err)) }
+		err = <-copyerrnotify
+		if err != nil { perr(F("(%s) ERROR err copy %v", cmds, err)) }
 	}()
 	<-SshCtx.Done()
 	if SshErr != nil {
@@ -820,13 +824,8 @@ func sshrun(cmds string, cmd []string, stdin io.Reader) (status string, err erro
 			}
 		default:
 			perr(F("ERROR Wait %v", SshErr))
-			SshCtxCancel()
 		}
 	}
-	err = <-copyoutnotify
-	if err != nil { perr(F("(%s) ERROR out copy %v", cmds, err)) }
-	err = <-copyerrnotify
-	if err != nil { perr(F("(%s) ERROR err copy %v", cmds, err)) }
 	return status, nil
 }
 
