@@ -202,9 +202,24 @@ func main() {
 	// https://pkg.go.dev/net/http/httptrace#ClientTrace
 	htrace := &httptrace.ClientTrace{
 		DNSStart:     func(info httptrace.DNSStartInfo) {},
-		DNSDone:      func(info httptrace.DNSDoneInfo) {},
-		ConnectStart: func(network, addr string) {},
-		GotConn:      func(info httptrace.GotConnInfo) {},
+		DNSDone:      func(info httptrace.DNSDoneInfo) {
+			perr(F(
+				"DEBUG dns err [%v] addrs(%s)",
+				info.Err, AtonListIPAddrs(info.Addrs),
+			))
+		},
+		ConnectStart: func(network, addr string) {
+			perr(F(
+				"DEBUG conn network [%s] addr [%s]",
+				network, addr,
+			))
+		},
+		GotConn: func(info httptrace.GotConnInfo) {
+			perr(F(
+				"DEBUG conn local [%s] remote [%s]",
+				info.Conn.LocalAddr(), info.Conn.RemoteAddr(),
+			))
+		},
 		TLSHandshakeStart: func() {},
 		TLSHandshakeDone: func(htlsconnstate tls.ConnectionState, err error) {
 			// https://pkg.go.dev/crypto/tls#ConnectionState
@@ -365,6 +380,12 @@ func AtonListIPs(pp []net.IP) string {
 	if len(pp)==0 { return "" }
 	var ss []string
 	for _, p := range pp { ss = append(ss, string(p)) }
+	return "[" + strings.Join(ss, "] [") + "]"
+}
+func AtonListIPAddrs(pp []net.IPAddr) string {
+	if len(pp)==0 { return "" }
+	var ss []string
+	for _, p := range pp { ss = append(ss, p.String()) }
 	return "[" + strings.Join(ss, "] [") + "]"
 }
 func AtonListURLs(pp []*url.URL) string {
