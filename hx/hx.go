@@ -1,3 +1,4 @@
+// :218
 /*
 HISTORY
 26/0330@thailand v1
@@ -21,6 +22,7 @@ import (
 	"net/http/httptrace"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"golang.org/x/exp/slices"
@@ -36,6 +38,10 @@ var (
 	VERSION string
 	USAGE   string = `USAGE
 hx get scheme://host:port/path/subpath header1:v1 header2:v2 arg1=val1 arg2=val2
+	env vars
+		DEBUG default <false> print debug messages
+		hh default <false> print headers received from server
+		insecure default <false> skip server tls certificate verification
 `
 	DEBUG bool
 	
@@ -54,15 +60,9 @@ hx get scheme://host:port/path/subpath header1:v1 header2:v2 arg1=val1 arg2=val2
 )
 
 func init() {
-	if os.Getenv("DEBUG") != "" {
-		DEBUG = true
-	}
-	if os.Getenv("hh") != "" {
-		PrintHeaders = true
-	}
-	if os.Getenv("insecure") != "" {
-		Insecure = true
-	}
+	if os.Getenv("DEBUG") != "" { DEBUG = true }
+	if os.Getenv("hh") != "" { PrintHeaders = true }
+	if os.Getenv("insecure") != "" { Insecure = true }
 }
 
 func argss() (args []string) {
@@ -102,23 +102,19 @@ func main() {
 	}
 	args = args[:n]
 	perr(F("DEBUG n <%d> args %#v", n, args))
-
 	if len(args) == 1 && args[0] == "version" {
 		pout(VERSION + NL)
 		os.Exit(0)
 	}
-
 	if len(args) == 1 && slices.Contains([]string{"help", "usage"}, args[0]) {
 		pout(USAGE + NL)
 		os.Exit(0)
 	}
-
 	if len(args) < 1 {
 		perr("ERROR not enough arguments")
 		perr(USAGE + NL)
 		os.Exit(1)
 	}
-
 	// https://pkg.go.dev/net/http
 	var hmethod string
 	switch strings.ToLower(args[0]) {
@@ -139,7 +135,6 @@ func main() {
 		perr(F("ERROR invalid method [%s]", args[0]))
 		os.Exit(1)
 	}
-
 	if len(args) < 2 {
 		perr("ERROR not enough arguments")
 		perr(USAGE + NL)
@@ -152,22 +147,16 @@ func main() {
 		perr(F("ERROR invalid url [%s]", args[1]))
 		os.Exit(1)
 	}
-
 	perr(F("DEBUG hurl %#v", hurl))
-
-	if hurl.Scheme == "" {
-		hurl.Scheme = "http"
-	}
-
+	if hurl.Scheme == "" { hurl.Scheme = "http" }
 	hquery := hurl.Query()
 	if err != nil {
 		perr(F("ERROR invalid url [%s] query part", hurl))
 		os.Exit(1)
 	}
-
 	// https://pkg.go.dev/net/http#Header
 	hheader := make(http.Header)
-
+	
 	for _, a := range args[2:] {
 		// https://pkg.go.dev/strings#SplitN
 		iheader := strings.Index(a, ":")
@@ -188,7 +177,6 @@ func main() {
 	}
 
 	hurl.RawQuery = hquery.Encode()
-
 	perr(F("DEBUG hmethod [%s]", hmethod))
 	hheaderss := make([]string, 0)
 	// https://pkg.go.dev/http#Request.Header
@@ -198,9 +186,7 @@ func main() {
 		}
 	}
 	slices.SortFunc(hheaderss, strings.Compare)
-	for _, h := range hheaderss {
-		perr(F("DEBUG hheader %s", h))
-	}
+	for _, h := range hheaderss { perr(F("DEBUG hheader %s", h)) }
 	perr(F("DEBUG hurl %#v", hurl))
 
 	// https://pkg.go.dev/http#Client
@@ -213,26 +199,29 @@ func main() {
 		}
 	}
 
+	// https://pkg.go.dev/net/http/httptrace#ClientTrace
 	htrace := &httptrace.ClientTrace{
 		DNSStart:     func(info httptrace.DNSStartInfo) {},
 		DNSDone:      func(info httptrace.DNSDoneInfo) {},
 		ConnectStart: func(network, addr string) {},
 		GotConn:      func(info httptrace.GotConnInfo) {},
-		TLSHandshakeStart: func() {
-		},
+		TLSHandshakeStart: func() {},
 		TLSHandshakeDone: func(htlsconnstate tls.ConnectionState, err error) {
 			// https://pkg.go.dev/crypto/tls#ConnectionState
 			//perr(F("DEBUG tls %#v", htlsconnstate))
-			var tlsver string
-			switch htlsconnstate.Version {
-			case tls.VersionTLS10: tlsver="1.0"
-			case tls.VersionTLS11: tlsver="1.1"
-			case tls.VersionTLS12: tlsver="1.2"
-			case tls.VersionTLS13: tlsver="1.3"
+			tlsver := func (v uint64) (ver string) {
+				switch v {
+				case tls.VersionTLS10: ver = "1.0"
+				case tls.VersionTLS11: ver = "1.1"
+				case tls.VersionTLS12: ver = "1.2"
+				case tls.VersionTLS13: ver = "1.3"
+				default: ver = strconv.FormatUint(v, 10)
+				}
+				return ver
 			}
 			perr(F(
-				"DEBUG tls Version [%s] ServerName [%s] NegotiatedProtoco [%s]",
-				tlsver, htlsconnstate.ServerName, htlsconnstate.NegotiatedProtocol,
+				"DEBUG tls Version [%s] ServerName [%s] NegotiatedProtocol [%s]",
+				tlsver(uint64(htlsconnstate.Version)), htlsconnstate.ServerName, htlsconnstate.NegotiatedProtocol,
 			))
 			for _, pc := range htlsconnstate.PeerCertificates {
 				perr(F(
@@ -339,8 +328,8 @@ func main() {
 
 func fmttime(t time.Time) string {
 	return F(
-		"%d:%02d%02d:%02d%02d",
-		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
+		":%d:%02d%02d:%02d%02d",
+		t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
 }
 
