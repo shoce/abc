@@ -56,8 +56,8 @@ func main() {
 		}
 		asz := iz(a)
 		total += asz
-		pout(F("<%s,> [%s]\n", commas(asz), a))
+		pout(F("<%s,> [%s]", commas(asz), a)+NL)
 	}
-	pout(F("<%s,> total\n", commas(total)))
+	pout(F("<%s,> total", commas(total))+NL)
 }
 

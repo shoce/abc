@@ -13,6 +13,8 @@ ln l ll
 ln l lr
 ln l lsr
 ln l llr
+ln l lq
+ln l lsq
 */
 /*
 GoGet
@@ -54,6 +56,7 @@ var (
 	
 	TERM string
 	
+	Qompact bool
 	Recursive   bool
 	ShowSymlink bool
 	ShowSize    bool
@@ -70,7 +73,12 @@ var (
 
 func printinfo(path string, info os.FileInfo) (err error) {
 	if path=="" { return EF("path string empty") }
-	s := path
+	var s string
+	if Qompact {
+		s = filepath.Base(path)
+	} else {
+		s = path
+	}
 	s = strings.ReplaceAll(s, TAB, "\\\t")
 	var finfo os.FileInfo = info
 	if finfo.Mode().IsDir() && s[len(s)-1]!=os.PathSeparator {
@@ -115,7 +123,7 @@ func printinfo(path string, info os.FileInfo) (err error) {
 		}
 		s += TAB + F("uid<%s> gid<%s>", fstatuid, fstatgid)
 	}
-	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink == 0) {
+	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink==0) {
 		f, err := os.Open(path)
 		if err != nil {
 			perr(F("ERROR %v", err))
@@ -130,16 +138,20 @@ func printinfo(path string, info os.FileInfo) (err error) {
 		c := cid.NewCidV1(cid.Raw, fmh)
 		s += TAB + F("cid[%s]", c)
 	}
-	pout(s+NL)
+	if Qompact {
+		pout("["+s+"]"+TAB)
+	} else {
+		pout(s+NL)
+	}
 	return nil
 }
 
 func fls(path string, info os.FileInfo, err error) error {
-	if err != nil {
+	if err!=nil {
 		perr(F("ERROR %v", err))
 		return err
 	}
-	if err2 := printinfo(path, info); err2 != nil {
+	if err2:=printinfo(path, info); err2!=nil {
 		perr(F("ERROR %v", err2))
 		return err2
 	}
@@ -211,27 +223,26 @@ func list(path string) error {
 		}
 	} else {
 		err = printinfo(path, pathstat)
-		if err != nil { return err }
+		if err!=nil { return err }
+	}
+	if Qompact {
+		pout(NL)
 	}
 	return nil
 }
 
 func init() {
-	if len(os.Args) == 2 && os.Args[1] == "-version" {
-		pout(VERSION + NL)
+	if len(os.Args)==2 && os.Args[1]=="-version" {
+		pout(VERSION+NL)
 		os.Exit(0)
 	}
-	if v := os.Getenv("DEBUG"); v != "" {
-		DEBUG = true
-	}
-	if v := os.Getenv("TERM"); v != "" {
-		TERM = v
-	}
+	if v:=os.Getenv("DEBUG"); v!="" { DEBUG=true }
+	if v:=os.Getenv("TERM"); v!="" { TERM=v }
 }
 
 func main() {
 	var err error
-
+	
 	cmdname := filepath.Base(os.Args[0])
 	perr(F("DEBUG cmd name [%s]", cmdname))
 	switch cmdname {
@@ -262,11 +273,17 @@ func main() {
 		ShowPerm = true
 		ShowOwner = true
 		//ShowCid = true
+	case "lq":
+		Qompact = true
+	case "lsq":
+		Qompact = true
+		ShowSymlink = true
+		ShowSize = true
 	default:
 		perr(F("ERROR invalid cmd name [%s]", cmdname))
 		os.Exit(1)
 	}
-
+	
 	args := os.Args[1:]
 	perr(F("DEBUG args %#v", args))
 	var n int
@@ -310,6 +327,8 @@ func main() {
 			ShowPerm = false
 			ShowOwner = false
 			ShowCid = false
+		case "-q", "-qompact":
+			Qompact = true
 		default:
 			perr(F("ERROR invalid option [%s]", a))
 			os.Exit(1)
@@ -317,7 +336,7 @@ func main() {
 		n++
 	}
 	perr(F("DEBUG n <%d> args %#v", n, args))
-
+	
 	var paths []string
 	if n <= len(args) {
 		paths = args[n:]
@@ -336,17 +355,17 @@ func main() {
 }
 
 func TermBold(s string) string {
-	if TERM == "" { return s }
+	if TERM=="" { return s }
 	return "\033[1m" + s + "\033[0m"
 }
 
 func TermItalic(s string) string {
-	if TERM == "" { return s }
+	if TERM=="" { return s }
 	return "\033[3m" + s + "\033[23m"
 }
 
 func TermUnderline(s string) string {
-	if TERM == "" { return s }
+	if TERM=="" { return s }
 	return "\033[4m" + s + "\033[24m"
 }
 
@@ -375,3 +394,5 @@ func perr(msg string) {
 	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG { return }
 	fmt.Fprint(os.Stderr, msg+NL)
 }
+
+
