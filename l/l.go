@@ -139,7 +139,7 @@ func printinfo(path string, info os.FileInfo) (err error) {
 		s += TAB + F("cid[%s]", c)
 	}
 	if Qompact {
-		pout("["+s+"]"+TAB)
+		pout("["+s+"]"+TAB+TAB)
 	} else {
 		pout(s+NL)
 	}
