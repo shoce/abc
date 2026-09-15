@@ -92,20 +92,17 @@ func printinfo(path string, info os.FileInfo) (err error) {
 	}
 	if ShowSymlink && (finfo.Mode()&os.ModeSymlink) != 0 {
 		finfo, err = os.Lstat(path)
-		if err != nil { return err }
+		if err!=nil { return err }
 		var linkpath string
 		linkpath, err = os.Readlink(path)
-		if err != nil { return err }
+		if err!=nil { return err }
 		s += TAB + F("symlink[%s]", linkpath)
 	}
-	if ShowSize && !finfo.Mode().IsDir() && (info.Mode()&os.ModeSymlink == 0) {
+	if ShowSize && !finfo.Mode().IsDir() {
 		s += TAB + F("size<%s>", seps(int(finfo.Size()), 3))
 	}
 	if ShowSize && finfo.Mode().IsDir() {
 		s += TAB + "size<dir>"
-	}
-	if ShowSize && (info.Mode()&os.ModeSymlink != 0) {
-		s += TAB + "size<symlink>"
 	}
 	if ShowTime {
 		s += TAB + "mtime<" + fmttime(finfo.ModTime()) + ">"
@@ -324,6 +321,7 @@ func main() {
 		case "-r", "-recursive":
 			Recursive = true
 		case "-s", "-size":
+			ShowSymlink = true
 			ShowSize = true
 		case "-t", "-time":
 			ShowTime = true
@@ -333,6 +331,7 @@ func main() {
 		case "-o", "-owner":
 			ShowOwner = true
 		case "-l", "-long":
+			ShowSymlink = true
 			ShowSize = true
 			ShowTime = true
 			ShowPerm = true
