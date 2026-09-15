@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	
 	sysconf "github.com/tklauser/go-sysconf"
 )
 
@@ -37,13 +37,13 @@ const (
 	NL  = "\n"
 	SEP = ","
 	N   = ""
-
+	
 	TagKubepod = "kubepod"
 )
 
 var (
 	DEBUG bool
-
+	
 	F = fmt.Sprintf
 	EF = fmt.Errorf
 	pout = fmt.Print
@@ -57,22 +57,22 @@ type Process struct {
 	Sid   int64   // session id
 	TtyNr int     // controlling tty number
 	Tpgid int
-
+	
 	State   rune     // process state
 	Name    string   // process name
 	Cmdline []string // command line
-
+	
 	utimeticks     uint64 // user cpu time in cpu ticks
 	stimeticks     uint64 // system cpu time in cpu ticks
 	starttimeticks uint64 // start time in cpu ticks
-
+	
 	Utime     time.Duration // user cpu time
 	Stime     time.Duration // system cpu time
 	Starttime time.Time     // start time
-
+	
 	Vsize int64 // virtual size
 	Rss   int64 // resident set size
-
+	
 	Cgroup  string // cgroup
 	Kubepod bool
 }
@@ -85,11 +85,11 @@ type ProcessFilter struct {
 var (
 	VERSION string
 	PID int
-
+	
 	BootTime time.Time
 	ClkTck   int64
 	PageSize int
-
+	
 	PP []Process
 	FF []ProcessFilter
 )
@@ -100,9 +100,7 @@ func init() {
 		pout(VERSION+NL)
 		os.Exit(0)
 	}
-	if os.Getenv("DEBUG") != "" {
-		DEBUG = true
-	}
+	if os.Getenv("DEBUG") != "" { DEBUG = true }
 	PID = os.Getpid()
 	BootTime, err = GetBootTime()
 	if err != nil {
@@ -132,28 +130,22 @@ func main() {
 		filterpid, _ := strconv.Atoi(a)
 		FF = append(FF, ProcessFilter{Pid: int64(filterpid), Text: filtertext})
 	}
-	if len(FF) == 0 {
+	if len(FF)==0 {
 		FF = []ProcessFilter{ProcessFilter{Pid: 1}}
 	}
 	PP, err = GetProcesses()
-	if err != nil {
+	if err!=nil {
 		perr(F("ERROR GetProcesses %v", err))
 		os.Exit(1)
 	}
 	sort.Slice(PP, func(i, j int) bool {
-		if PP[i].Ppid < PP[j].Ppid {
-			return true
-		}
-		if PP[i].Ppid > PP[j].Ppid {
-			return false
-		}
+		if PP[i].Ppid < PP[j].Ppid { return true }
+		if PP[i].Ppid > PP[j].Ppid { return false }
 		return PP[i].Pid < PP[j].Pid
 	})
 	for i, p := range PP {
 		PP[i].Pids = []int64{p.Pid}
-		if p.Pid == p.Ppid || p.Ppid == 0 {
-			continue
-		}
+		if p.Pid == p.Ppid || p.Ppid == 0 { continue }
 		for _, q := range PP {
 			if q.Pid == p.Ppid {
 				PP[i].Pids = append(q.Pids, PP[i].Pids...)
@@ -163,16 +155,10 @@ func main() {
 	sort.Slice(PP, func(i, j int) bool {
 		ml := min(len(PP[i].Pids), len(PP[j].Pids))
 		for k := 0; k < ml; k++ {
-			if PP[i].Pids[k] < PP[j].Pids[k] {
-				return true
-			}
-			if PP[i].Pids[k] > PP[j].Pids[k] {
-				return false
-			}
+			if PP[i].Pids[k] < PP[j].Pids[k] { return true }
+			if PP[i].Pids[k] > PP[j].Pids[k] { return false }
 		}
-		if len(PP[i].Pids) < len(PP[j].Pids) {
-			return true
-		}
+		if len(PP[i].Pids) < len(PP[j].Pids) { return true }
 		return false
 	})
 	for _, p := range PP {
@@ -245,13 +231,9 @@ func main() {
 			}
 		}
 		procinfo := pidss
-		if tagss != "" {
-			procinfo += tagss
-		}
+		if tagss != "" { procinfo += tagss }
 		procinfo += SP
-		if procstats != "" {
-			procinfo += procstats + SP
-		}
+		if procstats != "" { procinfo += procstats + SP }
 		procinfo += cmd
 		procinfo += strings.Join(cmdargs, N)
 		pout(procinfo+NL)

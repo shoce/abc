@@ -38,9 +38,9 @@ func GetBootTime() (time.Time, error) {
 }
 
 const (
-	_CTRL_KERN         = 1
-	_KERN_PROC         = 14
-	_KERN_PROC_ALL     = 0
+	_CTRL_KERN = 1
+	_KERN_PROC = 14
+	_KERN_PROC_ALL = 0
 	_KINFO_STRUCT_SIZE = 648
 )
 
@@ -72,9 +72,7 @@ func darwinSyscallProcAll() (*bytes.Buffer, error) {
 		0,
 		0,
 	)
-	if errno != 0 {
-		return nil, errno
-	}
+	if errno != 0 { return nil, errno }
 	bs := make([]byte, size)
 	_, _, errno = syscall.Syscall6(
 		syscall.SYS___SYSCTL,
@@ -84,47 +82,42 @@ func darwinSyscallProcAll() (*bytes.Buffer, error) {
 		uintptr(unsafe.Pointer(&size)),
 		0,
 		0)
-	if errno != 0 {
-		return nil, errno
-	}
+	if errno != 0 { return nil, errno }
 	return bytes.NewBuffer(bs[0:size]), nil
 }
 
 func darwinCstring(bb [16]byte) string {
 	for i := range bb {
-		if bb[i] == 0 {
-			return string(bb[:i])
-		}
+		if bb[i] == 0 { return string(bb[:i]) }
 	}
 	return string(bb[:])
 }
 
 func GetProcesses() ([]Process, error) {
 	buf, err := darwinSyscallProcAll()
-	if err != nil {
-		return nil, err
-	}
-	kpp := make([]*kinfoProc, 0, 1000)
+	if err!=nil { return nil, err }
+	kpp := make([]*kinfoProc, 0, 9999)
 	k := 0
-	for i := _KINFO_STRUCT_SIZE; i < buf.Len(); i += _KINFO_STRUCT_SIZE {
+	for i:=_KINFO_STRUCT_SIZE; i<buf.Len(); i+=_KINFO_STRUCT_SIZE {
 		kp := new(kinfoProc)
 		err = binary.Read(bytes.NewBuffer(buf.Bytes()[k:i]), binary.LittleEndian, kp)
-		if err != nil {
-			return nil, err
-		}
+		if err!=nil { perr("ERROR binary.Read"); return nil, err }
 		k = i
 		kpp = append(kpp, kp)
 	}
-
 	pp := make([]Process, len(kpp))
 	for i, kp := range kpp {
 		pgid, err := syscall.Getpgid(int(kp.Pid))
-		if err != nil {
-			return nil, err
+		if err!=nil { 
+			perr(F("ERROR Getpgid <%d> %v", kp.Pid, err))
+//			return nil, err 
+			continue
 		}
 		sid, err := syscall.Getsid(int(kp.Pid))
-		if err != nil {
-			return nil, err
+		if err!=nil {
+			perr(F("ERROR Getsid <%d> %v", kp.Pid, err))
+//			return nil, err
+			continue
 		}
 		comm := darwinCstring(kp.Comm)
 		vsize := 0
@@ -143,6 +136,5 @@ func GetProcesses() ([]Process, error) {
 			Rss:       int64(rss),
 		}
 	}
-
 	return pp, nil
 }

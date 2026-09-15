@@ -57,13 +57,14 @@ var (
 	TERM string
 	
 	Qompact bool
-	Recursive   bool
+	Recursive bool
 	ShowSymlink bool
-	ShowSize    bool
-	ShowTime    bool
-	ShowPerm    bool
-	ShowOwner   bool
-	ShowCid     bool
+	ShowSize bool
+	ShowTime bool
+	ShowPerm bool
+	ShowOwner bool
+	ShowCid bool
+	Sort func(a, b fs.DirEntry) int = SortName
 	
 	F = fmt.Sprintf
 	FI = strconv.FormatInt
@@ -146,7 +147,7 @@ func printinfo(path string, info os.FileInfo) (err error) {
 	return nil
 }
 
-func fls(path string, info os.FileInfo, err error) error {
+func walkprintinfo(path string, info os.FileInfo, err error) error {
 	if err!=nil {
 		perr(F("ERROR %v", err))
 		return err
@@ -162,17 +163,17 @@ func list(path string) error {
 	var listdir bool
 	if strings.HasSuffix(path, "/") { listdir = true }
 	path, err := filepath.Abs(path)
-	if err != nil { return err }
+	if err!=nil { return err }
 	pathstat, err := os.Lstat(path)
-	if err != nil { return err } 
-	if (pathstat.Mode() & os.ModeSymlink) != 0 {
+	if err!=nil { return err } 
+	if (pathstat.Mode()&os.ModeSymlink)!=0 {
 		linktargetpath, err := os.Readlink(path)
-		if err != nil { return err }
+		if err!=nil { return err }
 		if !filepath.IsAbs(linktargetpath) {
 			linktargetpath = filepath.Clean(filepath.Join(filepath.Dir(path), linktargetpath))
 		}
 		linktargetstat, err := os.Lstat(linktargetpath)
-		if err != nil { return err }
+		if err!=nil { return err }
 		if !linktargetstat.Mode().IsDir() && listdir {
 			return EF("[%s] symlink[%s] is not a dir", path, linktargetpath)
 		}
@@ -180,44 +181,28 @@ func list(path string) error {
 		return EF("[%s] is not a dir", path)
 	}
 	if Recursive {
-		err = filepath.Walk(path, fls)
-		if err != nil { return err }
+		err = filepath.Walk(path, walkprintinfo)
+		if err!=nil { return err }
 	} else if listdir {
-		err = printinfo(path, pathstat)
-		if err != nil { return err }
+		if !Qompact {
+			err = printinfo(path, pathstat)
+			if err!=nil { return err }
+		}
+		// https://pkg.go.dev/os#Open
 		d, err := os.Open(path)
-		if err != nil { return err }
+		if err!=nil { return err }
 		defer d.Close()
 		for {
+			// https://pkg.go.dev/os#File.ReadDir
 			ee, err := d.ReadDir(ReadDirN)
-			if err == io.EOF { break }
-			if err != nil { return err }
-			slices.SortFunc(ee, func(a, b fs.DirEntry) int {
-				// https://pkg.go.dev/strings#Compare
-				an, bn := a.Name(), b.Name()
-				ai, aierr := strconv.ParseInt(an, 16, 64)
-				bi, bierr := strconv.ParseInt(bn, 16, 64)
-				if aierr==nil && bierr==nil {
-					if ai<bi { return -1 }
-					if ai==bi { return 0 }
-					return 1
-				}
-				return strings.Compare(an, bn)
-				if len(an)!=len(bn) {
-					if len(an)<len(bn) { return -1 }
-					return 1
-				}
-				for i, _ := range an {
-					if an[i]<bn[i] { return -1 }
-					if an[i]==bn[i] { continue }
-					if an[i]>bn[i] { return 1 }
-				}
-				return 0
-			})
+			if err==io.EOF { break }
+			if err!=nil { return err }
+			slices.SortFunc(ee, Sort)
 			for _, e := range ee {
+				ename := e.Name()
 				fstat, err := e.Info()
-				if err != nil { return err }
-				fpath := filepath.Join(path, e.Name())
+				if err!=nil { return err }
+				fpath := filepath.Join(path, ename)
 				printinfo(fpath, fstat)
 			}
 		}
@@ -229,6 +214,40 @@ func list(path string) error {
 		pout(NL)
 	}
 	return nil
+}
+
+func SortName(a, b fs.DirEntry) int {
+	// https://pkg.go.dev/strings#Compare
+	an, bn := a.Name(), b.Name()
+	ai, aierr := strconv.ParseInt(an, 16, 64)
+	bi, bierr := strconv.ParseInt(bn, 16, 64)
+	if aierr==nil && bierr==nil {
+		if ai<bi { return -1 }
+		if ai==bi { return 0 }
+		return 1
+	}
+	return strings.Compare(an, bn)
+	if len(an)!=len(bn) {
+		if len(an)<len(bn) { return -1 }
+		return 1
+	}
+	for i, _ := range an {
+		if an[i]<bn[i] { return -1 }
+		if an[i]==bn[i] { continue }
+		if an[i]>bn[i] { return 1 }
+	}
+	return 0
+}
+
+func SortTime(a, b fs.DirEntry) int {
+	// https://pkg.go.dev/fs#DirEntry
+	ainfo, err := a.Info()
+	if err!=nil { return 0 }
+	binfo, err := b.Info()
+	if err!=nil { return 0 }
+	at, bt := ainfo.ModTime(), binfo.ModTime()
+	// https://pkg.go.dev/time#Time.Compare
+	return at.Compare(bt)
 }
 
 func init() {
@@ -256,6 +275,7 @@ func main() {
 		ShowSize = true
 	case "lt":
 		ShowTime = true
+		Sort = SortTime
 	case "lr":
 		Recursive = true
 	case "ll":
@@ -288,7 +308,7 @@ func main() {
 	perr(F("DEBUG args %#v", args))
 	var n int
 	for _, a := range args {
-		if a != "" {
+		if a!="" {
 			args[n] = a
 			n++
 		}
@@ -307,6 +327,7 @@ func main() {
 			ShowSize = true
 		case "-t", "-time":
 			ShowTime = true
+			Sort = SortTime
 		case "-p", "-perm":
 			ShowPerm = true
 		case "-o", "-owner":
@@ -338,16 +359,12 @@ func main() {
 	perr(F("DEBUG n <%d> args %#v", n, args))
 	
 	var paths []string
-	if n <= len(args) {
-		paths = args[n:]
-	}
+	if n<=len(args) { paths = args[n:] }
 	perr(F("DEBUG paths %#v", paths))
-	if len(paths) == 0 {
-		paths = append(paths, "./")
-	}
+	if len(paths)==0 { paths = append(paths, "./") }
 	for _, p := range paths {
 		err = list(p)
-		if err != nil {
+		if err!=nil {
 			perr(F("ERROR %v", err))
 			os.Exit(1)
 		}
@@ -358,12 +375,10 @@ func TermBold(s string) string {
 	if TERM=="" { return s }
 	return "\033[1m" + s + "\033[0m"
 }
-
 func TermItalic(s string) string {
 	if TERM=="" { return s }
 	return "\033[3m" + s + "\033[23m"
 }
-
 func TermUnderline(s string) string {
 	if TERM=="" { return s }
 	return "\033[4m" + s + "\033[24m"
