@@ -247,6 +247,22 @@ func SortTime(a, b fs.DirEntry) int {
 	return at.Compare(bt)
 }
 
+func SortSize(a, b fs.DirEntry) int {
+	// https://pkg.go.dev/fs#DirEntry
+	aisdir, bisdir := a.IsDir(), b.IsDir()
+	if aisdir&&bisdir { return SortName(a, b) }
+	if aisdir&&!bisdir { return -1 }
+	if bisdir&&!aisdir { return 1 }
+	ainfo, err := a.Info()
+	if err!=nil { return 0 }
+	binfo, err := b.Info()
+	if err!=nil { return 0 }
+	asz, bsz := ainfo.Size(), binfo.Size()
+	if asz==bsz { return SortName(a, b) }
+	if asz<bsz { return -1 }
+	return 1
+}
+
 func init() {
 	if len(os.Args)==2 && os.Args[1]=="-version" {
 		pout(VERSION+NL)
@@ -266,10 +282,12 @@ func main() {
 	case "ls":
 		ShowSymlink = true
 		ShowSize = true
+		Sort = SortSize
 	case "lsr":
 		Recursive = true
 		ShowSymlink = true
 		ShowSize = true
+		Sort = SortSize
 	case "lt":
 		ShowTime = true
 		Sort = SortTime
@@ -296,6 +314,7 @@ func main() {
 		Qompact = true
 		ShowSymlink = true
 		ShowSize = true
+		Sort = SortSize
 	default:
 		perr(F("ERROR invalid cmd name [%s]", cmdname))
 		os.Exit(1)
@@ -323,6 +342,7 @@ func main() {
 		case "-s", "-size":
 			ShowSymlink = true
 			ShowSize = true
+			Sort = SortSize
 		case "-t", "-time":
 			ShowTime = true
 			Sort = SortTime
@@ -330,6 +350,7 @@ func main() {
 			ShowPerm = true
 		case "-o", "-owner":
 			ShowOwner = true
+			//Sort = SortOwner
 		case "-l", "-long":
 			ShowSymlink = true
 			ShowSize = true
