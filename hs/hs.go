@@ -46,6 +46,39 @@ for x, y := / loop
 ~ regexp string / match string against regexp
 exit [status] / exit shell with status
 //
+
+TABS separate arguments
+
+comments start with < or >
+< example
+> another example
+<
+< one more
+>
+we will see
+
+file redirection must be very short for stdin, stdout, stderr
+file redir and piping to fork-exec  must not overlap
+NO automatic globbing
+EXPLICIT env var expansion env[var name] ? 
+	
+what do i use ! (sh) in ae for?
+- filtering output - piping to grep or g - 
+	filtering must be part of lang
+- piping processes - 
+	
+- file redirections
+	shorter form for >/dev/null and </dev/null
+	
+- "~" - check home dir - 
+	there should be no "~" for home dir. "." should always be home dir. and all paths are relative to home dir unless it is an absolute path. 
+- globbing - 
+	instead of globbing - find-like lang ( (type=d name*=abc*)+(type=f name~=.*)-(type=f name=.DS_Store) )
+- cycles - for f in glob - 
+- setting env vars - 
+	local vars and env vars must be different. local vars are typed. env vars is a map[string]string.
+
+
 */
 package main
 import (
