@@ -1,4 +1,7 @@
-// seps( CmdHistory :357 pout( :271 SshCancel :778
+/*
+seps( CmdHistory :357 pout( :271 SshCancel :778
+User USER userkey
+*/
 /*
 HISTORY
 020/0605	v1
@@ -30,9 +33,9 @@ Kill GoRun
 VARIABLES
 `host` variable is checked before every command execution: if it is empty then run locally; otherwise run via ssh.
 `user` variable stores user name if run via ssh.
-'userpass'
-'userkeyfile'
-'userkey'
+'pass'
+'keyfile'
+'key'
 `status` variable tells exit status of the last command executed.
 
 //
@@ -202,60 +205,49 @@ func init() {
 	perr(F("VERBOSE ProxyChain <%d> %v", len(ProxyChain), ProxyChain))
 	ProxyDialer = proxy.Direct
 	
+	if os.Getenv("home")=="" {
+		err = os.Setenv("home", os.Getenv("HOME"))
+		if err!=nil { perr(F("WARNING Setenv [home] %v", err)) }
+	}
+	
 	HOST = os.Getenv("host")
 	perr(F("VERBOSE HOST [%s]", HOST))
-	if HOST == "" {
-		perr("ERROR host env var empty")
-		os.Exit(1)
-	}
+	if HOST=="" { perr("ERROR host env var empty") ; os.Exit(1) }
 	
 	USER = os.Getenv("user")
 	perr(F("VERBOSE USER [%s]", USER))
-	if USER == "" {
-		perr("ERROR user env var empty")
-		os.Exit(1)
+	if USER=="" {
+		USER = os.Getenv("USER")
+		perr(F("VERBOSE USER [%s]", USER))
+		err = os.Setenv("user", USER)
+		if err!=nil { perr(F("ERROR Setenv [user] %v", err)) ; os.Exit(1) }
 	}
-	UserPass = os.Getenv("userpass")
-	if UserPass != "" {
-		UserAuthMethod = ssh.Password(UserPass)
-	}
+	if USER=="" { perr("ERROR user env var empty") ; os.Exit(1) }
+	
+	UserPass = os.Getenv("pass")
+	if UserPass!="" { UserAuthMethod = ssh.Password(UserPass) }
 	perr(F("VERBOSE UserPass [%s]", UserPass))
 	
-	if os.Getenv("home") == "" {
-		err = os.Setenv("home", os.Getenv("HOME"))
-		if err != nil { perr(F("WARNING Setenv home %v", err)) }
-	}
-	
-	UserKeyFile = os.ExpandEnv(os.Getenv("userkeyfile"))
-	if UserKeyFile != "" {
+	UserKeyFile = os.ExpandEnv(os.Getenv("keyfile"))
+	if UserKeyFile!="" {
 		userkeybb, err := ioutil.ReadFile(UserKeyFile)
-		if err != nil {
-			perr(F("ERROR Read UserKeyFile [%s] %v", UserKeyFile, err))
-			os.Exit(1)
-		}
+		if err!=nil { perr(F("ERROR Read UserKeyFile [%s] %v", UserKeyFile, err)) ; os.Exit(1) }
 		UserKey = string(userkeybb)
 	}
-	if v := os.Getenv("userkey"); v != "" {
-		UserKey = v
-	}
-	if UserKey != "" {
+	
+	if v := os.Getenv("key"); v!="" { UserKey = v }
+	if UserKey!="" {
 		UserSigner, err = ssh.ParsePrivateKey([]byte(UserKey))
-		if err != nil {
-			perr(F("ERROR ParsePrivateKey %v", err))
-			os.Exit(1)
-		}
+		if err!=nil { perr(F("ERROR ParsePrivateKey %v", err)) ; os.Exit(1) }
 		UserAuthMethod = ssh.PublicKeys(UserSigner)
 	}
 	perr(F("VERBOSE UserKey [%s]", UserKey))
 	
-	if UserAuthMethod == nil {
-		perr("ERROR no user auth method provided; no password and no user key")
-		os.Exit(1)
-	}
+	if UserAuthMethod==nil { perr("ERROR no user auth method provided; no password and no user key") ; os.Exit(1) }
 	
 	SshClientConfig = &ssh.ClientConfig{
-		User:    USER,
-		Auth:    []ssh.AuthMethod{UserAuthMethod},
+		User: USER,
+		Auth: []ssh.AuthMethod{UserAuthMethod},
 		Timeout: 10 * time.Second,
 		//ClientVersion: "hs", // NewClientConn: ssh: handshake failed: ssh: invalid packet length, packet too large
 		//HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -266,9 +258,7 @@ func init() {
 		BannerCallback: func(msg string) error {
 			msg = strings.TrimSpace(msg)
 			sep := N
-			if strings.Contains(msg, NL) {
-				sep = NL
-			}
+			if strings.Contains(msg, NL) { sep = NL }
 			perr(F("ssh server banner [%s%s]", sep, msg))
 			return nil
 		},
