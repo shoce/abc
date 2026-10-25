@@ -22,9 +22,7 @@ GoBuildNull
 GoBuild
 GoRun
 */
-
 package main
-
 import (
 	"fmt"
 	"io"
@@ -36,26 +34,20 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	
 	cid "github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
 	slices "golang.org/x/exp/slices"
 )
-
 const (
 	NL  = "\n"
 	TAB = "\t"
 	SEP = ","
-	
 	ReadDirN = 9999
 )
-
 var (
 	VERSION string
 	DEBUG   bool
-	
 	TERM string
-	
 	Qompact bool
 	Recursive bool
 	ShowSymlink bool
@@ -65,12 +57,17 @@ var (
 	ShowOwner bool
 	ShowCid bool
 	Sort func(a, b fs.DirEntry) int = SortName
-	
+	args = os.Args
 	F = fmt.Sprintf
 	FI = strconv.FormatInt
 	EF = fmt.Errorf
 	pout = fmt.Print
+	exit = os.Exit
 )
+func perr(msg string) (int, error) {
+	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG { return 0, nil }
+	return fmt.Fprint(os.Stderr, msg)
+}
 
 func printinfo(path string, info os.FileInfo) (err error) {
 	if path=="" { return EF("path string empty") }
@@ -124,13 +121,13 @@ func printinfo(path string, info os.FileInfo) (err error) {
 	if ShowCid && !finfo.IsDir() && (info.Mode()&os.ModeSymlink==0) {
 		f, err := os.Open(path)
 		if err != nil {
-			perr(F("ERROR %v", err))
+			perr(F("ERROR %v", err)+NL)
 			return err
 		}
 		defer f.Close()
 		fmh, err := mh.SumStream(f, mh.SHA2_256, -1)
 		if err != nil {
-			perr(F("ERROR %v", err))
+			perr(F("ERROR %v", err)+NL)
 			return err
 		}
 		c := cid.NewCidV1(cid.Raw, fmh)
@@ -146,11 +143,11 @@ func printinfo(path string, info os.FileInfo) (err error) {
 
 func walkprintinfo(path string, info os.FileInfo, err error) error {
 	if err!=nil {
-		perr(F("ERROR %v", err))
+		perr(F("ERROR %v", err)+NL)
 		return err
 	}
 	if err2:=printinfo(path, info); err2!=nil {
-		perr(F("ERROR %v", err2))
+		perr(F("ERROR %v", err2)+NL)
 		return err2
 	}
 	return nil
@@ -264,9 +261,9 @@ func SortSize(a, b fs.DirEntry) int {
 }
 
 func init() {
-	if len(os.Args)==2 && os.Args[1]=="-version" {
+	if len(args)==2 && args[1]=="-version" {
 		pout(VERSION+NL)
-		os.Exit(0)
+		exit(0)
 	}
 	if v:=os.Getenv("DEBUG"); v!="" { DEBUG=true }
 	if v:=os.Getenv("TERM"); v!="" { TERM=v }
@@ -275,8 +272,8 @@ func init() {
 func main() {
 	var err error
 	
-	cmdname := filepath.Base(os.Args[0])
-	perr(F("DEBUG cmd name [%s]", cmdname))
+	cmdname := filepath.Base(args[0])
+	perr(F("DEBUG cmd name [%s]", cmdname)+NL)
 	switch cmdname {
 	case "l":
 	case "ls":
@@ -316,12 +313,12 @@ func main() {
 		ShowSize = true
 		Sort = SortSize
 	default:
-		perr(F("ERROR invalid cmd name [%s]", cmdname))
-		os.Exit(1)
+		perr(F("ERROR invalid cmd name [%s]", cmdname)+NL)
+		exit(1)
 	}
 	
-	args := os.Args[1:]
-	perr(F("DEBUG args %#v", args))
+	args = args[1:]
+	perr(F("DEBUG args %#v", args)+NL)
 	var n int
 	for _, a := range args {
 		if a!="" {
@@ -330,7 +327,7 @@ func main() {
 		}
 	}
 	args = args[:n]
-	perr(F("DEBUG n <%d> args %#v", n, args))
+	perr(F("DEBUG n <%d> args %#v", n, args)+NL)
 	n = 0
 	for _, a := range args {
 		if !strings.HasPrefix(a, "-") { break }
@@ -371,24 +368,26 @@ func main() {
 		case "-q", "-qompact":
 			Qompact = true
 		default:
-			perr(F("ERROR invalid option [%s]", a))
-			os.Exit(1)
+			perr(F("ERROR invalid option [%s]", a)+NL)
+			exit(1)
 		}
 		n++
 	}
-	perr(F("DEBUG n <%d> args %#v", n, args))
+	perr(F("DEBUG n <%d> args %#v", n, args)+NL)
 	
 	var paths []string
 	if n<=len(args) { paths = args[n:] }
-	perr(F("DEBUG paths %#v", paths))
+	perr(F("DEBUG paths %#v", paths)+NL)
 	if len(paths)==0 { paths = append(paths, "./") }
+	var errerr error
 	for _, p := range paths {
 		err = list(p)
 		if err!=nil {
-			perr(F("ERROR %v", err))
-			os.Exit(1)
+			errerr = err
+			perr(F("ERROR %v", err)+NL)
 		}
 	}
+	if errerr!=nil { exit(1) }
 }
 
 func TermBold(s string) string {
@@ -425,9 +424,5 @@ func seps(i, e int) string {
 	return seps(i/ee, e)+SEP+F(f , i%ee)
 }
 
-func perr(msg string) {
-	if strings.HasPrefix(msg, "DEBUG ") && !DEBUG { return }
-	fmt.Fprint(os.Stderr, msg+NL)
-}
 
 
