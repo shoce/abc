@@ -1,6 +1,7 @@
 /*
 seps( CmdHistory :357 pout( :271 SshCancel :778
 User USER userkey bufio.Writer TrimSuffix logstatus
+host [ :pb "<" :549 perrstatus(
 */
 /*
 HISTORY
@@ -121,12 +122,6 @@ const (
 	PortDefault = "22"
 	SshKeepAliveInterval time.Duration = 11 * time.Second
 	InReaderBufferSize = 100 * 1000
-	
-	CmdHostInfo = `cat /proc/sys/kernel/hostname /proc/sys/kernel/osrelease /proc/sys/kernel/arch /proc/sys/kernel/random/boot_id /proc/stat`
-	CmdPwd      = `pwd`
-	
-	CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | LC_ALL=C sort ; done ;`
-	CmdAllFiles    = `find "%s" -maxdepth 1 -print | LC_ALL=C sort`
 )
 
 type CmdHistoryRecord struct {
@@ -135,10 +130,10 @@ type CmdHistoryRecord struct {
 }
 var (
 	VERSION string
-	LogBeatTime bool
 	DEBUG bool
 	VERBOSE bool
 	UID, GID int
+	CURDIR  string
 	PATH string
 	TERM string
 	
@@ -147,15 +142,15 @@ var (
 	ProxyDialer proxy.Dialer
 	ProxyConn net.Conn
 	
-	HOST string // host network address to run commands on: set empty to run with exec() and hostname[:port] to use ssh transport
+	HostAddr string // host network address to run commands on: set empty to run with exec() and hostname[:port] to use ssh transport
 	
 	SshGatherHostInfo bool
-	HOSTNAME string
-	BootTime int64
-	BootId string
-	Pwd  string
-	Kernel string
-	Arch string
+	HostName string
+	HostBootTime int64
+	HostBootId string
+	HostKernelName  string
+	HostKernelRelease string
+	HostArch string
 	
 	AllPathCmds []string
 	AllFiles []string
@@ -217,9 +212,9 @@ func init() {
 		if err!=nil { perr(F("WARNING Setenv [home] %v", err)) }
 	}
 	
-	HOST = os.Getenv("host")
-	perr(F("VERBOSE HOST [%s]", HOST))
-	if HOST=="" {
+	HostAddr = os.Getenv("host")
+	perr(F("VERBOSE HostAddr [%s]", HostAddr))
+	if HostAddr=="" {
 		perr("WARNING host env var empty so running commands locally")
 	}
 	
@@ -232,7 +227,7 @@ func init() {
 		if err!=nil { perr(F("ERROR Setenv [user] %v", err)) ; exit(1) }
 	}
 	if USER=="" {
-		if HOST!="" { perr("ERROR user env var empty") ; exit(1) }
+		if HostAddr!="" { perr("ERROR user env var empty") ; exit(1) }
 		perr(F("WARNING user env var empty so running commands as current user uid<%d> gid<%d>", UID, GID))
 	}
 	
@@ -257,7 +252,7 @@ func init() {
 	}
 	perr(F("VERBOSE UserKey [%s]", UserKey))
 	
-	if HOST!="" && UserAuthMethod==nil { perr("ERROR no user auth method provided; no pass, no key, no keyfile") ; exit(1) }
+	if HostAddr!="" && UserAuthMethod==nil { perr("ERROR no user auth method provided; no pass, no key, no keyfile") ; exit(1) }
 	
 	SshClientConfig = &ssh.ClientConfig{
 		User: USER,
@@ -313,15 +308,15 @@ func main() {
 		}
 	}
 	
-	if HOST!="" && len(args)==0 {
+	if HostAddr!="" && len(args)==0 {
 		SshGatherHostInfo = true
 	}
 	
-	if HOST=="" {
+	if HostAddr=="" {
 		
-		HOSTNAME, err = os.Hostname()
+		HostName, err = os.Hostname()
 		if err!=nil {
-			perr(F("ERROR Hostname %v", err))
+			perr(F("ERROR os.Hostname %v", err))
 			exit(1)
 		}
 		//Hostname = strings.TrimSuffix(Hostname, ".local")
@@ -333,18 +328,13 @@ func main() {
 		}
 		USER = u.Username
 		
-		Pwd, err = os.Getwd()
-		if err!=nil {
-			perr(F("ERROR Getwd %v", err))
-			exit(1)
-		}
-		
 		boottimetv, err := unix.SysctlTimeval("kern.boottime")
 		if err!=nil {
 			perr(F("ERROR SysctlTimeval kern.boottime  %v", err))
 			exit(1)
 		}
-		BootTime = boottimetv.Sec
+		HostBootTime = boottimetv.Sec
+		
 	} else {
 		
 		if len(ProxyChain) > 0 {
@@ -364,16 +354,16 @@ func main() {
 		}
 		
 		var addrerr *net.AddrError
-		if _, _, err := net.SplitHostPort(HOST); err!=nil {
+		if _, _, err := net.SplitHostPort(HostAddr); err!=nil {
 			if errors.As(err, &addrerr) && addrerr.Err == "missing port in address" {
-				if len(HOST) > 2 && HOST[0] == '[' && HOST[len(HOST)-1] == ']' && net.ParseIP(HOST[1:len(HOST)-1]) != nil {
-					HOST = HOST[1 : len(HOST)-1]
+				if len(HostAddr) > 2 && HostAddr[0] == '[' && HostAddr[len(HostAddr)-1] == ']' && net.ParseIP(HostAddr[1:len(HostAddr)-1])!=nil {
+					HostAddr = HostAddr[1 : len(HostAddr)-1]
 				}
-				if ip := net.ParseIP(HOST); ip!=nil {
+				if ip := net.ParseIP(HostAddr); ip!=nil {
 					perr(F("DEBUG ip [%s]", ip.String()))
-					HOST = net.JoinHostPort(ip.String(), PortDefault)
+					HostAddr = net.JoinHostPort(ip.String(), PortDefault)
 				} else {
-					HOST = net.JoinHostPort(HOST, PortDefault)
+					HostAddr = net.JoinHostPort(HostAddr, PortDefault)
 				}
 			} else {
 				perr(F("ERROR SplitHostPort %v", err))
@@ -381,7 +371,7 @@ func main() {
 			}
 		}
 		
-		perr(F("DEBUG HOST [%s]", HOST))
+		perr(F("DEBUG HostAddr [%s]", HostAddr))
 		err = sshconnect()
 		if err!=nil {
 			perr(F("ERROR ssh connect %v", err))
@@ -397,47 +387,122 @@ func main() {
 		perr(F("ERROR MkdirAll [%s] %v", AtonString(CmdHistoryDir), err))
 		exit(1)
 	}
-	CmdHistoryPath = fmttime(time.Now())+HOST
+	CmdHistoryPath = fmttime(time.Now())+HostName
 	CmdHistoryPath = filepath.Join(CmdHistoryDir, CmdHistoryPath)
 	perr(F("DEBUG CmdHistoryPath [%s]", AtonString(CmdHistoryPath)))
-	CmdHistoryAppend(F("host [%s] user [%s] uid<%d> gid<%d>", AtonString(HOST), AtonString(USER), UID, GID))
+	CmdHistoryAppend(F(
+		"host[%s] user[%s] uid<%d> gid<%d> curdir[%s] path[%s] term[%s]",
+		AtonString(HostAddr), AtonString(USER), UID, GID, AtonString(CURDIR), AtonString(PATH), AtonString(TERM),
+	))
 	
 	inreader := bufio.NewReaderSize(os.Stdin, InReaderBufferSize)
 	
-	var readcmdstdin bool
-	readcmdstdin = false
-	if len(args)>0 {
-		cmd := args[:]
-		if cmd[len(cmd)-1] == "<" {
-			readcmdstdin = true
-			cmd = cmd[:len(cmd)-1]
-		}
-		cmds := strings.Join(cmd, TAB)
+	readcmdstdin := false
+	cmd := args[:]
+	if len(cmd)>0 && cmd[len(cmd)-1] == "<" {
+		readcmdstdin = true
+		cmd = cmd[:len(cmd)-1]
+	}
+	cmds := strings.Join(cmd, TAB)
+	if len(cmd)>0 {
 		if readcmdstdin {
-			perr(F("host=%s user=%s hs --", HOST, USER) + TAB + cmds + TAB + TermUnderline("stdin:"))
+			perr(TermUnderline(F("host=%s user=%s hs --", HostAddr, USER) + TAB + cmds + TAB + TermInverse("stdin:")))
 		}
 		Status, err = run(cmds, cmd, inreader)
 		if err!=nil {
-			perr(F("host=%s user=%s hs --", HOST, USER) + TAB + cmds + TAB + F("%s %v", TermInverse("ERROR"), err))
+			perr(TermUnderline(F("host=%s user=%s hs --", HostAddr, USER) + TAB + cmds + TAB + F("%s %v", TermInverse("ERROR"), err)))
 			exit(1)
 		}
-		perr(F("host=%s user=%s hs --", HOST, USER) + TAB + cmds + TAB + F("status[%s]", TermInverse(Status)))
+		perr(TermUnderline(F("host=%s user=%s hs --", HostAddr, USER) + TAB + cmds + TAB + F("status[%s]", TermInverse(Status))))
 		exit(0)
 	}
 	
 	var stdinbb []byte
+	
 	for {
-		logstatus()
+		
+		if CURDIR=="" || HostAddr=="" {
+			CURDIR, err = os.Getwd()
+			if err!=nil {
+				perr(TermInverse(F("ERROR os.Getwd %v", err)))
+				exit(1)
+			}
+			if len(CURDIR)>0 && !strings.HasSuffix(CURDIR, string(filepath.Separator)) {
+				CURDIR += string(filepath.Separator)
+			}
+		}
+		
+		perrstatus()
+		
 		cmds, err := inreader.ReadString('\n')
 		if err!=nil {
-			if err == io.EOF { perr("EOF") ; break }
+			if err == io.EOF {
+				perr("EOF")
+				break
+			}
 			perr(F("ERROR ReadString %v", err))
 			exit(1)
 		}
 		cmds = strings.TrimSuffix(cmds, NL)
 		perr(F("DEBUG cmds [%s]", cmds))
+		if cmds=="" { continue }
+		
+		switch cmds {
+		
+		case ":q":
+			exit(0)
+			
+		case ":help":
+			pout(
+				":q"+TAB+"quit"+NL+
+				":help"+TAB+"usage"+NL+
+				":t"+TAB+"current time"+NL+
+				":p"+TAB+"commands history"+NL+
+				":wd"+TAB+"working directory"+NL+
+				":path"+TAB+"path"+NL+
+				":pb"+TAB+"clipboard"+NL+
+				":clip"+TAB+"switch clipboard showing in status line"+NL,
+			)
+			continue
+			
+		case ":t":
+			tnow := time.Now()
+			pout(fmttime(tnow)+NL)
+			continue
+			
+		case ":p":
+			tnow := time.Now()
+			for _, ic := range CmdHistory {
+				pout(F("<%s>"+TAB+"<%s>ago"+TAB+"%s", fmttime(ic.Timestamp), fmtdur(tnow.Sub(ic.Timestamp)), ic.Cmds)+NL)
+			}
+			continue
+			
+		case ":wd":
+			pout(CURDIR+NL)
+			continue
+			
+		case ":path":
+			pout(PATH+NL)
+			continue
+			
+		case ":pb":
+			clip, err := ClipGet()
+			if err!=nil {
+				perr(F("ERROR %v", err))
+			} else {
+				pout("["+clip+"]"+NL)
+			}
+			continue
+			
+		case ":clip":
+			ClipEnabled = !ClipEnabled
+			perr(F("ClibEnabled <%t>", ClipEnabled))
+			continue
+			
+		}
+		
 		if strings.HasSuffix(cmds, TAB) {
-			if HOST!="" {
+			if HostAddr!="" {
 				perr(strings.ReplaceAll(cmds, TAB, `\t`))
 				// https://pkg.go.dev/strings#TrimPrefix
 				cmds = strings.TrimSuffix(cmds, TAB)
@@ -459,16 +524,16 @@ func main() {
 					fpath := cmdsff[len(cmdsff)-1]
 					fpathdir := path.Dir(fpath)
 					if fpathdir == "." {
-						fpathdir = Pwd
+						fpathdir = CURDIR
 					}
-					if !strings.HasSuffix(fpathdir, "/") { fpathdir += "/" }
+					if ! strings.HasSuffix(fpathdir, "/") { fpathdir += "/" }
 					err := GetAllFiles(fpathdir)
 					if err!=nil {
 						//perr(F("ERROR AllFilesGet %v", err))
 					}
 					for _, f := range AllFiles {
 						// path.Join is intentional because filepath.Join would produce wrong result on Windows connecting to Unix machine
-						if strings.HasPrefix(f, fpath) || strings.HasPrefix(f, path.Join(Pwd, fpath)) {
+						if strings.HasPrefix(f, fpath) || strings.HasPrefix(f, path.Join(CURDIR, fpath)) {
 							pout(f + NL)
 						}
 					}
@@ -480,63 +545,26 @@ func main() {
 			}
 		}
 		
-		switch cmds {
-		
-		case ":q":
-			exit(0)
-			
-		case ":t":
-			tnow := time.Now()
-			pout(fmttime(tnow)+NL)
-			continue
-			
-		case ":p":
-			tnow := time.Now()
-			for _, ic := range CmdHistory[max(len(CmdHistory)-11, 0):] {
-				pout(F("<%s>"+TAB+"<%s>ago"+TAB+"%s", fmttime(ic.Timestamp), fmtdur(tnow.Sub(ic.Timestamp)), ic.Cmds)+NL)
+		if HostAddr=="" && !strings.Contains(cmds, TAB) && strings.HasSuffix(cmds, string(filepath.Separator)) {
+			if di, err := os.Stat(cmds); err==nil && di.IsDir() {
+				err := os.Chdir(cmds)
+				if err!=nil {
+					perr(TermInverse(F("ERROR Chdir [%s] %v",AtonString(cmds), err)))
+				}
+				continue
 			}
-			continue
-			
-		case ":pp":
-			tnow := time.Now()
-			for _, ic := range CmdHistory {
-				pout(F("<%s>"+TAB+"<%s>ago"+TAB+"%s", fmttime(ic.Timestamp), fmtdur(tnow.Sub(ic.Timestamp)), ic.Cmds)+NL)
-			}
-			continue
-			
-		case ":pwd":
-			pout(Pwd+NL)
-			continue
-			
-		case ":pb":
-			clip, err := ClipGet()
-			if err!=nil {
-				perr(F("ERROR %v", err))
-			} else {
-				pout("[" + clip + "]" + NL)
-			}
-			continue
-			
-		case ":clip":
-			ClipEnabled = !ClipEnabled
-			perr(F("ClibEnabled <%t>", ClipEnabled))
-			continue
-			
-		//cmds = strings.TrimSpace(cmds)
-		case "":
-			continue
-			
 		}
 		
-		cmd := strings.Split(cmds, TAB)
-		if len(cmd)>0 && cmd[len(cmd)-1] == "<" {
+		if len(cmds)>0 && cmds[len(cmds)-1] == '<' {
 			readcmdstdin = true
-			cmd = cmd[:len(cmd)-1]
-			cmds = strings.Join(cmd, TAB)
+			cmds = cmds[:len(cmds)-1]
+			cmds = strings.TrimRight(cmds, SP+TAB)
 		}
+		cmd := strings.Split(cmds, TAB)
+		
 		stdinbb = nil
 		if readcmdstdin {
-			perr(F("host=%s user=%s hs -- %s", HOST, USER, cmds) + TAB + TermUnderline("stdin:"))
+			perr(F("host=%s user=%s hs -- %s", HostAddr, USER, cmds) + TAB + TermUnderline("stdin:"))
 			stdinbb, err = ioutil.ReadAll(os.Stdin)
 			readcmdstdin = false
 			if err!=nil {
@@ -547,10 +575,10 @@ func main() {
 		
 		Status, err = run(cmds, cmd, bytes.NewBuffer(stdinbb))
 		if err!=nil {
-			perr(F("host=%s user=%s hs --", HOST, USER) + TAB + cmds + TAB + F("%s %v", TermInverse("ERROR"), err))
+			perr(TermUnderline(F("host=%s user=%s hs --", HostAddr, USER) + TAB + cmds + TAB + F("%s %v", TermInverse("ERROR"), err)))
 			continue
 		} else {
-			perr(F("host=%s user=%s hs --", HOST, USER) + TAB + cmds + TAB + F("status[%s]", TermInverse(Status)))
+			perr(TermUnderline(F("host=%s user=%s hs --", HostAddr, USER) + TAB + cmds + TAB + F("status[%s]", TermInverse(Status))))
 		}
 	}
 }
@@ -558,13 +586,13 @@ func main() {
 func ClipGet() (string, error) {
 	switch runtime.GOOS {
 	case "darwin":
-		if pbb, err := exec.Command("pbpaste").Output(); err != nil {
+		pbb, err := exec.Command("pbpaste").Output()
+		if err!=nil {
 			return "", EF("ERROR exec pbpaste %v", err)
-		} else {
-			return string(pbb), nil
 		}
+		return string(pbb), nil
 	default:
-		return "", EF("ERROR clipboard not supported")
+		return "", EF("TODO clipboard support")
 	}
 }
 
@@ -588,29 +616,28 @@ func TermUnderlineInverse(s string) string {
 	return "\033[4;7m" + s + "\033[24;27m" //ae:]]
 }
 
-func logstatus() {
+func perrstatus() {
 	fmt.Fprint(os.Stderr, NL)
 	if ClipEnabled {
-		if clip, err := ClipGet(); err == nil {
-			if len(clip) > 123 {
-				clip = clip[:123] + "…"
-			}
+		clip, err := ClipGet()
+		if err==nil {
+			if len(clip) > 123 { clip = clip[:123] + "…" }
 			clip = strings.ReplaceAll(clip, NL, `\n`)
 			clip = strings.ReplaceAll(clip, CR, `\r`)
 			clip = strings.ReplaceAll(clip, TAB, `\t`)
-			perr(TermUnderline("clip[" + clip + "]"))
+			perr(TermUnderline("clip["+clip+"]"))
 		}
 	}
 	var st string
 	//st = F("status[%s]", TermInverse(Status))
-	uptime := "nil"
-	if BootTime>0 {
-		uptimesecs := uint64(time.Now().Unix() - BootTime)
+	var uptime string
+	if HostBootTime>0 {
+		uptimesecs := uint64(time.Now().Unix() - HostBootTime)
 		uptime = fmtdursec(uptimesecs)
 	}
 	st += F(
-		"hostname[%s] uptime<%s> kernel[%s] host=%s user=%s hs",
-		HOSTNAME, uptime, Kernel, HOST, USER,
+		"hostname[%s] uptime<%s> kernel[%s] curdir[%s] host=%s user=%s hs",
+		AtonString(HostName), uptime, AtonString(HostKernelRelease), CURDIR, HostAddr, USER,
 	)
 	st = TermUnderline(st)
 	perr(st)
@@ -624,92 +651,110 @@ func copynotify(dst io.Writer, src io.Reader, notify chan error) {
 }
 
 func sshconnect() (err error) {
-	ProxyConn, err = ProxyDialer.Dial("tcp", HOST)
-	if err!=nil {
-		return err
-	}
-	SshConn, SshNewChannelCh, SshRequestCh, err := ssh.NewClientConn(ProxyConn, HOST, SshClientConfig)
-	if err!=nil {
-		return err
-	}
+	ProxyConn, err = ProxyDialer.Dial("tcp", HostAddr)
+	if err!=nil { return err }
+	SshConn, SshNewChannelCh, SshRequestCh, err := ssh.NewClientConn(ProxyConn, HostAddr, SshClientConfig)
+	if err!=nil { return err }
 	// https://pkg.go.dev/golang.org/x/crypto/ssh#NewClient
 	SshClient = ssh.NewClient(SshConn, SshNewChannelCh, SshRequestCh)
 	
-	if !SshGatherHostInfo { return nil }
+	if ! SshGatherHostInfo { return nil }
 	var session *ssh.Session
-	perr(F("host=%s user=%s hs -- %s", HOST, USER, CmdHostInfo))
+	var outbb []byte
+	var outvv []string
+	
+	//const CmdHostInfo = `sysctl -n kernel.ostype kern.ostype kernel.osrelease kern.osrelease kernel.hostname kern.hostname  kernel.random.boot_id kern.bootuuid kern.boottime `
+	
+	const CmdHostInfo = `uname -s -r -n -m `
+	perr(F("host=%s user=%s hs -- %s", HostAddr, USER, CmdHostInfo))
 	// https://pkg.go.dev/golang.org/x/crypto/ssh#Client.NewSession
 	session, err = SshClient.NewSession()
 	if err!=nil { return err }
-	hostinfobb, err := session.Output(CmdHostInfo)
-	if err!=nil { perr(F("WARNING ssh CmdHostInfo Output %v", err)) }
+	outbb, err = session.Output(CmdHostInfo)
+	if err!=nil { perr(F("WARNING ssh [%s] Output %v", CmdHostInfo, err)) }
 	session.Close()
-	hostinfo := strings.Split(strings.TrimSpace(string(hostinfobb)), NL)
-	if len(hostinfo) > 0 { HOSTNAME = hostinfo[0] }
-	if len(hostinfo) > 1 { Kernel = hostinfo[1] }
-	if len(hostinfo) > 2 { Arch = hostinfo[2] }
-	if len(hostinfo) > 3 {
-		BootId = hostinfo[3]
-		if len(BootId) > 4 {
-			BootId = BootId[:4]
+	outvv = strings.Split(strings.TrimSpace(string(outbb)), SP)
+	if len(outvv) > 0 { HostKernelName = outvv[0] }
+	if len(outvv) > 1 { HostName = outvv[1] }
+	if len(outvv) > 2 { HostKernelRelease = outvv[2] }
+	if len(outvv) > 3 { HostArch = outvv[3] }
+	
+	const CmdCurDir = `pwd `
+	perr(F("host=%s user=%s hs -- %s", HostAddr, USER, CmdCurDir))
+	session, err = SshClient.NewSession()
+	if err!=nil { return err }
+	outbb, err = session.Output(CmdCurDir)
+	if err!=nil { perr(F("WARNING ssh [%s] Output %v", CmdCurDir, err)) }
+	CURDIR = strings.TrimRight(string(outbb), NL)
+	if len(CURDIR)>0 && CURDIR[len(CURDIR)-1]!=filepath.Separator {
+		CURDIR += string(filepath.Separator)
+	}
+	session.Close()
+	
+	if strings.ToLower(HostKernelName) != "linux" { return nil }
+	
+	const CmdHostBootInfo = `cat /proc/sys/kernel/random/boot_id /proc/stat `
+	perr(F("host=%s user=%s hs -- %s", HostAddr, USER, CmdHostBootInfo))
+	// https://pkg.go.dev/golang.org/x/crypto/ssh#Client.NewSession
+	session, err = SshClient.NewSession()
+	if err!=nil { return err }
+	outbb, err = session.Output(CmdHostBootInfo)
+	if err!=nil { perr(F("WARNING ssh [%s] Output %v", CmdHostBootInfo, err)) }
+	session.Close()
+	outvv = strings.Split(strings.TrimSpace(string(outbb)), NL)
+	if len(outvv) > 0 {
+		HostBootId = outvv[0]
+		if len(HostBootId) > 4 {
+			HostBootId = HostBootId[:4]
 		}
 	}
-	if len(hostinfo) > 5 {
-		for _, l := range hostinfo[5:] {
+	if len(outvv) > 1 {
+		for _, l := range outvv[1:] {
 			if ff := strings.Fields(l); len(ff) == 2 && ff[0] == "btime" {
-				BootTime, err = strconv.ParseInt(ff[1], 10, 64)
-				if err!=nil {
-					perr(F("WARNING ssh CmdHostInfo btime ParseInt %v", err))
-				}
+				HostBootTime, err = strconv.ParseInt(ff[1], 10, 64)
+				if err!=nil { perr(F("WARNING ssh btime ParseInt [%s] %v",ff[1],  err)) }
 			}
 		}
 	}
-	perr(F("host=%s user=%s hs -- %s", HOST, USER, CmdPwd))
-	session, err = SshClient.NewSession()
-	if err!=nil { return err }
-	pwdbb, err := session.Output(CmdPwd)
-	if err!=nil {
-		perr(F("WARNING ssh CmdPwd Output %v", err))
-	}
-	Pwd = strings.TrimSpace(string(pwdbb))
-	session.Close()
 	
 	return nil
 }
 
 func GetAllPathCmds() error {
-	perr(F("host=%s user=%s hs -- %s", HOST, USER, CmdAllPathCmds))
+	const CmdAllPathCmds = `dd="" ; for d in ${PATH//:/ } ; do test -L "$d" && d=$(readlink -f "$d") ; test -d "$d" && dd="$dd $d" ; done ; ddd="" ; for d in $dd ; do for di in $ddd ; do test "$di" = "$d" && continue 2 ; done ; ddd="$ddd $d" ; done ; for d in $ddd ; do find "$d/" -maxdepth 1 -type f -executable -print -o -type l -exec sh -c 'test -x "{}"' \; -print | LC_ALL=C sort ; done ;`
+	perr(F("host=%s user=%s hs -- %s", HostAddr, USER, CmdAllPathCmds))
 	session, err := SshClient.NewSession()
 	if err!=nil {
 		perr(F("ERROR CmdAllPathCmds NewSession %v", err))
 		return err
 	}
-	pathcmdsbb, err := session.Output(CmdAllPathCmds)
+	outbb, err := session.Output(CmdAllPathCmds)
 	if err!=nil {
 		perr(F("WARNING CmdAllPathCmds Output %v", err))
-		perr(string(pathcmdsbb))
+		perr(string(outbb))
 		return err
 	}
-	AllPathCmds = strings.Split(string(pathcmdsbb), NL)
+	AllPathCmds = strings.Split(string(outbb), NL)
 	perr(F("DEBUG AllPathCmds <%d>", len(AllPathCmds)))
 	session.Close()
 	return nil
 }
 
 func GetAllFiles(fpathdir string) error {
-	perr(F("host=%s user=%s hs -- %s", HOST, USER, F(CmdAllFiles, fpathdir)))
+	const CmdAllFiles    = `find "%s" -maxdepth 1 -print | LC_ALL=C sort`
+	perr(F("host=%s user=%s hs -- %s", HostAddr, USER, F(CmdAllFiles, fpathdir)))
 	session, err := SshClient.NewSession()
 	if err!=nil {
 		perr(F("ERROR CmdAllFiles NewSession %v", err))
 		return err
 	}
-	allfilesbb, err := session.Output(F(CmdAllFiles, fpathdir))
+	outbb, err := session.Output(F(CmdAllFiles, fpathdir))
 	if err!=nil {
 		perr(F("WARNING CmdAllFiles Output %v", err))
-		perr(string(allfilesbb))
+		perr(string(outbb))
 		return err
 	}
-	AllFiles = strings.Split(string(allfilesbb), NL)
+	AllFiles = strings.Split(string(outbb), NL)
 	perr(F("DEBUG AllFiles <%d>", len(AllFiles)))
 	session.Close()
 	return nil
@@ -907,8 +952,8 @@ func run(cmds string, cmd []string, stdin io.Reader) (status string, err error) 
 	if cmds=="" && len(cmd)==0 { return "", EF("cmds and cmd empty") }
 	CmdHistoryAppend(cmds)
 	//fmt.Fprint(os.Stderr, NL)
-	perr(F("host=%s user=%s hs --", HOST, USER) + TAB + cmds)
-	if HOST=="" {
+	perr(TermUnderline(F("host=%s user=%s hs --", HostAddr, USER) + TAB + cmds))
+	if HostAddr=="" {
 		return localrun(cmds, cmd, stdin)
 	} else {
 		return sshrun(cmds, cmd, stdin)
@@ -992,6 +1037,7 @@ func AtonStrings(ss []string) (t string) {
 	for _, s := range ss { t += "["+AtonString(s)+"]" }
 	return t
 }
+
 
 
 
